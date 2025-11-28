@@ -1,6 +1,5 @@
 package com.supermobtracker.util;
 
-import java.lang.RuntimeException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -51,7 +50,7 @@ public class JEIHelper {
      * Returns true if successfully opened, false otherwise.
      */
     public static boolean showMobPage(ResourceLocation entityId) {
-        int mobIndex = getMobIndex(entityId) / 2;   // FIXME: determine number of mobs per page (2 in my window ratio)
+        int mobIndex = getMobIndex(entityId);
         if (mobIndex < 0) return false;
 
         IJeiRuntime runtime = JEIIntegration.getRuntime();
@@ -62,7 +61,6 @@ public class JEIHelper {
             recipesGui.showCategories(Collections.singletonList(JER_MOB_CATEGORY));
 
             // Navigate to the mob's page using reflection on JEI internals
-            // FIXME: setRecipeIndex does not work
             setRecipeIndex(recipesGui, mobIndex);
 
             return true;
@@ -170,6 +168,15 @@ public class JEIHelper {
             // IngredientLookupState has setRecipeIndex method
             Method setRecipeIndexMethod = state.getClass().getMethod("setRecipeIndex", int.class);
             setRecipeIndexMethod.invoke(state, index);
+
+            // RecipeGuiLogic has a "stateListener" field of type IRecipeLogicStateListener
+            Field stateListenerField = logic.getClass().getDeclaredField("stateListener");
+            stateListenerField.setAccessible(true);
+            Object stateListener = stateListenerField.get(logic);
+
+            // IRecipeLogicStateListener has onStateChange() method
+            Method onStateChangeMethod = stateListener.getClass().getMethod("onStateChange");
+            onStateChangeMethod.invoke(stateListener);
         } catch (Exception e) {
             SuperMobTracker.LOGGER.warn("Failed to set JEI recipe index to {}", index, e);
         }
