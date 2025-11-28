@@ -128,6 +128,7 @@ public class SampleFinder {
                 boolean canSpawn = entity.getCanSpawnHere();
                 lastQueriedConditions = world.getAndResetQueriedConditions();
 
+                // FIXME: finding the first sample is incredibly flaky, could it be related to spawn chance? Some randomness somewhere.
                 if (canSpawn && isStable(y)) {
                     return new ValidSample(y, light, groundBlock, biomeId, lastQueriedConditions);
                 }
@@ -155,7 +156,7 @@ public class SampleFinder {
     public SpawnConditionAnalyzer.SpawnConditions buildFailureResult(List<Integer> lightProbe) {
         List<String> failBiomes = Arrays.asList("unknown");
         List<String> failGround = Arrays.asList("unknown");
-        List<Integer> narrowedLight = refineLightLevels(lightProbe);
+        List<Integer> narrowedLight = new ArrayList<>();
         List<Integer> emptyY = new ArrayList<>();
         List<String> time = Arrays.asList("unknown");
         List<String> weather = Arrays.asList("unknown");

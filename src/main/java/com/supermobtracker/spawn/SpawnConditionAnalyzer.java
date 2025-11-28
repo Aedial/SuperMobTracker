@@ -406,6 +406,7 @@ public class SpawnConditionAnalyzer {
 
         if (creatureType == null) return null;
 
+        // TODO: maintain a static cache of native biomes per entity to avoid recomputing every time
         for (Biome biome : ALL_BIOMES) {
             List<Biome.SpawnListEntry> spawnList = biome.getSpawnableList(creatureType);
             for (Biome.SpawnListEntry spawnEntry : spawnList) {
@@ -424,22 +425,16 @@ public class SpawnConditionAnalyzer {
      */
     private SpawnConditions computeSpawnConditions(EntityLiving entity, List<String> biomes, boolean nativeBiomes,
                                                    List<String> groundBlocks, List<Integer> lightLevels) {
-        List<String> startBiomes = nativeBiomes && !biomes.isEmpty() ? Arrays.asList(biomes.get(0)) : biomes;
-
         SimulatedWorld simulatedWorld = SimulatedWorld.fromReal(entity.world);
         simulatedWorld.dimension = entity.world.provider.getDimensionType().getName().toLowerCase();
 
         ConditionRefiner refiner = new ConditionRefiner(entity.getClass(), simulatedWorld);
-        SpawnConditions result = refiner.findValidConditions(
-            startBiomes, nativeBiomes, groundBlocks, lightLevels, PROBE_Y_LEVELS
-        );
+        SpawnConditions result = refiner.findValidConditions(biomes, nativeBiomes, groundBlocks, lightLevels, PROBE_Y_LEVELS);
 
         if (result != null) {
-            if (nativeBiomes && result.biomes.size() == 1 &&
-                result.biomes.get(0).equals(ConditionUtils.KEY_ANY)) {
+            if (nativeBiomes) {
                 return new SpawnConditions(
-                    biomes, result.groundBlocks, result.lightLevels, result.yLevels,
-                    result.timeOfDay, result.weather, result.hints
+                    biomes, result.groundBlocks, result.lightLevels, result.yLevels, result.timeOfDay, result.weather, result.hints
                 );
             }
 

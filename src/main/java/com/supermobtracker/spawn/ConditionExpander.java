@@ -5,8 +5,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.entity.EntityLiving;
+import net.minecraft.util.text.translation.I18n;
 
 import static com.supermobtracker.spawn.ConditionUtils.*;
+
 
 /**
  * Expands spawn conditions from a valid sample by exhaustively testing all values.

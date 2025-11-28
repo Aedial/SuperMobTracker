@@ -1,0 +1,72 @@
+# Super Mob Tracker Language File
+
+key.supermobtracker.open=Open Mob Tracker
+key.categories.supermobtracker=Super Mob Tracker
+
+config.supermobtracker.server.enableTracking.desc=Enable server-side tracking of mobs.
+config.supermobtracker.client.detectionRange.desc=Range in blocks to detect tracked mobs for glowing effect.
+config.supermobtracker.client.i18nNames.desc=Use localized names in the tracker GUI.
+config.supermobtracker.client.trackedEntityIds.desc=List of entity IDs currently being tracked.
+config.supermobtracker.client.lastSelectedEntity.desc=Last selected entity in the mob tracker GUI.
+
+# GUI Labels
+gui.supermobtracker.i18nIDs.on=IDs: Localized
+gui.supermobtracker.i18nIDs.off=IDs: Raw
+
+gui.mobtracker.separator=, 
+gui.mobtracker.noMobSelected=Select a mob from the list
+gui.mobtracker.noSpawnData=No spawn data available
+
+gui.mobtracker.entityName=Name: %s
+gui.mobtracker.entityId=ID: %s
+gui.mobtracker.entitySize=Size: %s x %s x %s
+gui.mobtracker.attributes=Attributes: %s
+gui.mobtracker.jeiButton=[View in JEI]
+
+gui.mobtracker.spawnConditions=Spawn Conditions:
+gui.mobtracker.lightLevels=Light: %s
+gui.mobtracker.yPos=Y Level: %s
+gui.mobtracker.groundBlocks=Ground: %s
+
+gui.mobtracker.timeOfDay=Time: %s
+gui.mobtracker.timeOfDay.dawn=Dawn
+gui.mobtracker.timeOfDay.day=Day
+gui.mobtracker.timeOfDay.dusk=Dusk
+gui.mobtracker.timeOfDay.night=Night
+gui.mobtracker.timeOfDay.unknown=Unknown
+gui.mobtracker.timeOfDay.any=Any
+
+gui.mobtracker.weather=Weather: %s
+gui.mobtracker.weather.clear=Clear
+gui.mobtracker.weather.rain=Rain
+gui.mobtracker.weather.thunder=Thunder
+gui.mobtracker.weather.unknown=Unknown
+gui.mobtracker.weather.any=Any
+
+gui.mobtracker.biomes=Biomes: %s
+gui.mobtracker.biomes.none=Biomes: None
+gui.mobtracker.biomes.unknown=Biomes: Unknown
+gui.mobtracker.biomes.any=Biomes: Any
+
+gui.mobtracker.hintsHeader=Notes:
+gui.mobtracker.any=Any
+gui.mobtracker.unknown=Unknown
+
+# Attributes
+gui.mobtracker.attribute.boss=Boss
+gui.mobtracker.attribute.cannotDespawn=Persistent
+gui.mobtracker.attribute.passive=Passive
+gui.mobtracker.attribute.neutral=Neutral
+gui.mobtracker.attribute.hostile=Hostile
+gui.mobtracker.attribute.aquatic=Aquatic
+gui.mobtracker.attribute.flying=Flying
+gui.mobtracker.attribute.tameable=Tameable
+
+# Hints
+gui.mobtracker.hint.dimension=May spawn in another dimension.
+gui.mobtracker.hint.light=May require a specific light level.
+gui.mobtracker.hint.ground=May require a specific ground block.
+gui.mobtracker.hint.biome=May require a specific biome.
+gui.mobtracker.hint.time=May require a specific time of day.
+gui.mobtracker.hint.weather=May require specific weather.
+gui.mobtracker.hint.firstfail=Could not determine spawn; may not spawn in this dimension.

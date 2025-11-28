@@ -41,6 +41,9 @@ public class ConditionRefiner {
 
         if (candidateBiomes.isEmpty() || groundBlocks.isEmpty()) return null;
 
+        // TODO: might be worth adding hints if the biomes list cannot be found in current dimension. Is that possible?
+        // Something like: "The valid biome(s) for this entity do not exist in the current dimension."
+
         SampleFinder.ValidSample sample = sampleFinder.find(candidateBiomes, groundBlocks, lightProbe, yLevels);
         if (sample == null) return sampleFinder.buildFailureResult(lightProbe);
 
