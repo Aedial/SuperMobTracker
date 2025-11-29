@@ -36,10 +36,10 @@ public class ConditionExpander {
 
     /**
      * Expand all conditions from a valid sample by exhaustively testing all values.
+     * Biomes are taken as-is from native spawn tables (no expansion).
      */
     public ExpandedConditions expandAll(SampleFinder.ValidSample sample,
                                         List<String> candidateBiomes,
-                                        boolean nativeBiomes,
                                         List<String> candidateGroundBlocks) {
         ExpandedConditions result = new ExpandedConditions();
 
@@ -50,13 +50,7 @@ public class ConditionExpander {
         result.yLevels = expandYLevels(sample.y);
         result.lightLevels = expandLightLevels(sample);
         result.groundBlocks = expandGroundBlocks(sample, candidateGroundBlocks);
-
-        if (nativeBiomes) {
-            result.biomes = new ArrayList<>(candidateBiomes);
-        } else {
-            result.biomes = expandBiomes(sample, candidateBiomes);
-        }
-
+        result.biomes = new ArrayList<>(candidateBiomes);
         result.times = expandTimes(sample);
         result.weathers = expandWeathers(sample);
 
@@ -146,25 +140,6 @@ public class ConditionExpander {
         if (allValid.size() == candidateGroundBlocks.size() && !allValid.isEmpty()) return Arrays.asList("any");
 
         return allValid.isEmpty() ? Arrays.asList(sample.ground) : allValid;
-    }
-
-    private List<String> expandBiomes(SampleFinder.ValidSample sample,
-                                      List<String> candidateBiomes) {
-        List<String> allValid = new ArrayList<>();
-
-        for (String biomeId : candidateBiomes) {
-            world.biome = extractBiomePath(biomeId);
-
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) {
-                allValid.add(biomeId);
-            }
-        }
-
-        world.biome = extractBiomePath(sample.biome);
-
-        if (allValid.size() == candidateBiomes.size() && !allValid.isEmpty()) return Arrays.asList("any");
-
-        return allValid.isEmpty() ? Arrays.asList(sample.biome) : allValid;
     }
 
     private List<String> expandTimes(SampleFinder.ValidSample sample) {

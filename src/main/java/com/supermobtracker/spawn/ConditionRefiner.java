@@ -31,23 +31,20 @@ public class ConditionRefiner {
 
     /**
      * Attempt to find a valid sample and expand all spawn conditions exhaustively.
+     * Biomes are taken as-is from native spawn tables (no expansion).
      */
     public SpawnConditionAnalyzer.SpawnConditions findValidConditions(
             List<String> candidateBiomes,
-            boolean nativeBiomes,
             List<String> groundBlocks,
             List<Integer> lightProbe,
             List<Integer> yLevels) {
 
         if (candidateBiomes.isEmpty() || groundBlocks.isEmpty()) return null;
 
-        // TODO: might be worth adding hints if the biomes list cannot be found in current dimension. Is that possible?
-        // Something like: "The valid biome(s) for this entity do not exist in the current dimension."
-
         SampleFinder.ValidSample sample = sampleFinder.find(candidateBiomes, groundBlocks, lightProbe, yLevels);
         if (sample == null) return sampleFinder.buildFailureResult(lightProbe);
 
-        ConditionExpander.ExpandedConditions expanded = expander.expandAll(sample, candidateBiomes, nativeBiomes, groundBlocks);
+        ConditionExpander.ExpandedConditions expanded = expander.expandAll(sample, candidateBiomes, groundBlocks);
         return expander.toSpawnConditions(expanded);
     }
 }

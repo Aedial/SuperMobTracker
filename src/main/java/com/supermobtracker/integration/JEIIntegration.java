@@ -1,5 +1,6 @@
 package com.supermobtracker.integration;
 
+// TODO: the API is 60kB, wtf. Make a duck for it.
 import mezz.jei.api.IJeiRuntime;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JEIPlugin;

@@ -16,6 +16,12 @@ gui.supermobtracker.i18nIDs.off=IDs: Raw
 gui.mobtracker.separator=, 
 gui.mobtracker.noMobSelected=Select a mob from the list
 gui.mobtracker.noSpawnData=No spawn data available
+gui.mobtracker.cannotSpawnNaturally=This entity cannot spawn naturally.
+gui.mobtracker.cannotSpawnNaturallyHint=It may only be obtained via spawners, commands, or special game mechanics (like boss summoning).
+gui.mobtracker.analysisCrashed=Spawn analysis failed.
+gui.mobtracker.analysisCrashedHint=An error occurred while analyzing spawn conditions for this entity.
+gui.mobtracker.noSpawnConditions=Could not determine spawn; may not spawn in this dimension.
+
 
 gui.mobtracker.entityName=Name: %s
 gui.mobtracker.entityId=ID: %s
@@ -69,4 +75,3 @@ gui.mobtracker.hint.ground=May require a specific ground block.
 gui.mobtracker.hint.biome=May require a specific biome.
 gui.mobtracker.hint.time=May require a specific time of day.
 gui.mobtracker.hint.weather=May require specific weather.
-gui.mobtracker.hint.firstfail=Could not determine spawn; may not spawn in this dimension.

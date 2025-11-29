@@ -1,6 +1,7 @@
 package com.supermobtracker.client.event;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.client.resources.I18n;
@@ -13,6 +14,8 @@ import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.common.registry.EntityEntry;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import com.supermobtracker.client.ClientSettings;
 import com.supermobtracker.client.input.KeyBindings;
@@ -20,6 +23,10 @@ import com.supermobtracker.client.gui.GuiMobTracker;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.tracking.SpawnTrackerManager;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 
@@ -69,42 +76,60 @@ public class ClientEvents {
     @SubscribeEvent
     public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
         if (SpawnTrackerManager.getTrackedIds().isEmpty()) return;
+
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.player == null || mc.world == null) return;
 
         double rangeSq = ModConfig.clientDetectionRange * ModConfig.clientDetectionRange;
 
         // Build class -> id map for O(n) single pass counting. Exact class match assumed.
-        java.util.Map<Class<?>, ResourceLocation> classToId = new java.util.HashMap<>();
+        Map<Class<?>, ResourceLocation> classToId = new HashMap<>();
         for (ResourceLocation id : SpawnTrackerManager.getTrackedIds()) {
-            net.minecraftforge.fml.common.registry.EntityEntry entry = net.minecraftforge.fml.common.registry.ForgeRegistries.ENTITIES.getValue(id);
+            EntityEntry entry = ForgeRegistries.ENTITIES.getValue(id);
             if (entry != null) classToId.put(entry.getEntityClass(), id);
         }
 
-        java.util.Map<ResourceLocation, Integer> counts = new java.util.LinkedHashMap<>();
+        Map<ResourceLocation, Integer> counts = new LinkedHashMap<>();
         for (ResourceLocation id : SpawnTrackerManager.getTrackedIds()) counts.put(id, 0);
 
         for (Entity e : mc.world.loadedEntityList) {
             if (mc.player.getDistanceSq(e) > rangeSq) continue;
+
             ResourceLocation id = classToId.get(e.getClass());
             if (id != null) counts.put(id, counts.get(id) + 1);
         }
 
+        // Build display strings
+        List<String> lines = new ArrayList<>();
         for (Map.Entry<ResourceLocation, Integer> entry : counts.entrySet()) {
             ResourceLocation id = entry.getKey();
-            String key = EntityList.getTranslationName(id);
-            String name;
-            if (key != null) {
-                // Always try vanilla key first (some mods reuse vanilla naming style)
-                name = I18n.format(key);
-            } else {
-                String[] parts = id.toString().split(":" , 2);
-                String domain = parts.length > 0 ? parts[0] : "minecraft";
-                String path = parts.length > 1 ? parts[1] : parts[0];
-                String altKey = "entity." + domain + "." + path + ".name";
-                name = I18n.hasKey(altKey) ? I18n.format(altKey) : id.toString();
+
+            String name = id.toString();
+            if (ModConfig.clientI18nNames) {
+                Entity entity = EntityList.createEntityByIDFromName(id, mc.world);
+                if (entity != null) name = entity.getDisplayName().getUnformattedText();
             }
-            event.getLeft().add(name + ": " + entry.getValue());
+
+            lines.add(name + ": " + entry.getValue());
         }
+
+        // Add background box for better readability
+        // TODO: box is kinda ugly and lines do not align with it
+        // TODO: we need a configutable HUD system for proper placement, to avoid conflicts with other mods
+        if (!lines.isEmpty()) {
+            int maxWidth = 0;
+            for (String line : lines) {
+                maxWidth = Math.max(maxWidth, mc.fontRenderer.getStringWidth(line));
+            }
+
+            int boxX = 2;
+            int boxY = 2;
+            int boxW = maxWidth + 6;
+            int boxH = lines.size() * 10 + 4;
+
+            Gui.drawRect(boxX, boxY, boxX + boxW, boxY + boxH, 0x80000000);
+        }
+
+        event.getLeft().addAll(lines);
     }
 }

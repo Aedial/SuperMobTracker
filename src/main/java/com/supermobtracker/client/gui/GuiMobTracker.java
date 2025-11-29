@@ -5,10 +5,12 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Vector;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.lwjgl.input.Mouse;
@@ -30,6 +32,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityHanging;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.biome.Biome;
 
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.client.ClientSettings;
@@ -63,7 +66,7 @@ public class GuiMobTracker extends GuiScreen {
     private static final int ylevelColor = 0xAAAAFF;
     private static final int groundColor = 0xAAFFAA;
     private static final int timeOfDayColor = 0xFFAAFF;
-    private static final int weatherColor = 0xFFAACC;   // TODO: change color for weather, perhaps blueish
+    private static final int weatherColor = 0xAABBFF;
     private static final int biomeColor = 0xAADDFF;
     private static final int hintColor = 0xFFAAAA;
 
@@ -80,6 +83,7 @@ public class GuiMobTracker extends GuiScreen {
 
         this.buttonList.add(new GuiButton(1, leftWidth + 10, height - 30, 80, 20, getI18nButtonString()));
 
+        // TODO: keep last spawn conditions around, so it doesn't regenerate constantly on window resize
         // Restore last selected entity
         String lastEntity = ModConfig.getClientLastSelectedEntity();
         if (lastEntity != null && !lastEntity.isEmpty()) {
@@ -127,31 +131,41 @@ public class GuiMobTracker extends GuiScreen {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
-        filterField.mouseClicked(mouseX, mouseY, mouseButton);  // TODO: right click to clear
-
-        // Handle JEI button click
-        if (jeiButtonVisible && selected != null && mouseButton == 0 &&
-            mouseX >= jeiButtonX && mouseX <= jeiButtonX + jeiButtonW &&
-            mouseY >= jeiButtonY && mouseY <= jeiButtonY + jeiButtonH) {
-            JEIHelper.showMobPage(selected);
-
-            return;
+        // Right-click on filter field clears it
+        if (mouseButton == 1 &&
+            mouseX >= filterField.x && mouseX <= filterField.x + filterField.width &&
+            mouseY >= filterField.y && mouseY <= filterField.y + filterField.height) {
+            filterField.setText("");
         }
 
-        ResourceLocation click = listWidget.handleClick(mouseX, mouseY);
+        filterField.mouseClicked(mouseX, mouseY, mouseButton);
 
-        if (click != null) {
-            long now = Minecraft.getSystemTime();
-            boolean isDouble = click.equals(lastClickId) && (now - lastClickTime) < 500L;
-            lastClickId = click;
-            lastClickTime = now;
-            selectEntity(click);
+        if (mouseButton == 0) {
+            // Handle JEI button click
+            if (jeiButtonVisible && selected != null &&
+                mouseX >= jeiButtonX && mouseX <= jeiButtonX + jeiButtonW &&
+                mouseY >= jeiButtonY && mouseY <= jeiButtonY + jeiButtonH) {
+                JEIHelper.showMobPage(selected);
 
-            if (isDouble) {
-                SpawnTrackerManager.toggleTracked(click);
-                ModConfig.setClientTrackedIds(SpawnTrackerManager.getTrackedIdStrings());
-                SpawnTrackerManager.scanWorld(mc.world);
-                listWidget.rebuildFiltered();
+                return;
+            }
+
+            // Handle list widget click
+            ResourceLocation click = listWidget.handleClick(mouseX, mouseY);
+
+            if (click != null) {
+                long now = Minecraft.getSystemTime();
+                boolean isDouble = click.equals(lastClickId) && (now - lastClickTime) < 500L;
+                lastClickId = click;
+                lastClickTime = now;
+                selectEntity(click);
+
+                if (isDouble) {
+                    SpawnTrackerManager.toggleTracked(click);
+                    ModConfig.setClientTrackedIds(SpawnTrackerManager.getTrackedIdStrings());
+                    SpawnTrackerManager.scanWorld(mc.world);
+                    listWidget.rebuildFiltered();
+                }
             }
         }
 
@@ -199,14 +213,18 @@ public class GuiMobTracker extends GuiScreen {
         return y + lineHeight;
     }
 
-    // TODO: separate internal line height and external spacing
     private int drawWrappedString(FontRenderer renderer, String text, int x, int y, int lineHeight, int maxWidth, int color) {
-        List<String> wrapped = Utils.wrapText(renderer, text, maxWidth);
-        if (y + lineHeight * wrapped.size() > panelMaxY) return y;
+        return drawWrappedString(renderer, text, x, y, lineHeight, 0, maxWidth, color);
+    }
 
-        for (String line : wrapped) {
-            renderer.drawString(line, x, y, color);
-            y += lineHeight;
+    private int drawWrappedString(FontRenderer renderer, String text, int x, int y, int lineHeight, int extraSpacing, int maxWidth, int color) {
+        List<String> wrapped = Utils.wrapText(renderer, text, maxWidth);
+        int totalHeight = lineHeight * wrapped.size() + extraSpacing * Math.max(0, wrapped.size() - 1);
+        if (y + totalHeight > panelMaxY) return y;
+
+        for (int i = 0; i < wrapped.size(); i++) {
+            renderer.drawString(wrapped.get(i), x, y, color);
+            y += lineHeight + (i < wrapped.size() - 1 ? extraSpacing : 0);
         }
 
         return y;
@@ -227,6 +245,38 @@ public class GuiMobTracker extends GuiScreen {
         return s;
     }
 
+    private String translateBlockName(String blockName) {
+        // Try standard block translation keys
+        String[] keys = {
+            "tile." + blockName + ".name",
+            "tile.minecraft." + blockName + ".name",
+            "block.minecraft." + blockName
+        };
+
+        for (String key : keys) {
+            if (I18n.hasKey(key)) return I18n.format(key);
+        }
+
+        // Fallback: capitalize the block name
+        return blockName.substring(0, 1).toUpperCase() + blockName.substring(1).replace("_", " ");
+    }
+
+    /**
+     * Translates a biome registry name to its localized display name.
+     * @param biomeRegistryName The biome registry name (e.g., "minecraft:plains")
+     * @return The localized biome name, or the registry name if not found
+     */
+    private String translateBiomeName(String biomeRegistryName) {
+        Biome biome = ForgeRegistries.BIOMES.getValue(new ResourceLocation(biomeRegistryName));
+        if (biome != null) {
+            String localizedName = biome.getBiomeName();
+            if (localizedName != null && !localizedName.isEmpty()) return localizedName;
+        }
+
+        // Fallback: return the registry name
+        return biomeRegistryName;
+    }
+
     private void drawRightPanel(int mouseX, int mouseY, float partialTicks) {
         int leftWidth = Math.min(width / 2, 250);
         int panelX = leftWidth + 10;
@@ -238,148 +288,254 @@ public class GuiMobTracker extends GuiScreen {
         String sep = I18n.format("gui.mobtracker.separator");
 
         drawRect(panelX, panelY, panelX + panelW, panelY + panelH, 0x80000000);
-        if (selected != null) {
-            int textX = panelX + 6;
-            int textY = panelY + 6;
-            int textW = panelW - 12;
-            int color = 0xFFFFFF;
-
-            // preview: up to a quarter of panel height, slowly rotating (full rotation every 10s)
-            int previewSizeLocal = Math.min(textW, panelH / 4);
-            int previewX = textX + (textW - previewSizeLocal) / 2;
-            int previewY = textY;
-            int previewSize = previewSizeLocal;
-            float previewRotationY = (System.currentTimeMillis() % 10000L) / 10000.0f * 360.0f;
-
-            drawMobPreview(selected, previewX, previewY, previewSize, previewRotationY);
-
-            textY += previewSize + 16;
-
-            // TODO: some mobs just cannot spawn naturally, how do we check that (is that all bosses)?
-            // We should indicate it here, instead of showing spawn conditions that don't apply.
-            ArrayList<String> attributes = new ArrayList<>();
-            if (analyzer.isBoss(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.boss"));
-            if (analyzer.cannotDespawn(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.cannotDespawn"));
-            if (analyzer.isPassive(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.passive"));
-            if (analyzer.isNeutral(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.neutral"));
-            if (analyzer.isHostile(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.hostile"));
-            if (analyzer.isAquatic(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.aquatic"));
-            if (analyzer.isFlying(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.flying"));
-            if (analyzer.isTameable(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.tameable"));
-
-            String name = I18n.format("gui.mobtracker.entityName", formatEntityName(selected, true));
-            textY = drawElidedString(fontRenderer, name, textX, textY, 14, textW, color);
-
-            String entityIdStr = I18n.format("gui.mobtracker.entityId", selected.toString());
-            textY = drawElidedString(fontRenderer, entityIdStr, textX, textY, 14, textW, color);
-
-            Vec3d size = analyzer.getEntitySize(selected);
-            String sizeStr = I18n.format("gui.mobtracker.entitySize", format(size.x), format(size.y), format(size.z));
-            textY = drawElidedString(fontRenderer, sizeStr, textX, textY, 14, textW, color);
-
-            String attributeString = I18n.format("gui.mobtracker.attributes", String.join(sep, attributes));
-            textY = drawWrappedString(fontRenderer, attributeString, textX, textY, 14, textW, color);
-
-            // JEI button (only if JEI is loaded and can show mob info)
-            jeiButtonVisible = false;
-            if (JEIHelper.canShowMobPage(selected)) {
-                String jeiText = I18n.format("gui.mobtracker.jeiButton");
-                jeiButtonW = fontRenderer.getStringWidth(jeiText) + 8;
-                jeiButtonH = 12;
-                jeiButtonX = textX;
-                jeiButtonY = textY;
-                jeiButtonVisible = true;
-
-                boolean hovered = mouseX >= jeiButtonX && mouseX <= jeiButtonX + jeiButtonW &&
-                                  mouseY >= jeiButtonY && mouseY <= jeiButtonY + jeiButtonH;
-                int btnBg = hovered ? 0x60FFFFFF : 0x40FFFFFF;
-                int btnColor = hovered ? 0xFFFFAA : 0xCCCCCC;
-
-                drawRect(jeiButtonX, jeiButtonY, jeiButtonX + jeiButtonW, jeiButtonY + jeiButtonH, btnBg);
-                fontRenderer.drawString(jeiText, jeiButtonX + 4, jeiButtonY + 2, btnColor);
-                textY += jeiButtonH + 4;
-            }
-
-            if (spawnConditions == null) {
-                List<String> hints = analyzer.getErrorHints();
-                if (hints.isEmpty()) {
-                    textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.noSpawnData"), textX, textY, 12, textW, color);
-                } else {
-                    for (String hint : hints) {
-                        textY = drawWrappedString(fontRenderer, hint, textX, textY, 12, textW, 0xFFAAAA);
-                    }
-                }
-            } else {
-                textY += 20;
-
-                textY = drawSingleString(fontRenderer, I18n.format("gui.mobtracker.spawnConditions"), textX, textY, 12, color);
-
-                int condsX = textX + 6;
-
-                String lightLevels = I18n.format("gui.mobtracker.lightLevels", Utils.formatRangeFromList(spawnConditions.lightLevels, sep));
-                textY = drawWrappedString(fontRenderer, lightLevels, condsX, textY, 12, textW, lightColor);
-
-                String yPos = I18n.format("gui.mobtracker.yPos", Utils.formatRangeFromList(spawnConditions.yLevels, sep));
-                textY = drawWrappedString(fontRenderer, yPos, condsX, textY, 12, textW, ylevelColor);
-
-                // FIXME: translate ground blocks. That one is tricky.
-                String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", String.join(sep, spawnConditions.groundBlocks));
-                textY = drawWrappedString(fontRenderer, groundBlocks, condsX, textY, 12, textW, groundColor);
-
-                String timeOfDayTL = String.join(sep, ConditionUtils.translateList(spawnConditions.timeOfDay, "gui.mobtracker.timeOfDay"));
-                String timeOfDay = I18n.format("gui.mobtracker.timeOfDay", timeOfDayTL);
-                textY = drawWrappedString(fontRenderer, timeOfDay, condsX, textY, 12, textW, timeOfDayColor);
-
-                String weatherTL = String.join(sep, ConditionUtils.translateList(spawnConditions.weather, "gui.mobtracker.weather"));
-                String weather = I18n.format("gui.mobtracker.weather", weatherTL);
-                textY = drawWrappedString(fontRenderer, weather, condsX, textY, 12, textW, weatherColor);
-
-                int biomesCount = spawnConditions.biomes.size();
-                boolean hasBiomes = biomesCount > 0;
-                boolean isUnknownBiome = biomesCount == 1 && spawnConditions.biomes.get(0).equals("unknown");
-                boolean isAnyBiome = biomesCount == 1 && spawnConditions.biomes.get(0).equals("any");
-
-                String biomesLabel;
-                if (!hasBiomes) {
-                    biomesLabel = I18n.format("gui.mobtracker.biomes.none");
-                } else if (isUnknownBiome) {
-                    biomesLabel = I18n.format("gui.mobtracker.biomes.unknown");
-                } else if (isAnyBiome) {
-                    biomesLabel = I18n.format("gui.mobtracker.biomes.any");
-                } else {
-                    biomesLabel = I18n.format("gui.mobtracker.biomes", spawnConditions.biomes.size());
-                }
-
-                int biomesLabelY = textY;
-                textY = drawSingleString(fontRenderer, biomesLabel, condsX, textY, 12, biomeColor);
-
-                boolean showTooltip = textY > biomesLabelY && hasBiomes && !isUnknownBiome && !isAnyBiome &&
-                    mouseX >= condsX && mouseX <= condsX + fontRenderer.getStringWidth(biomesLabel) &&
-                    mouseY >= biomesLabelY && mouseY <= biomesLabelY + 12;
-                if (showTooltip) {
-                    // TODO: give a darkened background box with border for better readability
-                    // TODO: sort biomes (prioritize minecraft: ones?)
-                    int maxWidth = Math.min(300, spawnConditions.biomes.stream().mapToInt(s -> fontRenderer.getStringWidth(s)).max().orElse(100) + 8);
-                    int boxX = Math.min(mouseX + 12, panelX + panelW - maxWidth - 4);
-                    int boxY = Math.min(mouseY + 12, panelY + panelH - 8 - Math.min(spawnConditions.biomes.size(), 20) * 10);
-                    int lines = Math.min(spawnConditions.biomes.size(), 20);
-                    drawRect(boxX - 2, boxY - 2, boxX + maxWidth + 2, boxY + lines * 10 + 2, 0xC0000000);
-                    for (int i = 0; i < lines; i++) {
-                        // FIXME: how to translate biome names properly?
-                        fontRenderer.drawString(I18n.format(spawnConditions.biomes.get(i)), boxX + 4, boxY + i * 10, 0xDDDDDD);
-                    }
-                }
-
-                List<String> hints = spawnConditions.hints;
-                if (!hints.isEmpty()) {
-                    textY += 10;
-                    textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.hintsHeader"), textX, textY, 10, textW, color);
-
-                    for (String hint : hints) textY = drawWrappedString(fontRenderer, "- " + hint, textX + 6, textY, 12, textW, hintColor);
-                }
-            }
-        } else {
+        if (selected == null) {
             fontRenderer.drawString(I18n.format("gui.mobtracker.noMobSelected"), panelX + 6, panelY + 6, 0xFFFFFF);
+            return;
+        }
+
+        int textX = panelX + 6;
+        int textY = panelY + 6;
+        int textW = panelW - 12;
+        int color = 0xFFFFFF;
+
+        // preview: up to a quarter of panel height, slowly rotating (full rotation every 10s)
+        int previewSizeLocal = Math.min(textW, panelH / 4);
+        int previewX = textX + (textW - previewSizeLocal) / 2;
+        int previewY = textY;
+        int previewSize = previewSizeLocal;
+        float previewRotationY = (System.currentTimeMillis() % 10000L) / 10000.0f * 360.0f;
+
+        drawMobPreview(selected, previewX, previewY, previewSize, previewRotationY);
+
+        textY += previewSize + 16;
+
+        ArrayList<String> attributes = new ArrayList<>();
+        if (analyzer.isBoss(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.boss"));
+        if (analyzer.cannotDespawn(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.cannotDespawn"));
+        if (analyzer.isPassive(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.passive"));
+        if (analyzer.isNeutral(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.neutral"));
+        if (analyzer.isHostile(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.hostile"));
+        if (analyzer.isAquatic(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.aquatic"));
+        if (analyzer.isFlying(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.flying"));
+        if (analyzer.isTameable(selected)) attributes.add(I18n.format("gui.mobtracker.attribute.tameable"));
+
+        String name = I18n.format("gui.mobtracker.entityName", formatEntityName(selected, true));
+        textY = drawElidedString(fontRenderer, name, textX, textY, 14, textW, color);
+
+        String entityIdStr = I18n.format("gui.mobtracker.entityId", selected.toString());
+        textY = drawElidedString(fontRenderer, entityIdStr, textX, textY, 14, textW, color);
+
+        Vec3d size = analyzer.getEntitySize(selected);
+        String sizeStr = I18n.format("gui.mobtracker.entitySize", format(size.x), format(size.y), format(size.z));
+        textY = drawElidedString(fontRenderer, sizeStr, textX, textY, 14, textW, color);
+
+        String attributeString = I18n.format("gui.mobtracker.attributes", String.join(sep, attributes));
+        textY = drawWrappedString(fontRenderer, attributeString, textX, textY, 14, textW, color);
+
+        // JEI button (only if JEI is loaded and can show mob info)
+        jeiButtonVisible = false;
+        if (JEIHelper.canShowMobPage(selected)) {
+            String jeiText = I18n.format("gui.mobtracker.jeiButton");
+            jeiButtonW = fontRenderer.getStringWidth(jeiText) + 8;
+            jeiButtonH = 12;
+            jeiButtonX = textX;
+            jeiButtonY = textY;
+            jeiButtonVisible = true;
+
+            boolean hovered = mouseX >= jeiButtonX && mouseX <= jeiButtonX + jeiButtonW &&
+                                mouseY >= jeiButtonY && mouseY <= jeiButtonY + jeiButtonH;
+            int btnBg = hovered ? 0x60FFFFFF : 0x40FFFFFF;
+            int btnColor = hovered ? 0xFFFFAA : 0xCCCCCC;
+
+            drawRect(jeiButtonX, jeiButtonY, jeiButtonX + jeiButtonW, jeiButtonY + jeiButtonH, btnBg);
+            fontRenderer.drawString(jeiText, jeiButtonX + 4, jeiButtonY + 2, btnColor);
+            textY += jeiButtonH + 4;
+        }
+
+        // Check if analysis failed (crashed) vs entity cannot spawn naturally
+        List<String> errorHints = analyzer.getErrorHints();
+        boolean analysisCrashed = !errorHints.isEmpty() && errorHints.stream().anyMatch(h -> h.contains("crashed"));
+
+        // Entities without native biomes (not in any spawn table) cannot spawn naturally.
+        // But if analysis crashed, show that instead.
+        if (spawnConditions == null) {
+            textY += 10;
+
+            if (analysisCrashed) {
+                textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.analysisCrashed"), textX, textY, 12, textW, 0xFFAAAA);
+                textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.analysisCrashedHint"), textX, textY, 12, textW, 0xAAAAAA);
+            } else {
+                textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.cannotSpawnNaturally"), textX, textY, 12, textW, 0xFFAAAA);
+                textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.cannotSpawnNaturallyHint"), textX, textY, 12, textW, 0xAAAAAA);
+            }
+
+            return;
+        }
+
+        textY += 20;
+
+        textY = drawSingleString(fontRenderer, I18n.format("gui.mobtracker.spawnConditions"), textX, textY, 12, color);
+
+        int condsX = textX + 6;
+
+        boolean hasLightLevels = !spawnConditions.lightLevels.isEmpty();
+        boolean hasYLevels = !spawnConditions.yLevels.isEmpty();
+        boolean hasGroundBlocks = !spawnConditions.groundBlocks.isEmpty() && !spawnConditions.groundBlocks.get(0).equals("unknown");
+        boolean hasTimeOfDay = !spawnConditions.timeOfDay.isEmpty() && !spawnConditions.timeOfDay.get(0).equals("unknown");
+        boolean hasWeather = !spawnConditions.weather.isEmpty() && !spawnConditions.weather.get(0).equals("unknown");
+
+        // Only show spawn condition details if they have valid data
+        if (hasLightLevels || hasYLevels || hasGroundBlocks || hasTimeOfDay || hasWeather) {
+            String lightLevels = I18n.format("gui.mobtracker.lightLevels", Utils.formatRangeFromList(spawnConditions.lightLevels, sep));
+            textY = drawWrappedString(fontRenderer, lightLevels, condsX, textY, 12, textW, lightColor);
+
+            String yPos = I18n.format("gui.mobtracker.yPos", Utils.formatRangeFromList(spawnConditions.yLevels, sep));
+            textY = drawWrappedString(fontRenderer, yPos, condsX, textY, 12, textW, ylevelColor);
+
+            String groundBlocksTranslated = spawnConditions.groundBlocks.stream()
+                .map(this::translateBlockName)
+                .collect(Collectors.joining(sep));
+            String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", groundBlocksTranslated);
+            textY = drawWrappedString(fontRenderer, groundBlocks, condsX, textY, 12, textW, groundColor);
+
+            String timeOfDayTL = String.join(sep, ConditionUtils.translateList(spawnConditions.timeOfDay, "gui.mobtracker.timeOfDay"));
+            String timeOfDay = I18n.format("gui.mobtracker.timeOfDay", timeOfDayTL);
+            textY = drawWrappedString(fontRenderer, timeOfDay, condsX, textY, 12, textW, timeOfDayColor);
+
+            String weatherTL = String.join(sep, ConditionUtils.translateList(spawnConditions.weather, "gui.mobtracker.weather"));
+            String weather = I18n.format("gui.mobtracker.weather", weatherTL);
+            textY = drawWrappedString(fontRenderer, weather, condsX, textY, 12, textW, weatherColor);
+        } else {
+            String noConditions = I18n.format("gui.mobtracker.noSpawnConditions");
+            textY = drawWrappedString(fontRenderer, noConditions, condsX, textY, 12, textW, 0xFFAAAA);
+        }
+
+        int biomesCount = spawnConditions.biomes.size();
+        boolean hasBiomes = biomesCount > 0;
+        boolean isUnknownBiome = biomesCount == 1 && spawnConditions.biomes.get(0).equals("unknown");
+        boolean isAnyBiome = biomesCount == 1 && spawnConditions.biomes.get(0).equals("any");
+
+        // Deduplicate biomes
+        List<String> uniqueBiomes = new ArrayList<>(new LinkedHashSet<>(spawnConditions.biomes));
+        int uniqueBiomesCount = uniqueBiomes.size();
+
+        String biomesLabel;
+        if (!hasBiomes) {
+            biomesLabel = I18n.format("gui.mobtracker.biomes.none");
+        } else if (isUnknownBiome) {
+            biomesLabel = I18n.format("gui.mobtracker.biomes.unknown");
+        } else if (isAnyBiome) {
+            biomesLabel = I18n.format("gui.mobtracker.biomes.any");
+        } else {
+            biomesLabel = I18n.format("gui.mobtracker.biomes", uniqueBiomesCount);
+        }
+
+        int biomesLabelY = textY;
+        textY = drawSingleString(fontRenderer, biomesLabel, condsX, textY, 12, biomeColor);
+
+        List<String> hints = spawnConditions.hints;
+        if (!hints.isEmpty()) {
+            textY += 10;
+            textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.hintsHeader"), textX, textY, 10, textW, color);
+
+            for (String hint : hints) textY = drawWrappedString(fontRenderer, "- " + hint, textX + 6, textY, 12, textW, hintColor);
+        }
+
+        // Show biomes tooltip last, so it appears on top
+        // TODO: tooltip is still under mob preview and I18n button
+        boolean showTooltip = textY > biomesLabelY && hasBiomes && !isUnknownBiome && !isAnyBiome &&
+            mouseX >= condsX && mouseX <= condsX + fontRenderer.getStringWidth(biomesLabel) &&
+            mouseY >= biomesLabelY && mouseY <= biomesLabelY + 12;
+        if (showTooltip) {
+            // Sort biomes: minecraft: first, then alphabetically by localized name
+            List<String> sortedBiomes = new ArrayList<>(uniqueBiomes);
+            sortedBiomes.sort((a, b) -> {
+                boolean aMinecraft = a.startsWith("minecraft:");
+                boolean bMinecraft = b.startsWith("minecraft:");
+                if (aMinecraft != bMinecraft) return aMinecraft ? -1 : 1;
+
+                return translateBiomeName(a).compareToIgnoreCase(translateBiomeName(b));
+            });
+
+            // Translate biome names for display
+            List<String> localizedBiomes = sortedBiomes.stream()
+                .map(this::translateBiomeName)
+                .collect(Collectors.toList());
+
+            // Screen edge padding
+            int edgePadding = panelH / 20;
+
+            // Calculate multi-column layout to show all biomes
+            int lineHeight = 10;
+            int columnPadding = 8;
+            int availableHeight = height - edgePadding * 2; // leave padding on top and bottom
+            int maxLinesPerColumn = Math.max(1, availableHeight / lineHeight);
+
+            // Calculate how many columns we need
+            int totalBiomes = localizedBiomes.size();
+            int numColumns = (int) Math.ceil((double) totalBiomes / maxLinesPerColumn);
+
+            // Calculate column widths based on content
+            List<Integer> columnWidths = new ArrayList<>();
+            for (int col = 0; col < numColumns; col++) {
+                int startIdx = col * maxLinesPerColumn;
+                int endIdx = Math.min(startIdx + maxLinesPerColumn, totalBiomes);
+                int maxWidth = 0;
+                for (int i = startIdx; i < endIdx; i++) {
+                    int w = fontRenderer.getStringWidth(localizedBiomes.get(i));
+                    if (w > maxWidth) maxWidth = w;
+                }
+                columnWidths.add(maxWidth);
+            }
+
+            // Calculate total tooltip dimensions
+            int tooltipW = columnWidths.stream().mapToInt(Integer::intValue).sum() + columnPadding * (numColumns + 1);
+            int linesInTooltip = Math.min(totalBiomes, maxLinesPerColumn);
+            int tooltipH = linesInTooltip * lineHeight + 6;
+
+            // Clamp tooltip width to screen width
+            int maxTooltipW = width - 8;
+            if (tooltipW > maxTooltipW) tooltipW = maxTooltipW;
+
+            // Position tooltip: prefer top-left of cursor, then try other positions if it overflows
+            int boxX = mouseX - tooltipW - 12;
+            if (boxX < edgePadding) {
+                // Try right of cursor if left doesn't fit
+                boxX = mouseX + 12;
+                if (boxX + tooltipW > width - edgePadding) {
+                    // Clamp to screen edge with padding
+                    boxX = edgePadding;
+                }
+            }
+
+            // Position vertically: prefer above cursor, then below if it overflows
+            int boxY = mouseY - tooltipH - 12;
+            if (boxY < edgePadding) {
+                // Try below cursor if above doesn't fit
+                boxY = mouseY + 12;
+                if (boxY + tooltipH > height - edgePadding) {
+                    // Clamp to screen edge with padding
+                    boxY = edgePadding;
+                }
+            }
+
+            // Draw border and background
+            drawRect(boxX - 1, boxY - 1, boxX + tooltipW + 1, boxY + tooltipH + 1, 0xFF505050);
+            drawRect(boxX, boxY, boxX + tooltipW, boxY + tooltipH, 0xF0100010);
+
+            // Draw biomes in columns
+            int xOffset = boxX + columnPadding;
+            for (int col = 0; col < numColumns; col++) {
+                int startIdx = col * maxLinesPerColumn;
+                int endIdx = Math.min(startIdx + maxLinesPerColumn, totalBiomes);
+                for (int i = startIdx; i < endIdx; i++) {
+                    int row = i - startIdx;
+                    fontRenderer.drawString(localizedBiomes.get(i), xOffset, boxY + 3 + row * lineHeight, 0xDDDDDD);
+                }
+                if (col < columnWidths.size()) {
+                    xOffset += columnWidths.get(col) + columnPadding;
+                }
+            }
         }
     }
 
@@ -391,9 +547,9 @@ public class GuiMobTracker extends GuiScreen {
         drawRect(x - 1, y - 1, x + size + 1, y + size + 1, entityBorderColor);
         drawRect(x, y, x + size, y + size, entityBgColor);
 
-        // Calculate scale based on entity height - TODO: get length/depth too for animal-like mobs
-        // Scale works great for humanoid mobs, but not the ones that are long or flat-ish/cube-ish (or lie about their size).
-        float scale = size / Math.max(entity.height, entity.width) / 1.5f;
+        // Calculate scale based on entity's largest dimension (width, height/length)
+        float maxDimension = Math.max(1.0f, Math.max(entity.height, entity.width));
+        float scale = size / maxDimension / 1.5f;
 
         // Center position
         int centerX = x + size / 2;
@@ -512,8 +668,17 @@ public class GuiMobTracker extends GuiScreen {
         }
 
         private void rebuildFiltered() {
+            String filterLower = this.filter.toLowerCase();
+
+            // Filter by both raw ID and i18n name
             List<ResourceLocation> base = all.stream()
-                .filter(id -> id.toString().toLowerCase().contains(this.filter))
+                .filter(id -> {
+                    if (id.toString().toLowerCase().contains(filterLower)) return true;
+
+                    String i18nName = tracker.formatEntityName(id, true).toLowerCase();
+
+                    return i18nName.contains(filterLower);
+                })
                 .collect(Collectors.toList());
 
             List<ResourceLocation> trackedTop = base.stream().filter(SpawnTrackerManager::isTracked).collect(Collectors.toList());
@@ -523,18 +688,15 @@ public class GuiMobTracker extends GuiScreen {
             filteredSortedRaw.clear();
             filteredSortedI18n.clear();
 
+            // Count occurrences of each i18n name to detect duplicates (across all entries)
+            Map<String, Integer> i18nNameCounts = new HashMap<>();
+            for (ResourceLocation id : base) {
+                String i18nName = tracker.formatEntityName(id, true);
+                i18nNameCounts.merge(i18nName, 1, Integer::sum);
+            }
+
             // Helper to create entries with disambiguation for duplicates
-            java.util.function.BiConsumer<List<ResourceLocation>, Boolean> buildEntries = (ids, isTracked) -> {
-                // Count occurrences of each i18n name to detect duplicates
-                Map<String, Integer> i18nNameCounts = new HashMap<>();
-                for (ResourceLocation id : ids) {
-                    String i18nName = tracker.formatEntityName(id, true);
-                    i18nNameCounts.merge(i18nName, 1, Integer::sum);
-                }
-
-                // Track how many times we've seen each duplicate name
-                Map<String, Integer> i18nNameSeen = new HashMap<>();
-
+            BiConsumer<List<ResourceLocation>, Boolean> buildEntries = (ids, isTracked) -> {
                 List<MobEntry> rawEntries = new ArrayList<>();
                 List<MobEntry> i18nEntries = new ArrayList<>();
 
@@ -543,11 +705,7 @@ public class GuiMobTracker extends GuiScreen {
                     String i18nName = tracker.formatEntityName(id, true);
 
                     // If this i18n name appears multiple times, append the entity ID to disambiguate
-                    if (i18nNameCounts.get(i18nName) > 1) {
-                        int seen = i18nNameSeen.getOrDefault(i18nName, 0) + 1;
-                        i18nNameSeen.put(i18nName, seen);
-                        i18nName = i18nName + " (" + id.toString() + ")";
-                    }
+                    if (i18nNameCounts.get(i18nName) > 1) i18nName = i18nName + " (" + id.toString() + ")";
 
                     rawEntries.add(new MobEntry(rawName, id));
                     i18nEntries.add(new MobEntry(i18nName, id));
@@ -561,30 +719,11 @@ public class GuiMobTracker extends GuiScreen {
                 filteredSortedI18n.addAll(i18nEntries);
             };
 
+            // Build tracked entries first (they appear at top, sorted within themselves)
             buildEntries.accept(trackedTop, true);
-            int trackedCountRaw = filteredSortedRaw.size();
-            int trackedCountI18n = filteredSortedI18n.size();
 
+            // Then build non-tracked entries (sorted within themselves)
             buildEntries.accept(rest, false);
-
-            // Re-sort only the non-tracked portion (tracked entries stay at top)
-            if (trackedCountRaw < filteredSortedRaw.size()) {
-                List<MobEntry> trackedRaw = new ArrayList<>(filteredSortedRaw.subList(0, trackedCountRaw));
-                List<MobEntry> restRaw = new ArrayList<>(filteredSortedRaw.subList(trackedCountRaw, filteredSortedRaw.size()));
-                restRaw.sort((a, b) -> a.displayName.compareToIgnoreCase(b.displayName));
-                filteredSortedRaw.clear();
-                filteredSortedRaw.addAll(trackedRaw);
-                filteredSortedRaw.addAll(restRaw);
-            }
-
-            if (trackedCountI18n < filteredSortedI18n.size()) {
-                List<MobEntry> trackedI18n = new ArrayList<>(filteredSortedI18n.subList(0, trackedCountI18n));
-                List<MobEntry> restI18n = new ArrayList<>(filteredSortedI18n.subList(trackedCountI18n, filteredSortedI18n.size()));
-                restI18n.sort((a, b) -> a.displayName.compareToIgnoreCase(b.displayName));
-                filteredSortedI18n.clear();
-                filteredSortedI18n.addAll(trackedI18n);
-                filteredSortedI18n.addAll(restI18n);
-            }
         }
 
         // Helper to return current display list depending on i18n setting
@@ -706,13 +845,18 @@ public class GuiMobTracker extends GuiScreen {
                 if (isSel) Gui.drawRect(x, drawY, x + w - 6, drawY + 12, 0x40FFFFFF);
 
                 MobEntry entry = displayList.get(listIndex);
-                fontRenderer.drawString(entry.displayName, x + 4, drawY + 2, isSel ? 0xFFFFA0 : 0xFFFFFF);
+                String text = entry.displayName;
+                int maxWidth = w - 10;
+                String elided = fontRenderer.trimStringToWidth(text, maxWidth - fontRenderer.getStringWidth("…"));
+                if (!elided.equals(text)) elided += "…";
+                fontRenderer.drawString(elided, x + 4, drawY + 2, isSel ? 0xFFFFA0 : 0xFFFFFF);
 
                 if (SpawnTrackerManager.isTracked(entry.id)) {
                     float scale = 2.0f;
                     int starX = (int) ((x + w - 16) / scale);
                     int starY = (int) ((drawY / scale)) - 1;
 
+                    // TODO: the star looks a bit ugly due to lack of anti-aliasing
                     GlStateManager.pushMatrix();
                     GlStateManager.scale(scale, scale, scale);
                     fontRenderer.drawString("★", starX, starY, 0xFFD700);

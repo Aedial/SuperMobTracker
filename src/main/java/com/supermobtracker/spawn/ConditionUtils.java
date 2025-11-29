@@ -31,7 +31,6 @@ public final class ConditionUtils {
     public static final String HINT_BIOME = I18n.translateToLocal("gui.mobtracker.hint.biome");
     public static final String HINT_TIME = I18n.translateToLocal("gui.mobtracker.hint.time");
     public static final String HINT_WEATHER = I18n.translateToLocal("gui.mobtracker.hint.weather");
-    public static final String HINT_FIRST_FAIL = I18n.translateToLocal("gui.mobtracker.hint.firstfail");
 
     /** Number of stability checks to perform */
     public static final int STABILITY_CHECKS = 9;

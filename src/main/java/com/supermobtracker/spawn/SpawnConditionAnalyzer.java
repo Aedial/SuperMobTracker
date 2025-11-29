@@ -77,6 +77,9 @@ public class SpawnConditionAnalyzer {
     // Light levels to probe for finding first valid sample
     private static final List<Integer> PROBE_LIGHT_LEVELS = Arrays.asList(0, 1, 7, 12, 14, 15);
 
+    // Native biome cache
+    private static final Map<ResourceLocation, List<String>> NATIVE_BIOME_CACHE = new HashMap<>();
+
     // Entity instance cache
     private Map<ResourceLocation, EntityLiving> entityInstanceCache = new HashMap<>();
 
@@ -310,7 +313,10 @@ public class SpawnConditionAnalyzer {
     }
 
     public boolean isNeutral(ResourceLocation entityId) {
-        return false; // FIXME: 1.12 lacks direct neutral type
+        // FIXME: 1.12 lacks a direct neutral creature type. Neutral behavior (e.g., wolves, endermen,
+        // polar bears, zombie pigmen) is determined by per-entity logic, not a type flag.
+        // A proper implementation would require maintaining a hardcoded list of known neutral mobs.
+        return false;
     }
 
     public boolean isHostile(ResourceLocation entityId) {
@@ -329,7 +335,10 @@ public class SpawnConditionAnalyzer {
     }
 
     public boolean cannotDespawn(ResourceLocation entityId) {
-        return false; // FIXME: implement
+        // FIXME: In 1.12, despawn behavior is controlled by EntityLiving.canDespawn() and
+        // persistenceRequired flag, both of which depend on entity instance state (e.g., being
+        // name-tagged, interacted with). Without a live entity in the world, we cannot determine this.
+        return false;
     }
 
     public boolean isTameable(ResourceLocation entityId) {
@@ -361,11 +370,12 @@ public class SpawnConditionAnalyzer {
             EntityLiving entity = getEntityInstance(entityId);
             if (entity == null) return null;
 
-            // Try to get native biomes from the entity
+            // Get native biomes from the entity spawn tables
             List<String> nativeBiomes = getNativeBiomes(entityId, entry.getEntityClass());
-            boolean hasNativeBiomes = nativeBiomes != null && !nativeBiomes.isEmpty();
-
-            List<String> biomes = hasNativeBiomes ? nativeBiomes : ALL_BIOME_NAMES;
+            if (nativeBiomes == null || nativeBiomes.isEmpty()) {
+                // Entities without native biomes cannot spawn naturally
+                return null;
+            }
 
             List<String> groundBlocks;
             if (isFlying(entityId)) {
@@ -376,15 +386,14 @@ public class SpawnConditionAnalyzer {
                 groundBlocks = new ArrayList<>(GROUND_BLOCKS);
             }
 
-            SpawnConditions result = computeSpawnConditions(entity, biomes, hasNativeBiomes, groundBlocks, PROBE_LIGHT_LEVELS);
+            SpawnConditions result = computeSpawnConditions(entity, nativeBiomes, groundBlocks, PROBE_LIGHT_LEVELS);
             if (result == null) {
                 List<Integer> yLevels = Arrays.asList(PROBE_Y_LEVELS.get(0), PROBE_Y_LEVELS.get(PROBE_Y_LEVELS.size() - 1));
                 List<String> timeOfDay = isHostile(entityId) ? Arrays.asList("night") : Arrays.asList("day");
                 List<String> weather = Arrays.asList("clear");
 
                 result = new SpawnConditions(
-                    hasNativeBiomes ? biomes : Arrays.asList("unknown"),
-                    groundBlocks, PROBE_LIGHT_LEVELS, yLevels, timeOfDay, weather, null
+                    nativeBiomes, groundBlocks, PROBE_LIGHT_LEVELS, yLevels, timeOfDay, weather, null
                 );
             }
 
@@ -397,57 +406,54 @@ public class SpawnConditionAnalyzer {
         }
     }
 
+    private void createNativeBiomesCache() {
+        for (Biome biome : ALL_BIOMES) {
+            for (EnumCreatureType type : EnumCreatureType.values()) {
+                List<Biome.SpawnListEntry> entries = biome.getSpawnableList(type);
+                for (Biome.SpawnListEntry entry : entries) {
+                    ResourceLocation entityId = EntityList.getKey(entry.entityClass);
+                    if (entityId != null) {
+                        NATIVE_BIOME_CACHE.computeIfAbsent(entityId, k -> new ArrayList<>())
+                            .add(biome.getRegistryName().toString());
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Get native spawn biomes for an entity from the biome spawn lists.
      */
     private List<String> getNativeBiomes(ResourceLocation entityId, Class<?> entityClass) {
-        List<String> nativeBiomes = new ArrayList<>();
-        EnumCreatureType creatureType = CREATURE_TYPE_CACHE.get(entityId);
+        if (NATIVE_BIOME_CACHE.isEmpty()) createNativeBiomesCache();
 
-        if (creatureType == null) return null;
-
-        // TODO: maintain a static cache of native biomes per entity to avoid recomputing every time
-        for (Biome biome : ALL_BIOMES) {
-            List<Biome.SpawnListEntry> spawnList = biome.getSpawnableList(creatureType);
-            for (Biome.SpawnListEntry spawnEntry : spawnList) {
-                if (spawnEntry.entityClass.equals(entityClass)) {
-                    nativeBiomes.add(biome.getRegistryName().toString());
-                    break;
-                }
-            }
-        }
-
-        return nativeBiomes.isEmpty() ? null : nativeBiomes;
+        List<String> nativeBiomes = NATIVE_BIOME_CACHE.get(entityId);
+        return nativeBiomes != null ? nativeBiomes : new ArrayList<>();
     }
 
     /**
-     * Compute spawn conditions for an entity.
+     * Compute spawn conditions for an entity with native biomes.
      */
-    private SpawnConditions computeSpawnConditions(EntityLiving entity, List<String> biomes, boolean nativeBiomes,
+    private SpawnConditions computeSpawnConditions(EntityLiving entity, List<String> biomes,
                                                    List<String> groundBlocks, List<Integer> lightLevels) {
         SimulatedWorld simulatedWorld = SimulatedWorld.fromReal(entity.world);
         simulatedWorld.dimension = entity.world.provider.getDimensionType().getName().toLowerCase();
 
         ConditionRefiner refiner = new ConditionRefiner(entity.getClass(), simulatedWorld);
-        SpawnConditions result = refiner.findValidConditions(biomes, nativeBiomes, groundBlocks, lightLevels, PROBE_Y_LEVELS);
+        SpawnConditions result = refiner.findValidConditions(biomes, groundBlocks, lightLevels, PROBE_Y_LEVELS);
 
         if (result != null) {
-            if (nativeBiomes) {
-                return new SpawnConditions(
-                    biomes, result.groundBlocks, result.lightLevels, result.yLevels, result.timeOfDay, result.weather, result.hints
-                );
-            }
-
-            return result;
+            return new SpawnConditions(
+                biomes, result.groundBlocks, result.lightLevels, result.yLevels, result.timeOfDay, result.weather, result.hints
+            );
         }
 
         List<Integer> narrowedLight = refiner.refineLightLevels(lightLevels);
         List<Integer> yLevels = new ArrayList<>();
         List<String> timeOfDay = Arrays.asList("unknown");
         List<String> weather = Arrays.asList("unknown");
-        List<String> resultBiomes = nativeBiomes ? biomes : Arrays.asList("unknown");
 
-        return new SpawnConditions(resultBiomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null);
+        return new SpawnConditions(biomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null);
     }
 
     public boolean hasResult() {

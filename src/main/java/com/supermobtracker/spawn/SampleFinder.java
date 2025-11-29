@@ -171,8 +171,6 @@ public class SampleFinder {
             if (lastQueriedConditions.getOrDefault("weather", false)) hints.add(HINT_WEATHER);
         }
 
-        hints.add(HINT_FIRST_FAIL);
-
         return new SpawnConditionAnalyzer.SpawnConditions(
             failBiomes, failGround, narrowedLight, emptyY, time, weather, hints
         );

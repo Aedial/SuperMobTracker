@@ -7,6 +7,25 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Keep a Changelog: https://keepachangelog.com/en/1.1.0/
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
+
+## [0.1.1] - 2025-11-29
+### Added
+- Right-click to clear mob filter text box.
+
+### Fixed
+- Correct spawn condition analysis for mobs that cannot spawn naturally.
+- Fix JER GUI staying on page 1 when opening from mob tracker GUI.
+- Fix mob search not using localized names for matching, in Localized mode.
+- Fix mobs not being filtered by localized names (now they match both localized and unlocalized names).
+- Make the Biomes tooltip cleaner.
+- Correctly localize ground block names in spawn conditions panel.
+- Correctly localize biome names in spawn conditions panel.
+
+### Technical
+- Remove biome expansion logic. Mobs without a native biome will be considered to not spawn naturally.
+- Cache native biomes for each mob to avoid repeated expensive lookups.
+
+
 ## [0.1.0] - 2025-11-28
 ### Added
 - GUI accessible via keybinding (default N) or Inventory button.
