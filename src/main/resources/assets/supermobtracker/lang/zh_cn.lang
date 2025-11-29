@@ -16,6 +16,12 @@ gui.supermobtracker.i18nIDs.off=ID显示：原始
 gui.mobtracker.separator=、
 gui.mobtracker.noMobSelected=从列表中选择一个生物
 gui.mobtracker.noSpawnData=无可用生成数据
+gui.mobtracker.cannotSpawnNaturally=该实体不会自然生成。
+gui.mobtracker.cannotSpawnNaturallyHint=可能只能通过刷怪箱、命令或者特殊游戏机制生成（例如Boss召唤）。
+gui.mobtracker.analysisCrashed=生成分析失败。
+gui.mobtracker.analysisCrashedHint=分析该实体的生成条件时发生错误。
+gui.mobtracker.noSpawnConditions=无法确定生成条件；可能不会在此维度生成。
+
 
 gui.mobtracker.entityName=名称：%s
 gui.mobtracker.entityId=ID：%s
@@ -69,4 +75,3 @@ gui.mobtracker.hint.ground=可能需要特定地面方块。
 gui.mobtracker.hint.biome=可能需要特定生物群系。
 gui.mobtracker.hint.time=可能需要特定时间条件。
 gui.mobtracker.hint.weather=可能需要特定天气条件。
-gui.mobtracker.hint.firstfail=无法确定生成条件；可能不会在此维度生成。
