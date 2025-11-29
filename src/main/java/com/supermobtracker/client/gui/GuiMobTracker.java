@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.Vector;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-
 import org.lwjgl.input.Mouse;
 
 import net.minecraft.client.resources.I18n;
@@ -27,12 +26,12 @@ import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityHanging;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.biome.Biome;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.client.ClientSettings;
@@ -248,6 +247,7 @@ public class GuiMobTracker extends GuiScreen {
     private String translateBlockName(String blockName) {
         // Try standard block translation keys
         String[] keys = {
+            blockName,
             "tile." + blockName + ".name",
             "tile.minecraft." + blockName + ".name",
             "block.minecraft." + blockName
@@ -426,6 +426,8 @@ public class GuiMobTracker extends GuiScreen {
             biomesLabel = I18n.format("gui.mobtracker.biomes.unknown");
         } else if (isAnyBiome) {
             biomesLabel = I18n.format("gui.mobtracker.biomes.any");
+        } else if (uniqueBiomesCount == 1) {
+            biomesLabel = I18n.format("gui.mobtracker.biomes", translateBiomeName(uniqueBiomes.get(0)));
         } else {
             biomesLabel = I18n.format("gui.mobtracker.biomes", uniqueBiomesCount);
         }
@@ -443,7 +445,8 @@ public class GuiMobTracker extends GuiScreen {
 
         // Show biomes tooltip last, so it appears on top
         // TODO: tooltip is still under mob preview and I18n button
-        boolean showTooltip = textY > biomesLabelY && hasBiomes && !isUnknownBiome && !isAnyBiome &&
+        // TODO: copy tooltip to clipboard on click
+        boolean showTooltip = textY > biomesLabelY && uniqueBiomesCount > 1 &&
             mouseX >= condsX && mouseX <= condsX + fontRenderer.getStringWidth(biomesLabel) &&
             mouseY >= biomesLabelY && mouseY <= biomesLabelY + 12;
         if (showTooltip) {
@@ -462,7 +465,7 @@ public class GuiMobTracker extends GuiScreen {
                 .map(this::translateBiomeName)
                 .collect(Collectors.toList());
 
-            // Screen edge padding
+            // Screen edge padding (5% of height)
             int edgePadding = panelH / 20;
 
             // Calculate multi-column layout to show all biomes

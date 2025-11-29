@@ -137,7 +137,7 @@ public class ConditionExpander {
 
         world.groundBlock = sample.ground;
 
-        if (allValid.size() == candidateGroundBlocks.size() && !allValid.isEmpty()) return Arrays.asList("any");
+        if (allValid.size() == candidateGroundBlocks.size() && !allValid.isEmpty()) return Arrays.asList("gui.mobtracker.any");
 
         return allValid.isEmpty() ? Arrays.asList(sample.ground) : allValid;
     }

@@ -10,6 +10,8 @@ import net.minecraft.util.text.translation.I18n;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.world.World;
 
+import com.supermobtracker.config.ModConfig;
+
 /**
  * Shared utilities for spawn condition analysis.
  */
@@ -32,8 +34,8 @@ public final class ConditionUtils {
     public static final String HINT_TIME = I18n.translateToLocal("gui.mobtracker.hint.time");
     public static final String HINT_WEATHER = I18n.translateToLocal("gui.mobtracker.hint.weather");
 
-    /** Number of stability checks to perform */
-    public static final int STABILITY_CHECKS = 9;
+    /** Whether profiling is enabled (Java arg) */
+    public static final boolean PROFILING_ENABLED = Boolean.getBoolean("supermobtracker.profile");
 
     /**
      * Translate a list of strings with an optional prefix.
@@ -77,40 +79,23 @@ public final class ConditionUtils {
     }
 
     /**
-     * Check if an entity can spawn at a position (single check).
+     * Check if an entity can spawn at a position with retries for random spawn checks.
+     * Returns true if spawning succeeds at least once within the configured retry limit.
      */
     public static boolean canSpawn(Class<? extends EntityLiving> entityClass,
                                    SpawnConditionAnalyzer.SimulatedWorld world,
                                    double x, int y, double z) {
-        EntityLiving entity = createEntity(entityClass, world);
-        if (entity == null) return false;
+        int maxRetries = ModConfig.clientSpawnCheckRetries;
 
-        entity.setPosition(x, y, z);
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            EntityLiving entity = createEntity(entityClass, world);
+            if (entity == null) return false;
 
-        return entity.getCanSpawnHere();
-    }
-
-    /**
-     * Check if an entity can spawn stably at a position (multiple checks).
-     */
-    public static boolean canSpawnStably(Class<? extends EntityLiving> entityClass,
-                                         SpawnConditionAnalyzer.SimulatedWorld world,
-                                         double x, int y, double z) {
-        EntityLiving entity = createEntity(entityClass, world);
-        if (entity == null) return false;
-
-        entity.setPosition(x, y, z);
-        if (!entity.getCanSpawnHere()) return false;
-
-        for (int i = 0; i < STABILITY_CHECKS; i++) {
-            EntityLiving retry = createEntity(entityClass, world);
-            if (retry == null) return false;
-
-            retry.setPosition(x, y, z);
-            if (!retry.getCanSpawnHere()) return false;
+            entity.setPosition(x, y, z);
+            if (entity.getCanSpawnHere()) return true;
         }
 
-        return true;
+        return false;
     }
 
     /**

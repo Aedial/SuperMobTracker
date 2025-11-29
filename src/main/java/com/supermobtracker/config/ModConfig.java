@@ -15,12 +15,14 @@ public class ModConfig {
     public static boolean serverEnableTracking = true; // can disable tracking server-wide
     public static double clientDetectionRange = 64.0; // range for spawn event consideration client side
     public static boolean clientI18nNames = true; // localize names in UI/HUD
+    public static int clientSpawnCheckRetries = 100; // retry count for random spawn checks
     public static List<String> clientTrackedEntityIds = new ArrayList<>();
     public static String clientLastSelectedEntity = ""; // last selected entity in mob tracker GUI
 
     private static final String enableTrackingDesc = I18n.translateToLocal("config.supermobtracker.server.enableTracking.desc");
     private static final String detectionRangeDesc = I18n.translateToLocal("config.supermobtracker.client.detectionRange.desc");
     private static final String i18nNamesDesc = I18n.translateToLocal("config.supermobtracker.client.i18nNames.desc");
+    private static final String spawnCheckRetriesDesc = I18n.translateToLocal("config.supermobtracker.client.spawnCheckRetries.desc");
     private static final String trackedEntityIdsDesc = I18n.translateToLocal("config.supermobtracker.client.trackedEntityIds.desc");
     private static final String lastSelectedEntityDesc = I18n.translateToLocal("config.supermobtracker.client.lastSelectedEntity.desc");
 
@@ -45,6 +47,7 @@ public class ModConfig {
         // Client settings
         clientDetectionRange = config.getFloat("detectionRange", "client", (float) clientDetectionRange, 8f, 256f, detectionRangeDesc);
         clientI18nNames = config.getBoolean("i18nNames", "client", clientI18nNames, i18nNamesDesc);
+        clientSpawnCheckRetries = config.getInt("spawnCheckRetries", "client", clientSpawnCheckRetries, 1, 1000, spawnCheckRetriesDesc);
         clientLastSelectedEntity = config.getString("lastSelectedEntity", "client", clientLastSelectedEntity, lastSelectedEntityDesc);
 
         clientTrackedEntityIds = new ArrayList<>();

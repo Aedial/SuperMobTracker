@@ -6,6 +6,7 @@ key.categories.supermobtracker=Super Mob Tracker
 config.supermobtracker.server.enableTracking.desc=Enable server-side tracking of mobs.
 config.supermobtracker.client.detectionRange.desc=Range in blocks to detect tracked mobs for glowing effect.
 config.supermobtracker.client.i18nNames.desc=Use localized names in the tracker GUI.
+config.supermobtracker.client.spawnCheckRetries.desc=Maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time.
 config.supermobtracker.client.trackedEntityIds.desc=List of entity IDs currently being tracked.
 config.supermobtracker.client.lastSelectedEntity.desc=Last selected entity in the mob tracker GUI.
 
@@ -21,7 +22,6 @@ gui.mobtracker.cannotSpawnNaturallyHint=It may only be obtained via spawners, co
 gui.mobtracker.analysisCrashed=Spawn analysis failed.
 gui.mobtracker.analysisCrashedHint=An error occurred while analyzing spawn conditions for this entity.
 gui.mobtracker.noSpawnConditions=Could not determine spawn; may not spawn in this dimension.
-
 
 gui.mobtracker.entityName=Name: %s
 gui.mobtracker.entityId=ID: %s

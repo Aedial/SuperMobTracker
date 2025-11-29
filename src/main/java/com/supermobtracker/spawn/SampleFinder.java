@@ -9,6 +9,8 @@ import java.util.Map;
 
 import net.minecraft.entity.EntityLiving;
 
+import com.supermobtracker.config.ModConfig;
+
 import static com.supermobtracker.spawn.ConditionUtils.*;
 
 /**
@@ -120,34 +122,21 @@ public class SampleFinder {
             for (Integer light : lightLevels) {
                 world.lightLevel = light;
 
-                EntityLiving entity = createEntity(entityClass, world);
-                if (entity == null) return null;
+                if (canSpawn(entityClass, world, 0.5, y, 0.5)) {
+                    world.getAndResetQueriedConditions();
+                    EntityLiving entity = createEntity(entityClass, world);
+                    if (entity == null) return null;
 
-                entity.setPosition(0.5, y, 0.5);
-                world.getAndResetQueriedConditions();
-                boolean canSpawn = entity.getCanSpawnHere();
-                lastQueriedConditions = world.getAndResetQueriedConditions();
+                    entity.setPosition(0.5, y, 0.5);
+                    entity.getCanSpawnHere();
+                    lastQueriedConditions = world.getAndResetQueriedConditions();
 
-                // FIXME: finding the first sample is incredibly flaky, could it be related to spawn chance? Some randomness somewhere.
-                if (canSpawn && isStable(y)) {
                     return new ValidSample(y, light, groundBlock, biomeId, lastQueriedConditions);
                 }
             }
         }
 
         return null;
-    }
-
-    private boolean isStable(int y) {
-        for (int i = 0; i < STABILITY_CHECKS; i++) {
-            EntityLiving retry = createEntity(entityClass, world);
-            if (retry == null) return false;
-
-            retry.setPosition(0.5, y, 0.5);
-            if (!retry.getCanSpawnHere()) return false;
-        }
-
-        return true;
     }
 
     /**

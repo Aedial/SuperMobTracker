@@ -16,9 +16,11 @@ import net.minecraft.entity.passive.EntityTameable;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.profiler.Profiler;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.world.DimensionType;
 import net.minecraft.world.EnumDifficulty;
 import net.minecraft.world.World;
@@ -30,6 +32,9 @@ import net.minecraft.world.storage.WorldInfo;
 import net.minecraft.world.storage.ISaveHandler;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import net.minecraftforge.fml.common.registry.EntityEntry;
+
+import com.supermobtracker.SuperMobTracker;
+import com.supermobtracker.spawn.ConditionUtils;
 
 
 /**
@@ -239,6 +244,81 @@ public class SpawnConditionAnalyzer {
         }
 
         @Override
+        public BlockPos getTopSolidOrLiquidBlock(BlockPos pos) {
+            queriedConditions.put("pos", true);
+            return pos;
+        }
+
+        @Override
+        public boolean canSeeSky(BlockPos pos) {
+            queriedConditions.put("pos", true);
+            return lightLevel >= 15;
+        }
+
+        @Override
+        public boolean canBlockSeeSky(BlockPos pos) {
+            queriedConditions.put("pos", true);
+            return lightLevel >= 15;
+        }
+
+        @Override
+        public boolean isSideSolid(BlockPos pos, EnumFacing side) {
+            queriedConditions.put("groundBlock", true);
+            return !groundBlock.equals("air");
+        }
+
+        @Override
+        public boolean isSideSolid(BlockPos pos, EnumFacing side, boolean _default) {
+            queriedConditions.put("groundBlock", true);
+            return !groundBlock.equals("air");
+        }
+
+        @Override
+        public List<AxisAlignedBB> getCollisionBoxes(Entity entityIn, AxisAlignedBB aabb) {
+            return new ArrayList<>();
+        }
+
+        @Override
+        public boolean collidesWithAnyBlock(AxisAlignedBB bbox) {
+            return false;
+        }
+
+        @Override
+        public boolean isAnyPlayerWithinRangeAt(double x, double y, double z, double range) {
+            return false;
+        }
+
+        @Override
+        public boolean isBlockLoaded(BlockPos pos) {
+            return true;
+        }
+
+        @Override
+        public boolean isBlockLoaded(BlockPos pos, boolean allowEmpty) {
+            return true;
+        }
+
+        @Override
+        public boolean isAreaLoaded(BlockPos center, int radius) {
+            return true;
+        }
+
+        @Override
+        public boolean isAreaLoaded(BlockPos center, int radius, boolean allowEmpty) {
+            return true;
+        }
+
+        @Override
+        public boolean isAreaLoaded(BlockPos from, BlockPos to) {
+            return true;
+        }
+
+        @Override
+        public boolean isAreaLoaded(BlockPos from, BlockPos to, boolean allowEmpty) {
+            return true;
+        }
+
+        @Override
         protected IChunkProvider createChunkProvider() {
             return new IChunkProvider() {
                 private Chunk blankChunk;
@@ -360,6 +440,7 @@ public class SpawnConditionAnalyzer {
      * @return SpawnConditions result, or null if analysis failed
      */
     public SpawnConditions analyze(ResourceLocation entityId) {
+        long startTime = System.nanoTime();
         lastError = null;
         lastResult = null;
 
@@ -399,9 +480,20 @@ public class SpawnConditionAnalyzer {
 
             lastResult = result;
 
+            if (ConditionUtils.PROFILING_ENABLED) {
+                long elapsed = System.nanoTime() - startTime;
+                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " took " + (elapsed / 1_000_000.0) + "ms");
+            }
+
             return result;
         } catch (Throwable t) {
             lastError = t;
+
+            if (ConditionUtils.PROFILING_ENABLED) {
+                long elapsed = System.nanoTime() - startTime;
+                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " failed after " + (elapsed / 1_000_000.0) + "ms: " + t.getMessage());
+            }
+
             return null;
         }
     }
@@ -439,6 +531,14 @@ public class SpawnConditionAnalyzer {
         SimulatedWorld simulatedWorld = SimulatedWorld.fromReal(entity.world);
         simulatedWorld.dimension = entity.world.provider.getDimensionType().getName().toLowerCase();
 
+        // TODO: make a biome to dimension mapping to check the correct dimension and show it to the user
+        // The idea => check every dimension:
+        // 1. If it contains a BiomeProviderSingle; use that as the only biome
+        // 2. If the BiomeProvider relies on a BiomeManager/allowedBiomes/getBiomesToSpawnIn(), rely on that,
+        // then check 100 random positions in that dimension to see if there are more biomes available.
+        // 3. If neither of the above, check 1k-10k random positions in that dimension to see what biomes are present.
+        // Random positions should use grids of 32x32 chunks, with findBiomePosition/areBiomesViable calls.
+        // It should be cached at first GUI open for performance.
         ConditionRefiner refiner = new ConditionRefiner(entity.getClass(), simulatedWorld);
         SpawnConditions result = refiner.findValidConditions(biomes, groundBlocks, lightLevels, PROBE_Y_LEVELS);
 

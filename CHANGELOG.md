@@ -8,6 +8,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [0.1.2] - 2025-11-30
+### Fixed
+- Fix Any not being localized for ground blocks in spawn conditions panel.
+- Fix(-ish) flaky spawn condition analysis for most mobs (only a few mobs remain flaky at default retry count).
+  -> For that, a retry count config option has been added (default 100).
+  -> Some mobs may still have sparce or missing conditions due to inherent randomness in their spawning logic. Refreshing the selection or increasing the retry count may help.
+
+## Changed
+- Single biome spawn condition now shows the biome name instead of count.
+
+
 ## [0.1.1] - 2025-11-29
 ### Added
 - Right-click to clear mob filter text box.
