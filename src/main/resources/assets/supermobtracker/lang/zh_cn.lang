@@ -23,7 +23,6 @@ gui.mobtracker.analysisCrashed=生成分析失败。
 gui.mobtracker.analysisCrashedHint=分析该实体的生成条件时发生错误。
 gui.mobtracker.noSpawnConditions=无法确定生成条件；可能不会在此维度生成。
 
-
 gui.mobtracker.entityName=名称：%s
 gui.mobtracker.entityId=ID：%s
 gui.mobtracker.entitySize=尺寸：%s x %s x %s
