@@ -6,6 +6,7 @@ key.categories.supermobtracker=超级生物追踪器
 config.supermobtracker.server.enableTracking.desc=启用服务端生物追踪。
 config.supermobtracker.client.detectionRange.desc=检测被追踪生物给予其发光效果的范围（以方块为单位）。
 config.supermobtracker.client.i18nNames.desc=在追踪器GUI中使用本地化名称。
+config.supermobtracker.client.spawnCheckRetries.desc=检查生成条件的最大重试次数。数值越高，越能有效处理随机生成条件，但会增加分析耗时。
 config.supermobtracker.client.trackedEntityIds.desc=当前正在追踪的生物ID列表。
 config.supermobtracker.client.lastSelectedEntity.desc=生物追踪器GUI中最后选中的实体。
 
