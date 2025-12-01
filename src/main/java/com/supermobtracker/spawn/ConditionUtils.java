@@ -1,13 +1,13 @@
 package com.supermobtracker.spawn;
 
-import java.util.Arrays;
-import java.util.List;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
-import net.minecraft.util.text.translation.I18n;
 import net.minecraft.entity.EntityLiving;
+import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.World;
 
 import com.supermobtracker.config.ModConfig;
@@ -34,8 +34,12 @@ public final class ConditionUtils {
     public static final String HINT_TIME = I18n.translateToLocal("gui.mobtracker.hint.time");
     public static final String HINT_WEATHER = I18n.translateToLocal("gui.mobtracker.hint.weather");
 
-    /** Whether profiling is enabled (Java arg) */
-    public static final boolean PROFILING_ENABLED = Boolean.getBoolean("supermobtracker.profile");
+    /** Whether profiling is enabled (Java arg). Can be temporarily suppressed. */
+    private static final boolean PROFILING_ARG = Boolean.getBoolean("supermobtracker.profile");
+    private static boolean profilingSuppressed = false;
+
+    public static boolean isProfilingEnabled() { return PROFILING_ARG && !profilingSuppressed; }
+    public static void suppressProfiling(boolean suppress) { profilingSuppressed = suppress; }
 
     /**
      * Translate a list of strings with an optional prefix.

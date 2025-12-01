@@ -7,6 +7,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Keep a Changelog: https://keepachangelog.com/en/1.1.0/
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
+## [0.1.3] - 2025-12-01
+### Added
+- Add /smtanalyze command to analyze mob spawn conditions and dimension-biome mapping.
+  - `/smtanalyze mobs [samples]` - Analyzes all mobs and records how long each takes to analyze. Results are separated into successful, failed (couldn't determine conditions), and crashed (threw exceptions). Each list is sorted slowest-first.
+  - `/smtanalyze dimension [samples] [extendedCount] [numGrids]` - Benchmarks the dimension-to-biome mapping system with per-dimension timing. Useful for tuning the sampling parameters if dimension detection is slow or inaccurate.
+  - `/smtanalyze` with no arguments runs all analyses with default parameters.
+- Add dimension inference based on biomes, as some mobs check for the dimension directly.
+
+### Fixed
+- Fix the mob spawn conditions that depend on dimension checks.
+
 
 ## [0.1.2] - 2025-11-30
 ### Fixed
