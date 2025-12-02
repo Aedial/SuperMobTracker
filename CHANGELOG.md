@@ -7,6 +7,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Keep a Changelog: https://keepachangelog.com/en/1.1.0/
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
+
+## [0.2.0] - 2025-12-02
+### Added
+- Add config option to select HUD position from 3x3 grid.
+- Add config option to tweak some misc HUD display settings.
+- Remember the filter text box contents when reopening the GUI.
+- Add proper button to open the GUI from inventory screen (temporary icon).
+
+### Fixed
+- Make HUD box much nicer.
+- Fix Z-priority issues with biomes tooltip.
+
+
 ## [0.1.3] - 2025-12-01
 ### Added
 - Add /smtanalyze command to analyze mob spawn conditions and dimension-biome mapping.

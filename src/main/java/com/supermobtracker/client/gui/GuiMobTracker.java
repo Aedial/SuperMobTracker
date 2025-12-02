@@ -54,6 +54,10 @@ public class GuiMobTracker extends GuiScreen {
     // Panel bounds for text clipping
     private int panelMaxY = Integer.MAX_VALUE;
 
+    // Biome tooltip data (set during drawRightPanel, rendered in drawBiomeTooltip)
+    private List<String> tooltipBiomes = null;
+    private int tooltipBiomesLabelX, tooltipBiomesLabelY, tooltipBiomesLabelW;
+
     private static final int entityBgColor = 0xFF404040;
     private static final int entityBorderColor = 0xFF808080;
     private static final int lightColor = 0xFFFFAA;
@@ -73,10 +77,11 @@ public class GuiMobTracker extends GuiScreen {
     public void initGui() {
         int leftWidth = Math.min(width / 2, 250);
         filterField = new GuiTextField(0, fontRenderer, 10, 10, leftWidth - 20, 14);
-        listWidget = new MobListWidget(10, 30, leftWidth - 20, height - 40, fontRenderer, this);
+        filterField.setText(ModConfig.getClientFilterText());
+        listWidget = new MobListWidget(10, 30, leftWidth - 20, height - 70, fontRenderer, this);
         this.buttonList.clear();
 
-        this.buttonList.add(new GuiButton(1, leftWidth + 10, height - 30, 80, 20, getI18nButtonString()));
+        this.buttonList.add(new GuiButton(1, 10, height - 30, leftWidth - 20, 20, getI18nButtonString()));
 
         // TODO: keep last spawn conditions around, so it doesn't regenerate constantly on window resize
         // Restore last selected entity
@@ -113,7 +118,9 @@ public class GuiMobTracker extends GuiScreen {
     @Override
     public void updateScreen() {
         filterField.updateCursorCounter();
-        listWidget.setFilter(filterField.getText());
+        String newFilter = filterField.getText();
+        listWidget.setFilter(newFilter);
+        ModConfig.setClientFilterText(newFilter);
     }
 
     @Override
@@ -136,6 +143,20 @@ public class GuiMobTracker extends GuiScreen {
         filterField.mouseClicked(mouseX, mouseY, mouseButton);
 
         if (mouseButton == 0) {
+            // Handle biomes label click - copy to clipboard
+            if (tooltipBiomes != null && !tooltipBiomes.isEmpty() &&
+                mouseX >= tooltipBiomesLabelX && mouseX <= tooltipBiomesLabelX + tooltipBiomesLabelW &&
+                mouseY >= tooltipBiomesLabelY && mouseY <= tooltipBiomesLabelY + 12) {
+                String biomeList = String.join("\n", tooltipBiomes);
+                GuiScreen.setClipboardString(biomeList);
+
+                String entityName = formatEntityName(selected, true);
+                String msg = I18n.format("gui.mobtracker.biomesCopied", entityName);
+                mc.player.sendMessage(new net.minecraft.util.text.TextComponentString(msg));
+
+                return;
+            }
+
             // Handle JEI button click
             if (jeiButtonVisible && selected != null &&
                 mouseX >= jeiButtonX && mouseX <= jeiButtonX + jeiButtonW &&
@@ -195,6 +216,9 @@ public class GuiMobTracker extends GuiScreen {
         drawRightPanel(mouseX, mouseY, partialTicks);
 
         super.drawScreen(mouseX, mouseY, partialTicks);
+
+        // Draw tooltip last, so it appears above everything (buttons, mob preview, etc.)
+        drawBiomeTooltip(mouseX, mouseY);
     }
 
     private int drawElidedString(FontRenderer renderer, String text, int x, int y, int lineHeight, int maxWidth, int color) {
@@ -522,13 +546,9 @@ public class GuiMobTracker extends GuiScreen {
             for (String hint : hints) textY = drawWrappedString(fontRenderer, "- " + hint, textX + 6, textY, 12, textW, hintColor);
         }
 
-        // Show biomes tooltip last, so it appears on top
-        // TODO: tooltip is still under mob preview and I18n button
-        // TODO: copy tooltip to clipboard on click
-        boolean showTooltip = textY > biomesLabelY && uniqueBiomesCount > 1 &&
-            mouseX >= condsX && mouseX <= condsX + fontRenderer.getStringWidth(biomesLabel) &&
-            mouseY >= biomesLabelY && mouseY <= biomesLabelY + 12;
-        if (showTooltip) {
+        // Store biome tooltip data for later rendering (after buttons are drawn)
+        tooltipBiomes = null;
+        if (uniqueBiomesCount > 1) {
             // Sort biomes: minecraft: first, then alphabetically by localized name
             List<String> sortedBiomes = new ArrayList<>(uniqueBiomes);
             sortedBiomes.sort((a, b) -> {
@@ -540,85 +560,93 @@ public class GuiMobTracker extends GuiScreen {
             });
 
             // Translate biome names for display
-            List<String> localizedBiomes = sortedBiomes.stream()
-                .map(this::translateBiomeName)
-                .collect(Collectors.toList());
+            tooltipBiomes = sortedBiomes.stream().map(this::translateBiomeName).collect(Collectors.toList());
+            tooltipBiomesLabelX = condsX;
+            tooltipBiomesLabelY = biomesLabelY;
+            tooltipBiomesLabelW = fontRenderer.getStringWidth(biomesLabel);
+        }
+    }
 
-            // Screen edge padding (5% of height)
-            int edgePadding = panelH / 20;
+    private void drawBiomeTooltip(int mouseX, int mouseY) {
+        if (tooltipBiomes == null || tooltipBiomes.isEmpty()) return;
 
-            // Calculate multi-column layout to show all biomes
-            int lineHeight = 10;
-            int columnPadding = 8;
-            int availableHeight = height - edgePadding * 2; // leave padding on top and bottom
-            int maxLinesPerColumn = Math.max(1, availableHeight / lineHeight);
+        boolean showTooltip = mouseX >= tooltipBiomesLabelX && mouseX <= tooltipBiomesLabelX + tooltipBiomesLabelW &&
+            mouseY >= tooltipBiomesLabelY && mouseY <= tooltipBiomesLabelY + 12;
+        if (!showTooltip) return;
 
-            // Calculate how many columns we need
-            int totalBiomes = localizedBiomes.size();
-            int numColumns = (int) Math.ceil((double) totalBiomes / maxLinesPerColumn);
+        int leftWidth = Math.min(width / 2, 250);
+        int panelH = height - 40;
 
-            // Calculate column widths based on content
-            List<Integer> columnWidths = new ArrayList<>();
-            for (int col = 0; col < numColumns; col++) {
-                int startIdx = col * maxLinesPerColumn;
-                int endIdx = Math.min(startIdx + maxLinesPerColumn, totalBiomes);
-                int maxWidth = 0;
-                for (int i = startIdx; i < endIdx; i++) {
-                    int w = fontRenderer.getStringWidth(localizedBiomes.get(i));
-                    if (w > maxWidth) maxWidth = w;
-                }
-                columnWidths.add(maxWidth);
+        // Screen edge padding (5% of height)
+        int edgePadding = panelH / 20;
+
+        // Calculate multi-column layout to show all biomes
+        int lineHeight = 10;
+        int columnPadding = 8;
+        int availableHeight = height - edgePadding * 2;
+        int maxLinesPerColumn = Math.max(1, availableHeight / lineHeight);
+
+        // Calculate how many columns we need
+        int totalBiomes = tooltipBiomes.size();
+        int numColumns = (int) Math.ceil((double) totalBiomes / maxLinesPerColumn);
+
+        // Calculate column widths based on content
+        List<Integer> columnWidths = new ArrayList<>();
+        for (int col = 0; col < numColumns; col++) {
+            int startIdx = col * maxLinesPerColumn;
+            int endIdx = Math.min(startIdx + maxLinesPerColumn, totalBiomes);
+            int maxWidth = 0;
+            for (int i = startIdx; i < endIdx; i++) {
+                int w = fontRenderer.getStringWidth(tooltipBiomes.get(i));
+                if (w > maxWidth) maxWidth = w;
             }
+            columnWidths.add(maxWidth);
+        }
 
-            // Calculate total tooltip dimensions
-            int tooltipW = columnWidths.stream().mapToInt(Integer::intValue).sum() + columnPadding * (numColumns + 1);
-            int linesInTooltip = Math.min(totalBiomes, maxLinesPerColumn);
-            int tooltipH = linesInTooltip * lineHeight + 6;
+        // Calculate total tooltip dimensions
+        int tooltipW = columnWidths.stream().mapToInt(Integer::intValue).sum() + columnPadding * (numColumns + 1);
+        int linesInTooltip = Math.min(totalBiomes, maxLinesPerColumn);
+        int tooltipH = linesInTooltip * lineHeight + 6;
 
-            // Clamp tooltip width to screen width
-            int maxTooltipW = width - 8;
-            if (tooltipW > maxTooltipW) tooltipW = maxTooltipW;
+        // Clamp tooltip width to screen width
+        int maxTooltipW = width - 8;
+        if (tooltipW > maxTooltipW) tooltipW = maxTooltipW;
 
-            // Position tooltip: prefer top-left of cursor, then try other positions if it overflows
-            int boxX = mouseX - tooltipW - 12;
-            if (boxX < edgePadding) {
-                // Try right of cursor if left doesn't fit
-                boxX = mouseX + 12;
-                if (boxX + tooltipW > width - edgePadding) {
-                    // Clamp to screen edge with padding
-                    boxX = edgePadding;
-                }
+        // Position tooltip: prefer top-left of cursor, then try other positions if it overflows
+        int boxX = mouseX - tooltipW - 12;
+        if (boxX < edgePadding) {
+            boxX = mouseX + 12;
+            if (boxX + tooltipW > width - edgePadding) boxX = edgePadding;
+        }
+
+        // Position vertically: prefer above cursor, then below if it overflows
+        int boxY = mouseY - tooltipH - 12;
+        if (boxY < edgePadding) {
+            boxY = mouseY + 12;
+            if (boxY + tooltipH > height - edgePadding) boxY = edgePadding;
+        }
+
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(0.0F, 0.0F, 400.0F); // ensure tooltip is on top
+
+        // Draw border and background
+        drawRect(boxX - 1, boxY - 1, boxX + tooltipW + 1, boxY + tooltipH + 1, 0xFF505050);
+        drawRect(boxX, boxY, boxX + tooltipW, boxY + tooltipH, 0xF0100010);
+
+        // Draw biomes in columns
+        int xOffset = boxX + columnPadding;
+        for (int col = 0; col < numColumns; col++) {
+            int startIdx = col * maxLinesPerColumn;
+            int endIdx = Math.min(startIdx + maxLinesPerColumn, totalBiomes);
+            for (int i = startIdx; i < endIdx; i++) {
+                int row = i - startIdx;
+                fontRenderer.drawString(tooltipBiomes.get(i), xOffset, boxY + 3 + row * lineHeight, 0xDDDDDD);
             }
-
-            // Position vertically: prefer above cursor, then below if it overflows
-            int boxY = mouseY - tooltipH - 12;
-            if (boxY < edgePadding) {
-                // Try below cursor if above doesn't fit
-                boxY = mouseY + 12;
-                if (boxY + tooltipH > height - edgePadding) {
-                    // Clamp to screen edge with padding
-                    boxY = edgePadding;
-                }
-            }
-
-            // Draw border and background
-            drawRect(boxX - 1, boxY - 1, boxX + tooltipW + 1, boxY + tooltipH + 1, 0xFF505050);
-            drawRect(boxX, boxY, boxX + tooltipW, boxY + tooltipH, 0xF0100010);
-
-            // Draw biomes in columns
-            int xOffset = boxX + columnPadding;
-            for (int col = 0; col < numColumns; col++) {
-                int startIdx = col * maxLinesPerColumn;
-                int endIdx = Math.min(startIdx + maxLinesPerColumn, totalBiomes);
-                for (int i = startIdx; i < endIdx; i++) {
-                    int row = i - startIdx;
-                    fontRenderer.drawString(localizedBiomes.get(i), xOffset, boxY + 3 + row * lineHeight, 0xDDDDDD);
-                }
-                if (col < columnWidths.size()) {
-                    xOffset += columnWidths.get(col) + columnPadding;
-                }
+            if (col < columnWidths.size()) {
+                xOffset += columnWidths.get(col) + columnPadding;
             }
         }
+        GlStateManager.popMatrix();
     }
 
     private void drawMobPreview(ResourceLocation id, int x, int y, int size, float rotationY) {
