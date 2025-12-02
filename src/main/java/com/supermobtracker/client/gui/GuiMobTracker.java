@@ -1,35 +1,30 @@
 package com.supermobtracker.client.gui;
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.Vector;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+
 import org.lwjgl.input.Mouse;
 
-import net.minecraft.client.resources.I18n;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityHanging;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
@@ -66,6 +61,7 @@ public class GuiMobTracker extends GuiScreen {
     private static final int groundColor = 0xAAFFAA;
     private static final int timeOfDayColor = 0xFFAAFF;
     private static final int weatherColor = 0xAABBFF;
+    private static final int dimensionColor = 0xFFDDAA;
     private static final int biomeColor = 0xAADDFF;
     private static final int hintColor = 0xFFAAAA;
 
@@ -268,13 +264,87 @@ public class GuiMobTracker extends GuiScreen {
      */
     private String translateBiomeName(String biomeRegistryName) {
         Biome biome = ForgeRegistries.BIOMES.getValue(new ResourceLocation(biomeRegistryName));
-        if (biome != null) {
-            String localizedName = biome.getBiomeName();
-            if (localizedName != null && !localizedName.isEmpty()) return localizedName;
+        if (biome == null) return biomeRegistryName;
+
+        // First try the biome's internal name - works for most mods including DivineRPG
+        // which set display names directly in BiomeProperties
+        String biomeName = biome.getBiomeName();
+        if (biomeName != null && !biomeName.isEmpty() && !biomeName.equals(biomeRegistryName)) {
+            // Check if the name looks like a valid display name (not a registry path)
+            // Valid display names typically don't contain colons or underscores
+            if (!biomeName.contains(":") && !biomeName.contains("_")) return biomeName;
         }
 
-        // Fallback: return the registry name
+        // Parse namespace and path from registry name string for translation lookup
+        String namespace = "minecraft";
+        String path = biomeRegistryName;
+        int colonIdx = biomeRegistryName.indexOf(':');
+        if (colonIdx >= 0) {
+            namespace = biomeRegistryName.substring(0, colonIdx);
+            path = biomeRegistryName.substring(colonIdx + 1);
+        }
+
+        // Try common translation key patterns used by mods
+        // Pattern 1: biome.<namespace>.<path> (common modded pattern)
+        String key1 = "biome." + namespace + "." + path;
+        String translated1 = I18n.format(key1);
+        if (!translated1.equals(key1)) return translated1;
+
+        // Pattern 2: biome.<namespace>:<path> (alternate pattern)
+        String key2 = "biome." + biomeRegistryName;
+        String translated2 = I18n.format(key2);
+        if (!translated2.equals(key2)) return translated2;
+
+        // Pattern 3: biome.<path>.name (some mods use this)
+        String key3 = "biome." + path + ".name";
+        String translated3 = I18n.format(key3);
+        if (!translated3.equals(key3)) return translated3;
+
+        // No translation found - return biome name or registry name so user knows what key to add
+        if (biomeName != null && !biomeName.isEmpty()) return biomeName;
+
         return biomeRegistryName;
+    }
+
+    /**
+     * Translates a dimension name to a localized display string.
+     * Tries various translation key patterns used by Minecraft and mods.
+     */
+    private String translateDimensionName(String dimName) {
+        if (dimName == null || dimName.isEmpty()) return "?";
+
+        // Parse namespace and path
+        String namespace = "minecraft";
+        String path = dimName;
+        int colonIdx = dimName.indexOf(':');
+        if (colonIdx >= 0) {
+            namespace = dimName.substring(0, colonIdx);
+            path = dimName.substring(colonIdx + 1);
+        }
+
+        // Try common translation key patterns
+        // Pattern 1: dimension.<namespace>.<path> (modded pattern)
+        String key1 = "dimension." + namespace + "." + path;
+        String translated1 = I18n.format(key1);
+        if (!translated1.equals(key1)) return translated1;
+
+        // Pattern 2: dimension.<path> (vanilla-style)
+        String key2 = "dimension." + path;
+        String translated2 = I18n.format(key2);
+        if (!translated2.equals(key2)) return translated2;
+
+        // Pattern 3: <namespace>.dimension.<path> (alternate modded)
+        String key3 = namespace + ".dimension." + path;
+        String translated3 = I18n.format(key3);
+        if (!translated3.equals(key3)) return translated3;
+
+        // Pattern 4: dimension.<namespace>:<path>
+        String key4 = "dimension." + dimName;
+        String translated4 = I18n.format(key4);
+        if (!translated4.equals(key4)) return translated4;
+
+        // No translation found - return raw name so user knows what key to add
+        return dimName;
     }
 
     private void drawRightPanel(int mouseX, int mouseY, float partialTicks) {
@@ -378,14 +448,8 @@ public class GuiMobTracker extends GuiScreen {
 
         int condsX = textX + 6;
 
-        boolean hasLightLevels = !spawnConditions.lightLevels.isEmpty();
-        boolean hasYLevels = !spawnConditions.yLevels.isEmpty();
-        boolean hasGroundBlocks = !spawnConditions.groundBlocks.isEmpty() && !spawnConditions.groundBlocks.get(0).equals("unknown");
-        boolean hasTimeOfDay = !spawnConditions.timeOfDay.isEmpty() && !spawnConditions.timeOfDay.get(0).equals("unknown");
-        boolean hasWeather = !spawnConditions.weather.isEmpty() && !spawnConditions.weather.get(0).equals("unknown");
-
         // Only show spawn condition details if they have valid data
-        if (hasLightLevels || hasYLevels || hasGroundBlocks || hasTimeOfDay || hasWeather) {
+        if (!spawnConditions.failed()) {
             String lightLevels = I18n.format("gui.mobtracker.lightLevels", Utils.formatRangeFromList(spawnConditions.lightLevels, sep));
             textY = drawWrappedString(fontRenderer, lightLevels, condsX, textY, 12, textW, lightColor);
 
@@ -409,6 +473,21 @@ public class GuiMobTracker extends GuiScreen {
             String noConditions = I18n.format("gui.mobtracker.noSpawnConditions");
             textY = drawWrappedString(fontRenderer, noConditions, condsX, textY, 12, textW, 0xFFAAAA);
         }
+
+        // Format dimension as "ID (name)" where name is the translated dimension name
+        String dimDisplay;
+        if (spawnConditions.dimension != null) {
+            String translatedName = translateDimensionName(spawnConditions.dimension);
+            if (spawnConditions.dimensionId != Integer.MIN_VALUE) {
+                dimDisplay = spawnConditions.dimensionId + " (" + translatedName + ")";
+            } else {
+                dimDisplay = "? (" + translatedName + ")";
+            }
+        } else {
+            dimDisplay = "?";
+        }
+        String dimension = I18n.format("gui.mobtracker.dimension", dimDisplay);
+        textY = drawWrappedString(fontRenderer, dimension, condsX, textY, 12, textW, dimensionColor);
 
         int biomesCount = spawnConditions.biomes.size();
         boolean hasBiomes = biomesCount > 0;
@@ -821,7 +900,10 @@ public class GuiMobTracker extends GuiScreen {
             int selectedIndex = findIndexById(selected);
             if (selectedIndex == -1) return false;
 
+            int oldIndex = selectedIndex;
             selectedIndex = Math.min(display.size() - 1, Math.max(0, selectedIndex + direction));
+            if (selectedIndex == oldIndex) return true;
+
             ResourceLocation newId = display.get(selectedIndex).id;
             if (newId != null) {
                 tracker.selectEntity(newId);

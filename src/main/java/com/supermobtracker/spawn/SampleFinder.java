@@ -122,16 +122,27 @@ public class SampleFinder {
             for (Integer light : lightLevels) {
                 world.lightLevel = light;
 
+                // Always capture queried conditions, even on failure
+                world.getAndResetQueriedConditions();
+
                 if (canSpawn(entityClass, world, 0.5, y, 0.5)) {
-                    world.getAndResetQueriedConditions();
+                    lastQueriedConditions = world.getAndResetQueriedConditions();
                     EntityLiving entity = createEntity(entityClass, world);
                     if (entity == null) return null;
 
                     entity.setPosition(0.5, y, 0.5);
                     entity.getCanSpawnHere();
-                    lastQueriedConditions = world.getAndResetQueriedConditions();
+                    Map<String, Boolean> spawnConditions = world.getAndResetQueriedConditions();
+
+                    // Merge conditions from both checks
+                    for (Map.Entry<String, Boolean> entry : spawnConditions.entrySet()) {
+                        if (entry.getValue()) lastQueriedConditions.put(entry.getKey(), true);
+                    }
 
                     return new ValidSample(y, light, groundBlock, biomeId, lastQueriedConditions);
+                } else {
+                    // Capture what was queried even on failure so we know what to try next
+                    lastQueriedConditions = world.getAndResetQueriedConditions();
                 }
             }
         }
@@ -161,7 +172,7 @@ public class SampleFinder {
         }
 
         return new SpawnConditionAnalyzer.SpawnConditions(
-            failBiomes, failGround, narrowedLight, emptyY, time, weather, hints
+            failBiomes, failGround, narrowedLight, emptyY, time, weather, hints, null, Integer.MIN_VALUE
         );
     }
 }

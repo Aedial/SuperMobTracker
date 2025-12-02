@@ -49,6 +49,13 @@ gui.mobtracker.weather.thunder=Thunder
 gui.mobtracker.weather.unknown=Unknown
 gui.mobtracker.weather.any=Any
 
+gui.mobtracker.dimension=Dimension: %s
+
+# Vanilla Dimensions
+dimension.overworld=Overworld
+dimension.the_nether=The Nether
+dimension.the_end=The End
+
 gui.mobtracker.biomes=Biomes: %s
 gui.mobtracker.biomes.none=Biomes: None
 gui.mobtracker.biomes.unknown=Biomes: Unknown

@@ -1,40 +1,39 @@
 package com.supermobtracker.spawn;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityFlying;
-import net.minecraft.entity.passive.EntityTameable;
+import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EnumCreatureType;
+import net.minecraft.entity.passive.EntityTameable;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.DimensionType;
 import net.minecraft.world.EnumDifficulty;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.storage.WorldInfo;
+import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.storage.ISaveHandler;
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.fml.common.registry.EntityEntry;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import com.supermobtracker.SuperMobTracker;
-import com.supermobtracker.spawn.ConditionUtils;
 
 
 /**
@@ -77,7 +76,8 @@ public class SpawnConditionAnalyzer {
     }
 
     // Y levels to probe for finding first valid sample
-    private static final List<Integer> PROBE_Y_LEVELS = Arrays.asList(1, 10, 32, 63, 64, 96, 128, 150);
+    // Includes 50, 55, 60 for aquatic mobs that require posY > 45 && posY < seaLevel (63)
+    private static final List<Integer> PROBE_Y_LEVELS = Arrays.asList(1, 10, 32, 50, 55, 60, 63, 64, 96, 128, 150);
 
     // Light levels to probe for finding first valid sample
     private static final List<Integer> PROBE_LIGHT_LEVELS = Arrays.asList(0, 1, 7, 12, 14, 15);
@@ -94,6 +94,20 @@ public class SpawnConditionAnalyzer {
     // Last error during analysis (if any)
     private Throwable lastError;
 
+    // Whether the last analyzed entity had native biomes
+    private boolean lastHadNativeBiomes;
+
+    /**
+     * Returns whether the last analyzed entity had native biomes.
+     * Useful for distinguishing "no native biomes" from "analysis failed".
+     */
+    public boolean hasNativeBiomes() { return lastHadNativeBiomes; }
+
+    /**
+     * Returns the last error that occurred during analysis, or null if none.
+     */
+    public Throwable getLastError() { return lastError; }
+
     /**
      * Result of spawn condition analysis.
      */
@@ -105,6 +119,8 @@ public class SpawnConditionAnalyzer {
         public final List<String> timeOfDay;
         public final List<String> weather;
         public final List<String> hints;
+        public final String dimension;
+        public final int dimensionId;
 
         public SpawnConditions(List<String> biomes,
                                List<String> groundBlocks,
@@ -112,7 +128,9 @@ public class SpawnConditionAnalyzer {
                                List<Integer> yLevels,
                                List<String> timeOfDay,
                                List<String> weather,
-                               List<String> hints) {
+                               List<String> hints,
+                               String dimension,
+                               int dimensionId) {
             this.biomes = biomes;
             this.groundBlocks = groundBlocks;
             this.lightLevels = lightLevels;
@@ -120,6 +138,18 @@ public class SpawnConditionAnalyzer {
             this.timeOfDay = timeOfDay;
             this.weather = weather;
             this.hints = hints == null ? new ArrayList<>() : hints;
+            this.dimension = dimension;
+            this.dimensionId = dimensionId;
+        }
+
+        public boolean failed() {
+            boolean hasLightLevels = !lightLevels.isEmpty();
+            boolean hasYLevels = !yLevels.isEmpty();
+            boolean hasGroundBlocks = !groundBlocks.isEmpty() && !groundBlocks.get(0).equals("unknown");
+            boolean hasTimeOfDay = !timeOfDay.isEmpty() && !timeOfDay.get(0).equals("unknown");
+            boolean hasWeather = !weather.isEmpty() && !weather.get(0).equals("unknown");
+
+            return !(hasLightLevels || hasYLevels || hasGroundBlocks || hasTimeOfDay || hasWeather);
         }
     }
 
@@ -144,6 +174,8 @@ public class SpawnConditionAnalyzer {
             private SimulatedProvider(WorldProvider provider) {
                 this.baseProvider = provider;
                 this.dimension = provider.getDimensionType().getName().toLowerCase();
+                // Set the dimension field directly so getDimension() returns the correct value
+                this.setDimension(provider.getDimensionType().getId());
             }
 
             public void bindQueryTracker(Map<String, Boolean> queriedConditions) {
@@ -152,13 +184,27 @@ public class SpawnConditionAnalyzer {
 
             @Override
             public DimensionType getDimensionType() {
-                this.queriedConditions.put("dimension", true);
+                if (this.queriedConditions != null) {
+                    this.queriedConditions.put("dimension", true);
+                }
                 return baseProvider.getDimensionType();
+            }
+
+            @Override
+            public int getDimension() {
+                if (this.queriedConditions != null) {
+                    this.queriedConditions.put("dimension", true);
+                }
+                return baseProvider.getDimensionType().getId();
             }
         }
 
         public static SimulatedWorld fromReal(World world) {
             return new SimulatedWorld(null, world.getWorldInfo(), new SimulatedProvider(world.provider), new Profiler(), true);
+        }
+
+        public static SimulatedWorld fromProvider(WorldInfo worldInfo, WorldProvider provider) {
+            return new SimulatedWorld(null, worldInfo, new SimulatedProvider(provider), new Profiler(), true);
         }
 
         private SimulatedWorld(ISaveHandler saveHandler, WorldInfo info, WorldProvider provider, Profiler profiler, boolean isClient) {
@@ -453,7 +499,8 @@ public class SpawnConditionAnalyzer {
 
             // Get native biomes from the entity spawn tables
             List<String> nativeBiomes = getNativeBiomes(entityId, entry.getEntityClass());
-            if (nativeBiomes == null || nativeBiomes.isEmpty()) {
+            lastHadNativeBiomes = nativeBiomes != null && !nativeBiomes.isEmpty();
+            if (!lastHadNativeBiomes) {
                 // Entities without native biomes cannot spawn naturally
                 return null;
             }
@@ -473,25 +520,31 @@ public class SpawnConditionAnalyzer {
                 List<String> timeOfDay = isHostile(entityId) ? Arrays.asList("night") : Arrays.asList("day");
                 List<String> weather = Arrays.asList("clear");
 
+                // Fall back to current dimension
+                int currentDimId = entity.world.provider.getDimension();
+                String dimensionName = BiomeDimensionMapper.getDimensionName(currentDimId);
+
                 result = new SpawnConditions(
-                    nativeBiomes, groundBlocks, PROBE_LIGHT_LEVELS, yLevels, timeOfDay, weather, null
+                    nativeBiomes, groundBlocks, PROBE_LIGHT_LEVELS, yLevels, timeOfDay, weather, null, dimensionName, currentDimId
                 );
             }
 
             lastResult = result;
 
-            if (ConditionUtils.PROFILING_ENABLED) {
+            if (ConditionUtils.isProfilingEnabled()) {
                 long elapsed = System.nanoTime() - startTime;
                 SuperMobTracker.LOGGER.info("Analysis of " + entityId + " took " + (elapsed / 1_000_000.0) + "ms");
+
+                if (result.failed()) SuperMobTracker.LOGGER.info("  Spawn conditions could not be determined, as no valid samples were found.");
             }
 
             return result;
         } catch (Throwable t) {
             lastError = t;
 
-            if (ConditionUtils.PROFILING_ENABLED) {
+            if (ConditionUtils.isProfilingEnabled()) {
                 long elapsed = System.nanoTime() - startTime;
-                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " failed after " + (elapsed / 1_000_000.0) + "ms: " + t.getMessage());
+                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " crashed after " + (elapsed / 1_000_000.0) + "ms: " + t.getMessage());
             }
 
             return null;
@@ -528,23 +581,55 @@ public class SpawnConditionAnalyzer {
      */
     private SpawnConditions computeSpawnConditions(EntityLiving entity, List<String> biomes,
                                                    List<String> groundBlocks, List<Integer> lightLevels) {
-        SimulatedWorld simulatedWorld = SimulatedWorld.fromReal(entity.world);
-        simulatedWorld.dimension = entity.world.provider.getDimensionType().getName().toLowerCase();
+        // Find the correct dimension for this mob's biomes
+        int currentDimId = entity.world.provider.getDimension();
+        int targetDimId = BiomeDimensionMapper.findDimensionForBiomes(biomes, currentDimId);
 
-        // TODO: make a biome to dimension mapping to check the correct dimension and show it to the user
-        // The idea => check every dimension:
-        // 1. If it contains a BiomeProviderSingle; use that as the only biome
-        // 2. If the BiomeProvider relies on a BiomeManager/allowedBiomes/getBiomesToSpawnIn(), rely on that,
-        // then check 100 random positions in that dimension to see if there are more biomes available.
-        // 3. If neither of the above, check 1k-10k random positions in that dimension to see what biomes are present.
-        // Random positions should use grids of 32x32 chunks, with findBiomePosition/areBiomesViable calls.
-        // It should be cached at first GUI open for performance.
+        // Check if we actually found a matching dimension
+        boolean foundDimension = targetDimId != Integer.MIN_VALUE;
+        String dimensionName;
+        WorldProvider targetProvider;
+
+        if (foundDimension) {
+            targetProvider = BiomeDimensionMapper.getProviderForDimension(targetDimId);
+            dimensionName = BiomeDimensionMapper.getDimensionName(targetDimId);
+
+            // Fall back to overworld's provider if we can't get the target
+            if (targetProvider == null) {
+                targetProvider = BiomeDimensionMapper.getProviderForDimension(0);
+                targetDimId = 0;
+                dimensionName = BiomeDimensionMapper.getDimensionName(0);
+
+                // If still null, use current dimension
+                if (targetProvider == null) {
+                    targetProvider = entity.world.provider;
+                    targetDimId = currentDimId;
+                    dimensionName = BiomeDimensionMapper.getDimensionName(currentDimId);
+                }
+            }
+        } else {
+            // No dimension found for these biomes - default to overworld for testing
+            // (some mobs don't care about dimension, and unknown is invalid for testing)
+            targetDimId = 0;
+            targetProvider = BiomeDimensionMapper.getProviderForDimension(0);
+            dimensionName = null; // Will display as "?" in GUI
+
+            // Fall back to current dimension if overworld provider unavailable
+            if (targetProvider == null) {
+                targetProvider = entity.world.provider;
+                targetDimId = currentDimId;
+            }
+        }
+
+        SimulatedWorld simulatedWorld = SimulatedWorld.fromProvider(entity.world.getWorldInfo(), targetProvider);
+        simulatedWorld.dimension = dimensionName != null ? dimensionName : "unknown";
+
         ConditionRefiner refiner = new ConditionRefiner(entity.getClass(), simulatedWorld);
         SpawnConditions result = refiner.findValidConditions(biomes, groundBlocks, lightLevels, PROBE_Y_LEVELS);
 
         if (result != null) {
             return new SpawnConditions(
-                biomes, result.groundBlocks, result.lightLevels, result.yLevels, result.timeOfDay, result.weather, result.hints
+                biomes, result.groundBlocks, result.lightLevels, result.yLevels, result.timeOfDay, result.weather, result.hints, dimensionName, targetDimId
             );
         }
 
@@ -553,7 +638,7 @@ public class SpawnConditionAnalyzer {
         List<String> timeOfDay = Arrays.asList("unknown");
         List<String> weather = Arrays.asList("unknown");
 
-        return new SpawnConditions(biomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null);
+        return new SpawnConditions(biomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null, dimensionName, targetDimId);
     }
 
     public boolean hasResult() {

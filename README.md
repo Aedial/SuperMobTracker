@@ -9,6 +9,17 @@ A Minecraft 1.12.2 mod that lets you select a mob to view spawn conditions and t
 - Server config: enableTracking to globally disable tracking.
 - Client config: detectionRange to set radius for considering spawn attempts.
 
+## Commands
+
+### /smtanalyze
+Analyzes all registered mobs and exports results to the `supermobtracker/` folder. This is useful for mod developers to identify spawn condition issues or benchmark performance.
+
+Running `/smtanalyze` with no arguments runs all analyses with default parameters. You can also run specific analyses:
+
+- `/smtanalyze mobs [samples]` - Analyzes all mobs and records how long each takes to analyze. Results are separated into successful, failed (couldn't determine conditions), and crashed (threw exceptions). Each list is sorted slowest-first.
+
+- `/smtanalyze dimension [samples] [extendedCount] [numGrids]` - Benchmarks the dimension-to-biome mapping system with per-dimension timing. Useful for tuning the sampling parameters if dimension detection is slow or inaccurate.
+
 ## Building
 Run:
 ```

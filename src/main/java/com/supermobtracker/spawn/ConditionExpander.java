@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import net.minecraft.entity.EntityLiving;
-import net.minecraft.util.text.translation.I18n;
 
 import static com.supermobtracker.spawn.ConditionUtils.*;
 
@@ -32,6 +31,8 @@ public class ConditionExpander {
         public List<String> times = new ArrayList<>();
         public List<String> weathers = new ArrayList<>();
         public List<String> hints = new ArrayList<>();
+        public String dimension = null;
+        public int dimensionId = 0;
     }
 
     /**
@@ -186,7 +187,9 @@ public class ConditionExpander {
             expanded.yLevels,
             expanded.times,
             expanded.weathers,
-            expanded.hints
+            expanded.hints,
+            expanded.dimension,
+            expanded.dimensionId
         );
     }
 }

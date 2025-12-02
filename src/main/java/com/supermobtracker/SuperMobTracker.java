@@ -10,8 +10,10 @@ import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 
 import com.supermobtracker.IProxy;
+import com.supermobtracker.command.CommandAnalyze;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.tracking.SpawnEventHandler;
 
@@ -20,7 +22,7 @@ import com.supermobtracker.tracking.SpawnEventHandler;
 public class SuperMobTracker {
     public static final String MODID = "supermobtracker";
     public static final String NAME = "Super Mob Tracker";
-    public static final String VERSION = "0.1.2";
+    public static final String VERSION = "0.1.3";
 
     public static final Logger LOGGER = LogManager.getLogger(MODID);
 
@@ -47,5 +49,10 @@ public class SuperMobTracker {
     @EventHandler
     public void postInit(FMLPostInitializationEvent event) {
         proxy.postInit();
+    }
+
+    @EventHandler
+    public void serverStarting(FMLServerStartingEvent event) {
+        event.registerServerCommand(new CommandAnalyze());
     }
 }
