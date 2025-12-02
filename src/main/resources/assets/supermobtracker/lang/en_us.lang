@@ -9,6 +9,13 @@ config.supermobtracker.client.i18nNames.desc=Use localized names in the tracker 
 config.supermobtracker.client.spawnCheckRetries.desc=Maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time.
 config.supermobtracker.client.trackedEntityIds.desc=List of entity IDs currently being tracked.
 config.supermobtracker.client.lastSelectedEntity.desc=Last selected entity in the mob tracker GUI.
+config.supermobtracker.client.filterText.desc=Last filter text in the mob tracker GUI.
+config.supermobtracker.client.hudPosition.desc=Position of the tracking overlay on screen.
+config.supermobtracker.client.hudPaddingExternal.desc=Padding from screen edge for the tracking overlay.
+config.supermobtracker.client.hudPaddingInternal.desc=Padding inside the tracking overlay box.
+config.supermobtracker.client.hudLineSpacing.desc=Spacing between lines in the tracking overlay.
+
+# TODO: add the config names
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=IDs: Localized
@@ -60,6 +67,7 @@ gui.mobtracker.biomes=Biomes: %s
 gui.mobtracker.biomes.none=Biomes: None
 gui.mobtracker.biomes.unknown=Biomes: Unknown
 gui.mobtracker.biomes.any=Biomes: Any
+gui.mobtracker.biomesCopied=Biomes for %s copied to clipboard.
 
 gui.mobtracker.hintsHeader=Notes:
 gui.mobtracker.any=Any
@@ -82,3 +90,16 @@ gui.mobtracker.hint.ground=May require a specific ground block.
 gui.mobtracker.hint.biome=May require a specific biome.
 gui.mobtracker.hint.time=May require a specific time of day.
 gui.mobtracker.hint.weather=May require specific weather.
+
+# HUD Position Selector
+gui.supermobtracker.hudPosition.top_left=Top Left
+gui.supermobtracker.hudPosition.top_center=Top Center
+gui.supermobtracker.hudPosition.top_right=Top Right
+gui.supermobtracker.hudPosition.center_left=Center Left
+gui.supermobtracker.hudPosition.center=Center
+gui.supermobtracker.hudPosition.center_right=Center Right
+gui.supermobtracker.hudPosition.bottom_left=Bottom Left
+gui.supermobtracker.hudPosition.bottom_center=Bottom Center
+gui.supermobtracker.hudPosition.bottom_right=Bottom Right
+gui.supermobtracker.hudPosition.button=HUD: %s
+gui.supermobtracker.hudPosition.label=HUD Position

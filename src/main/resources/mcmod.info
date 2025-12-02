@@ -1,0 +1,14 @@
+[
+  {
+    "modid": "supermobtracker",
+    "name": "Super Mob Tracker",
+    "description": "An item-less mob tracker with spawn conditions inference.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "authorList": ["Aedial"],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": []
+  }
+]

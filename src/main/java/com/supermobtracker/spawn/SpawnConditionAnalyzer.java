@@ -473,6 +473,7 @@ public class SpawnConditionAnalyzer {
     }
 
     public Vec3d getEntitySize(ResourceLocation entityId) {
+        // TODO: use EntityLiving.getRenderBoundingBox() for more accurate size
         EntityLiving entity = getEntityInstance(entityId);
         if (entity == null) return new Vec3d(0, 0, 0);
 
