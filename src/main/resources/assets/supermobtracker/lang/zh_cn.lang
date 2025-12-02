@@ -49,6 +49,13 @@ gui.mobtracker.weather.thunder=雷暴
 gui.mobtracker.weather.unknown=未知
 gui.mobtracker.weather.any=任意
 
+gui.mobtracker.dimension=维度：%s
+
+# Vanilla Dimensions
+dimension.overworld=主世界
+dimension.the_nether=下界
+dimension.the_end=末地
+
 gui.mobtracker.biomes=生物群系：%s
 gui.mobtracker.biomes.none=生物群系：无
 gui.mobtracker.biomes.unknown=生物群系：未知
