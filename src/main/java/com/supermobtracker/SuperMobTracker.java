@@ -22,7 +22,7 @@ import com.supermobtracker.tracking.SpawnEventHandler;
 public class SuperMobTracker {
     public static final String MODID = "supermobtracker";
     public static final String NAME = "Super Mob Tracker";
-    public static final String VERSION = "0.2.1";
+    public static final String VERSION = "0.2.2";
 
     public static final Logger LOGGER = LogManager.getLogger(MODID);
 

@@ -18,9 +18,12 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityHanging;
@@ -48,6 +51,7 @@ public class GuiMobTracker extends GuiScreen {
     private SpawnConditionAnalyzer.SpawnConditions spawnConditions;
     private long lastClickTime = 0L;
     private ResourceLocation lastClickId = null;
+    private boolean entityErrorReported = false;
 
     // Cache for spawn conditions to avoid regenerating on window resize
     private static ResourceLocation cachedEntityId = null;
@@ -319,10 +323,10 @@ public class GuiMobTracker extends GuiScreen {
         GlStateManager.shadeModel(GL11.GL_SMOOTH);
         GlStateManager.color(r, g, b, a);
 
-        net.minecraft.client.renderer.Tessellator tessellator = net.minecraft.client.renderer.Tessellator.getInstance();
-        net.minecraft.client.renderer.BufferBuilder buffer = tessellator.getBuffer();
+        Tessellator tessellator = net.minecraft.client.renderer.Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.getBuffer();
 
-        buffer.begin(GL11.GL_TRIANGLE_FAN, net.minecraft.client.renderer.vertex.DefaultVertexFormats.POSITION);
+        buffer.begin(GL11.GL_TRIANGLE_FAN,DefaultVertexFormats.POSITION);
 
         // Center point
         buffer.pos(centerX, centerY, 0.0).endVertex();
@@ -794,17 +798,16 @@ public class GuiMobTracker extends GuiScreen {
         float verticalOffset = entity.height / 2.0f;
         // Also apply entity's intrinsic Y offset (e.g., for hanging entities)
         verticalOffset += (float) entity.getYOffset();
-        /*if (entity instanceof EntityHanging) {
-            verticalOffset += 0.5F;
-        }*/
         GlStateManager.translate(0.0F, -verticalOffset, 0.0F);
         Minecraft.getMinecraft().getRenderManager().playerViewY = 180F;
 
         try {
             Minecraft.getMinecraft().getRenderManager().renderEntity(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
+            this.entityErrorReported = false;
         } catch (Exception e) {
             // TODO: would be funny to show MissingNo there instead
-            SuperMobTracker.LOGGER.error("Error rendering entity!", e);
+            if (!this.entityErrorReported) SuperMobTracker.LOGGER.error("Error rendering entity!", e);
+            this.entityErrorReported = true;
         }
 
         GlStateManager.popMatrix();
@@ -1085,7 +1088,7 @@ public class GuiMobTracker extends GuiScreen {
                 if (SpawnTrackerManager.isTracked(entry.id)) {
                     float starCenterX = x + w - 16;
                     float starCenterY = drawY + 6;
-                    float starRadius = 5.0f;
+                    float starRadius = 4.0f;
                     drawStar(starCenterX, starCenterY, starRadius, 0xFFFFD700);
                 }
             }

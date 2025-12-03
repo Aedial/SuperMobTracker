@@ -79,18 +79,35 @@ public class BiomeDimensionMapper {
     /**
      * A minimal fake world used solely to initialize WorldProviders and get their BiomeProviders.
      * This is necessary because WorldProvider.getBiomeProvider() returns null until setWorld() is called.
+     * 
+     * IMPORTANT: We use a cloned WorldInfo to prevent any modifications from affecting the real world.
+     * Some mods (like BiomesOPlenty + Lost Cities) check/modify the terrain type during initialization.
      */
     private static class MinimalWorld extends World {
         private final WorldProvider targetProvider;
+        private BiomeProvider cachedBiomeProvider = null;
+        private Exception initException = null;
 
         public MinimalWorld(WorldInfo info, WorldProvider provider) {
             super(null, info, provider, new Profiler(), true);
             this.targetProvider = provider;
-            this.provider.setWorld(this);
+
+            try {
+                this.provider.setWorld(this);
+                this.cachedBiomeProvider = targetProvider.getBiomeProvider();
+            } catch (Exception e) {
+                // Provider initialization failed - likely due to WorldType mismatch
+                // Store the exception for logging but don't rethrow
+                this.initException = e;
+            }
         }
 
         public BiomeProvider getInitializedBiomeProvider() {
-            return targetProvider.getBiomeProvider();
+            return cachedBiomeProvider;
+        }
+
+        public Exception getInitException() {
+            return initException;
         }
 
         @Override
@@ -182,15 +199,40 @@ public class BiomeDimensionMapper {
 
     /**
      * Get base WorldInfo from current loaded world, or create a minimal one.
+     * 
+     * IMPORTANT: We clone the WorldInfo instead of returning the original to prevent
+     * any potential modifications from affecting the actual world. Some mod providers
+     * may inadvertently modify the WorldInfo during initialization.
      */
     private static WorldInfo getBaseWorldInfo() {
         // Try to get from overworld first
         WorldServer overworld = DimensionManager.getWorld(0);
-        if (overworld != null) return overworld.getWorldInfo();
+        // Clone the WorldInfo to prevent any modifications from affecting the actual world
+        if (overworld != null) return cloneWorldInfo(overworld.getWorldInfo());
 
-        // Create minimal WorldInfo
+        // Create minimal WorldInfo with DEFAULT type - this is safe as a fallback
+        // since we wrap provider initialization in try-catch
         WorldSettings settings = new WorldSettings(0, net.minecraft.world.GameType.SURVIVAL, true, false, WorldType.DEFAULT);
         return new WorldInfo(settings, "BiomeMapper");
+    }
+
+    /**
+     * Create a safe copy of WorldInfo to prevent modifications to the original.
+     * This is critical because some mod providers (like BiomesOPlenty with Lost Cities)
+     * may modify the WorldInfo's terrain type during initialization.
+     */
+    private static WorldInfo cloneWorldInfo(WorldInfo original) {
+        WorldSettings settings = new WorldSettings(
+            original.getSeed(),
+            original.getGameType(),
+            original.isMapFeaturesEnabled(),
+            original.isHardcoreModeEnabled(),
+            original.getTerrainType()
+        );
+        settings.setGeneratorOptions(original.getGeneratorOptions());
+        WorldInfo cloned = new WorldInfo(settings, original.getWorldName());
+
+        return cloned;
     }
 
     /**
@@ -210,21 +252,59 @@ public class BiomeDimensionMapper {
                 // Create a minimal world to initialize the provider
                 DimensionType dimType = DimensionManager.getProviderType(dimId);
                 if (dimType == null) {
-                    if (ConditionUtils.isProfilingEnabled()) SuperMobTracker.LOGGER.info("    No DimensionType for dimension " + dimId);
+                    if (ConditionUtils.isProfilingEnabled()) {
+                        SuperMobTracker.LOGGER.info("    No DimensionType for dimension " + dimId);
+                    }
 
                     return biomes;
                 }
 
                 WorldProvider provider = dimType.createDimension();
                 if (provider == null) {
-                    if (ConditionUtils.isProfilingEnabled()) SuperMobTracker.LOGGER.info("    Could not create WorldProvider for dimension " + dimId);
+                    if (ConditionUtils.isProfilingEnabled()) {
+                        SuperMobTracker.LOGGER.info("    Could not create WorldProvider for dimension " + dimId);
+                    }
 
                     return biomes;
                 }
 
                 // Create minimal world to initialize the provider
+                // baseWorldInfo is already cloned with the correct WorldType from the overworld
+                // This means if the player is in a BoP world, we use WorldType.BIOMESOP automatically
                 MinimalWorld minimalWorld = new MinimalWorld(baseWorldInfo, provider);
                 biomeProvider = minimalWorld.getInitializedBiomeProvider();
+
+                // If initialization failed, try with DEFAULT WorldType as fallback
+                // (for dimensions that don't care about WorldType, or vanilla dimensions)
+                Exception initException = minimalWorld.getInitException();
+                if (initException != null) {
+                    if (ConditionUtils.isProfilingEnabled()) {
+                        SuperMobTracker.LOGGER.info("    Provider init failed with current WorldType, trying DEFAULT: " +
+                            initException.getMessage());
+                    }
+
+                    // Try again with DEFAULT WorldType
+                    WorldSettings defaultSettings = new WorldSettings(
+                        baseWorldInfo.getSeed(),
+                        baseWorldInfo.getGameType(),
+                        baseWorldInfo.isMapFeaturesEnabled(),
+                        baseWorldInfo.isHardcoreModeEnabled(),
+                        WorldType.DEFAULT
+                    );
+                    WorldInfo defaultWorldInfo = new WorldInfo(defaultSettings, "BiomeMapper");
+
+                    // Need a fresh provider instance
+                    provider = dimType.createDimension();
+                    if (provider != null) {
+                        minimalWorld = new MinimalWorld(defaultWorldInfo, provider);
+                        biomeProvider = minimalWorld.getInitializedBiomeProvider();
+
+                        if (minimalWorld.getInitException() != null && ConditionUtils.isProfilingEnabled()) {
+                            SuperMobTracker.LOGGER.info("    Provider init also failed with DEFAULT WorldType: " +
+                                minimalWorld.getInitException().getMessage());
+                        }
+                    }
+                }
             }
 
             if (biomeProvider == null) {

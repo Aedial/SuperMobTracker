@@ -404,14 +404,10 @@ public class SpawnConditionAnalyzer {
      * Get or create a cached entity instance for analysis.
      */
     public EntityLiving getEntityInstance(ResourceLocation entityId) {
-        if (entityInstanceCache.containsKey(entityId)) {
-            return entityInstanceCache.get(entityId);
-        }
+        if (entityInstanceCache.containsKey(entityId)) return entityInstanceCache.get(entityId);
 
         EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
-        if (entry == null || !(EntityLiving.class.isAssignableFrom(entry.getEntityClass()))) {
-            return null;
-        }
+        if (entry == null || !(EntityLiving.class.isAssignableFrom(entry.getEntityClass()))) return null;
 
         try {
             World world = Minecraft.getMinecraft().world;
@@ -425,7 +421,7 @@ public class SpawnConditionAnalyzer {
                 entityInstanceCache.put(entityId, (EntityLiving) entity);
                 return (EntityLiving) entity;
             }
-        } catch (Exception e) { 
+        } catch (Exception e) {
             if (ConditionUtils.shouldShowCrashes()) {
                 SuperMobTracker.LOGGER.error("Error creating entity instance for " + entityId, e);
             }
@@ -507,10 +503,7 @@ public class SpawnConditionAnalyzer {
             // Get native biomes from the entity spawn tables
             List<String> nativeBiomes = getNativeBiomes(entityId, entry.getEntityClass());
             lastHadNativeBiomes = nativeBiomes != null && !nativeBiomes.isEmpty();
-            if (!lastHadNativeBiomes) {
-                // Entities without native biomes cannot spawn naturally
-                return null;
-            }
+            if (!lastHadNativeBiomes)  return null;  // Entities without native biomes cannot spawn naturally
 
             List<String> groundBlocks;
             if (isFlying(entityId)) {
