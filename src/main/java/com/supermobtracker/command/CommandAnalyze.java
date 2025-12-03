@@ -47,7 +47,6 @@ public class CommandAnalyze extends CommandBase {
         return "smtanalyze";
     }
 
-    // TODO: add localization support? I don't see any anyone really using that, beside myself.
     @Override
     public String getUsage(ICommandSender sender) {
         return "/smtanalyze [mobs|dimension] [samples] [extendedCount] [numGrids]";
@@ -193,140 +192,101 @@ public class CommandAnalyze extends CommandBase {
         noNativeBiomeMobs.sort(byWorstTime);
         crashedMobs.sort(byWorstTime);
 
-        // TODO: Refactor file writing into a common method
         // Write successful mobs to file
-        File successFile = getOutputFile("mob_performance_" + samples + "samples_" + timestamp + ".txt");
-        try (PrintWriter writer = new PrintWriter(new FileWriter(successFile))) {
-            writer.println("=== Successful Mob Analysis Performance Report ===");
-            writer.println("Generated: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-            writer.println("Total successful: " + successfulMobs.size());
-            writer.println("Samples per mob: " + samples);
-            writer.println();
-            writer.println("Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Dimension: X");
-            writer.println("Sorted by worst time (slowest first)");
-            writer.println();
-
-            for (MobPerformanceEntry entry : successfulMobs) {
-                writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Dimension: %s%n",
-                    entry.entityId,
-                    entry.getWorstTime() / 1_000_000.0,
-                    entry.getBestTime() / 1_000_000.0,
-                    entry.getAverageTime() / 1_000_000.0,
-                    entry.dimension != null ? entry.dimension : "?"
-                );
-            }
-        } catch (IOException e) {
-            sendMessage(sender, TextFormatting.RED, "Failed to write output file: " + e.getMessage());
+        File successFile = writePerformanceReport(
+            "mob_performance_" + samples + "samples_" + timestamp + ".txt",
+            "Successful Mob Analysis Performance Report",
+            null,
+            successfulMobs,
+            samples,
+            "Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Dimension: X",
+            (writer, entry) -> writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Dimension: %s%n",
+                entry.entityId,
+                entry.getWorstTime() / 1_000_000.0,
+                entry.getBestTime() / 1_000_000.0,
+                entry.getAverageTime() / 1_000_000.0,
+                entry.dimension != null ? entry.dimension : "?"),
+            sender
+        );
+        if (successFile == null) {
             ConditionUtils.suppressProfiling(false);
             return;
         }
 
         // Write failed mobs to file
         if (!failedMobs.isEmpty()) {
-            File failedFile = getOutputFile("failed_performance_" + samples + "samples_" + timestamp + ".txt");
-            try (PrintWriter writer = new PrintWriter(new FileWriter(failedFile))) {
-                writer.println("=== Failed Mob Analysis Performance Report ===");
-                writer.println("These mobs have native biomes but spawn conditions could not be determined.");
-                writer.println("Generated: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-                writer.println("Total failed: " + failedMobs.size());
-                writer.println("Samples per mob: " + samples);
-                writer.println();
-                writer.println("Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Dimension: X");
-                writer.println("Sorted by worst time (slowest first)");
-                writer.println();
-
-                for (MobPerformanceEntry entry : failedMobs) {
-                    writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Dimension: %s%n",
-                        entry.entityId,
-                        entry.getWorstTime() / 1_000_000.0,
-                        entry.getBestTime() / 1_000_000.0,
-                        entry.getAverageTime() / 1_000_000.0,
-                        entry.dimension != null ? entry.dimension : "?"
-                    );
-                }
-            } catch (IOException e) {
-                sendMessage(sender, TextFormatting.RED, "Failed to write failed file: " + e.getMessage());
-            }
+            writePerformanceReport(
+                "failed_performance_" + samples + "samples_" + timestamp + ".txt",
+                "Failed Mob Analysis Performance Report",
+                "These mobs have native biomes but spawn conditions could not be determined.",
+                failedMobs,
+                samples,
+                "Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Dimension: X",
+                (writer, entry) -> writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Dimension: %s%n",
+                    entry.entityId,
+                    entry.getWorstTime() / 1_000_000.0,
+                    entry.getBestTime() / 1_000_000.0,
+                    entry.getAverageTime() / 1_000_000.0,
+                    entry.dimension != null ? entry.dimension : "?"),
+                sender
+            );
         }
 
         // Write crashed mobs to file
         if (!crashedMobs.isEmpty()) {
-            File crashedFile = getOutputFile("crashed_performance_" + samples + "samples_" + timestamp + ".txt");
-            try (PrintWriter writer = new PrintWriter(new FileWriter(crashedFile))) {
-                writer.println("=== Crashed Mob Analysis Performance Report ===");
-                writer.println("These mobs caused exceptions during spawn condition analysis.");
-                writer.println("Generated: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-                writer.println("Total crashed: " + crashedMobs.size());
-                writer.println("Samples per mob: " + samples);
-                writer.println();
-                writer.println("Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Error: X");
-                writer.println("Sorted by worst time (slowest first)");
-                writer.println();
-
-                for (MobPerformanceEntry entry : crashedMobs) {
-                    writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Error: %s%n",
-                        entry.entityId,
-                        entry.getWorstTime() / 1_000_000.0,
-                        entry.getBestTime() / 1_000_000.0,
-                        entry.getAverageTime() / 1_000_000.0,
-                        entry.error
-                    );
-                }
-            } catch (IOException e) {
-                sendMessage(sender, TextFormatting.RED, "Failed to write crashed file: " + e.getMessage());
-            }
+            writePerformanceReport(
+                "crashed_performance_" + samples + "samples_" + timestamp + ".txt",
+                "Crashed Mob Analysis Performance Report",
+                "These mobs caused exceptions during spawn condition analysis.",
+                crashedMobs,
+                samples,
+                "Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Error: X",
+                (writer, entry) -> writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Error: %s%n",
+                    entry.entityId,
+                    entry.getWorstTime() / 1_000_000.0,
+                    entry.getBestTime() / 1_000_000.0,
+                    entry.getAverageTime() / 1_000_000.0,
+                    entry.error),
+                sender
+            );
         }
 
         // Write noDimension mobs to file (biomes couldn't be mapped to any dimension)
         if (!noDimensionMobs.isEmpty()) {
-            File noDimFile = getOutputFile("no_dimension_" + samples + "samples_" + timestamp + ".txt");
-            try (PrintWriter writer = new PrintWriter(new FileWriter(noDimFile))) {
-                writer.println("=== No Dimension Mapping - Mob Analysis Report ===");
-                writer.println("These mobs have native biomes that couldn't be mapped to any dimension.");
-                writer.println("Generated: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-                writer.println("Total: " + noDimensionMobs.size());
-                writer.println("Samples per mob: " + samples);
-                writer.println();
-                writer.println("Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Biomes: [list]");
-                writer.println("Sorted by worst time (slowest first)");
-                writer.println();
-
-                for (MobPerformanceEntry entry : noDimensionMobs) {
+            writePerformanceReport(
+                "no_dimension_" + samples + "samples_" + timestamp + ".txt",
+                "No Dimension Mapping - Mob Analysis Report",
+                "These mobs have native biomes that couldn't be mapped to any dimension.",
+                noDimensionMobs,
+                samples,
+                "Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Biomes: [list]",
+                (writer, entry) -> {
                     String biomeList = entry.biomes != null ? String.join(", ", entry.biomes) : "?";
                     writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Biomes: %s%n",
                         entry.entityId,
                         entry.getWorstTime() / 1_000_000.0,
                         entry.getBestTime() / 1_000_000.0,
                         entry.getAverageTime() / 1_000_000.0,
-                        biomeList
-                    );
-                }
-            } catch (IOException e) {
-                sendMessage(sender, TextFormatting.RED, "Failed to write no-dimension file: " + e.getMessage());
-            }
+                        biomeList);
+                },
+                sender
+            );
         }
 
         // Write noNativeBiomes mobs to file (don't spawn naturally)
         if (!noNativeBiomeMobs.isEmpty()) {
-            File noBiomesFile = getOutputFile("no_native_biomes_" + samples + "samples_" + timestamp + ".txt");
-            try (PrintWriter writer = new PrintWriter(new FileWriter(noBiomesFile))) {
-                writer.println("=== No Native Biomes - Mob Analysis Report ===");
-                writer.println("These mobs don't have native biomes and cannot spawn naturally.");
-                writer.println("Generated: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
-                writer.println("Total: " + noNativeBiomeMobs.size());
-                writer.println("Samples per mob: " + samples);
-                writer.println();
-                writer.println("Entity IDs (alphabetically sorted):");
-                writer.println();
-
-                // Sort alphabetically for this list since timing is irrelevant
-                noNativeBiomeMobs.sort((a, b) -> a.entityId.compareTo(b.entityId));
-                for (MobPerformanceEntry entry : noNativeBiomeMobs) {
-                    writer.println(entry.entityId);
-                }
-            } catch (IOException e) {
-                sendMessage(sender, TextFormatting.RED, "Failed to write no-biomes file: " + e.getMessage());
-            }
+            // Sort alphabetically for this list since timing is irrelevant
+            noNativeBiomeMobs.sort((a, b) -> a.entityId.compareTo(b.entityId));
+            writePerformanceReport(
+                "no_native_biomes_" + samples + "samples_" + timestamp + ".txt",
+                "No Native Biomes - Mob Analysis Report",
+                "These mobs don't have native biomes and cannot spawn naturally.",
+                noNativeBiomeMobs,
+                samples,
+                null, // No format hint, just entity IDs
+                (writer, entry) -> writer.println(entry.entityId),
+                sender
+            );
         }
 
         ConditionUtils.suppressProfiling(false);
@@ -471,6 +431,59 @@ public class CommandAnalyze extends CommandBase {
         long getWorstTime() { return Collections.max(timings); }
         long getBestTime() { return Collections.min(timings); }
         double getAverageTime() { return timings.stream().mapToLong(Long::longValue).average().orElse(0); }
+    }
+
+    /**
+     * Functional interface for writing entries to a PrintWriter.
+     * @param <T> the type of entry to write
+     */
+    @FunctionalInterface
+    private interface EntryWriter<T> {
+        void write(PrintWriter writer, T entry);
+    }
+
+    /**
+     * Writes a performance report to a file.
+     *
+     * @param <T> the type of entries in the report
+     * @param filename the output filename
+     * @param title the report title
+     * @param description optional description (can be null)
+     * @param entries the list of entries to write
+     * @param samples the number of samples per entry
+     * @param formatHint the format hint line describing the entry format
+     * @param entryWriter the function to write each entry
+     * @param sender the command sender for error messages
+     * @return the created file, or null if writing failed
+     */
+    private <T> File writePerformanceReport(String filename, String title, String description,
+                                            List<T> entries, int samples, String formatHint,
+                                            EntryWriter<T> entryWriter, ICommandSender sender) {
+        File file = getOutputFile(filename);
+        try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
+            writer.println("=== " + title + " ===");
+            if (description != null) {
+                writer.println(description);
+            }
+            writer.println("Generated: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+            writer.println("Total: " + entries.size());
+            writer.println("Samples per mob: " + samples);
+            writer.println();
+            if (formatHint != null) {
+                writer.println(formatHint);
+                writer.println("Sorted by worst time (slowest first)");
+                writer.println();
+            }
+
+            for (T entry : entries) {
+                entryWriter.write(writer, entry);
+            }
+
+            return file;
+        } catch (IOException e) {
+            sendMessage(sender, TextFormatting.RED, "Failed to write " + filename + ": " + e.getMessage());
+            return null;
+        }
     }
 
     // --- Utility methods ---

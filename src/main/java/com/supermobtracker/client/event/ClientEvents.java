@@ -215,6 +215,7 @@ public class ClientEvents {
     @SubscribeEvent
     public void onRenderOverlay(RenderGameOverlayEvent.Post event) {
         if (event.getType() != RenderGameOverlayEvent.ElementType.ALL) return;
+        if (!ModConfig.isClientHudEnabled()) return;
         if (SpawnTrackerManager.getTrackedIds().isEmpty()) return;
 
         Minecraft mc = Minecraft.getMinecraft();
@@ -340,7 +341,11 @@ public class ClientEvents {
 
     @SubscribeEvent
     public void onGuiDraw(GuiScreenEvent.DrawScreenEvent.Post event) {
-        // FIXME: Does not work in GuiContainerCreative
+        // FIXME: tooltip not showing correctly in creative inventory
+        // Note: The tooltip may not display correctly in GuiContainerCreative due to its
+        // custom rendering pipeline with tabs. The button itself works, but the hovering
+        // text may be occluded by the creative inventory's tab rendering which happens
+        // after the DrawScreenEvent.Post fires.
         if (event.getGui() instanceof GuiInventory || event.getGui() instanceof GuiContainerCreative) {
             int mx = event.getMouseX();
             int my = event.getMouseY();

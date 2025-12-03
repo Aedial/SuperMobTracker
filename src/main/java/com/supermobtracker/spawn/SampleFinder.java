@@ -94,8 +94,7 @@ public class SampleFinder {
         if (candidateBiomes.isEmpty() || groundBlocks.isEmpty()) return null;
 
         String biomeId = candidateBiomes.get(0);
-        String biomePath = extractBiomePath(biomeId);
-        world.biome = biomePath;
+        world.biomeId = biomeId;
         world.groundBlock = groundBlocks.get(0);
 
         List<Integer> narrowedLight = refineLightLevels(lightProbe);

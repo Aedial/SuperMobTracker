@@ -10,7 +10,7 @@ import com.supermobtracker.config.ModConfig.HudPosition;
 
 
 public class GuiHudPositionSelector extends GuiScreen {
-    private static final int PADDING = 10;
+    private static final int PADDING = 5;
 
     // Button IDs for positions (0-8 for grid)
     private static final int BTN_TOP_LEFT = 0;
@@ -57,7 +57,7 @@ public class GuiHudPositionSelector extends GuiScreen {
         String[] buttonLabels = new String[9];
         for (int i = 0; i < labels.length; i++) buttonLabels[i] = I18n.format("gui.supermobtracker.hudPosition." + labels[i]);
 
-        int btnH = mc.fontRenderer.FONT_HEIGHT + 4;
+        int btnH = 20;
         int btnW = 0;
         for (String label : buttonLabels) {
             int labelW = mc.fontRenderer.getStringWidth(label) + 10;
@@ -81,7 +81,6 @@ public class GuiHudPositionSelector extends GuiScreen {
             HudPosition pos = positions[btn];
             String label = buttonLabels[btn];
 
-            // FIXME: text is not vertically centered
             buttonList.add(new GuiButton(btn, btnX, btnY, btnW, btnH, label));
         }
     }

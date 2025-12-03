@@ -3,6 +3,7 @@
 key.supermobtracker.open=Open Mob Tracker
 key.categories.supermobtracker=Super Mob Tracker
 
+# Config descriptions
 config.supermobtracker.server.enableTracking.desc=Enable server-side tracking of mobs.
 config.supermobtracker.client.detectionRange.desc=Range in blocks to detect tracked mobs for glowing effect.
 config.supermobtracker.client.i18nNames.desc=Use localized names in the tracker GUI.
@@ -14,8 +15,21 @@ config.supermobtracker.client.hudPosition.desc=Position of the tracking overlay 
 config.supermobtracker.client.hudPaddingExternal.desc=Padding from screen edge for the tracking overlay.
 config.supermobtracker.client.hudPaddingInternal.desc=Padding inside the tracking overlay box.
 config.supermobtracker.client.hudLineSpacing.desc=Spacing between lines in the tracking overlay.
+config.supermobtracker.client.hudEnabled.desc=Whether to show the tracking overlay on screen.
 
-# TODO: add the config names
+# Config names (displayed in config GUI)
+config.supermobtracker.server.enableTracking=Enable Tracking
+config.supermobtracker.client.detectionRange=Detection Range
+config.supermobtracker.client.i18nNames=Localized Names
+config.supermobtracker.client.spawnCheckRetries=Spawn Check Retries
+config.supermobtracker.client.trackedEntityIds=Tracked Entity IDs
+config.supermobtracker.client.lastSelectedEntity=Last Selected Entity
+config.supermobtracker.client.filterText=Filter Text
+config.supermobtracker.client.hudPosition=HUD Position
+config.supermobtracker.client.hudPaddingExternal=HUD External Padding
+config.supermobtracker.client.hudPaddingInternal=HUD Internal Padding
+config.supermobtracker.client.hudLineSpacing=HUD Line Spacing
+config.supermobtracker.client.hudEnabled=HUD Enabled
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=IDs: Localized
@@ -57,6 +71,7 @@ gui.mobtracker.weather.unknown=Unknown
 gui.mobtracker.weather.any=Any
 
 gui.mobtracker.dimension=Dimension: %s
+gui.mobtracker.dimension.unknown.tooltip=Could not determine dimension: the entity's native biome has not been found so far in scans. May appear later, once scans finish.
 
 # Vanilla Dimensions
 dimension.overworld=Overworld

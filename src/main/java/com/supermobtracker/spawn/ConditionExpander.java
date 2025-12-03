@@ -6,7 +6,9 @@ import java.util.List;
 
 import net.minecraft.entity.EntityLiving;
 
-import static com.supermobtracker.spawn.ConditionUtils.*;
+import static com.supermobtracker.spawn.ConditionUtils.DEFAULT_TIMES;
+import static com.supermobtracker.spawn.ConditionUtils.DEFAULT_WEATHERS;
+import static com.supermobtracker.spawn.ConditionUtils.canSpawn;
 
 
 /**
@@ -44,7 +46,7 @@ public class ConditionExpander {
                                         List<String> candidateGroundBlocks) {
         ExpandedConditions result = new ExpandedConditions();
 
-        world.biome = extractBiomePath(sample.biome);
+        world.biomeId = sample.biome;
         world.groundBlock = sample.ground;
         world.lightLevel = sample.light;
 

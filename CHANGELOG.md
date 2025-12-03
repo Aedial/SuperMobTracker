@@ -8,6 +8,20 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [0.2.1] - 2025-12-03
+### Fixed
+- Improve the selection star in the mob list.
+- Fix some mobs crashing the spawn conditions analyzer, due to wrong biome ID handling.
+- Fix Biomes to Dimension mapping sometimes undersampling rare biomes: now it will sample over time, accumulating more data instead of sampling once at startup. So far, only ultra-rare biomes like Mushroom Islands are still affected.
+
+### Added
+- Add option to hide the HUD.
+- Localize the names for the configs.
+- Add info tooltip on why a dimension may be unknown in the spawn conditions panel.
+- Add Java arg to log spawn condition crashes: -Dsupermobtracker.showcrashes=true
+- Save config on Escape key (instead of only on Done button).
+
+
 ## [0.2.0] - 2025-12-02
 ### Added
 - Add config option to select HUD position from 3x3 grid.

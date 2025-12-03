@@ -10,6 +10,7 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.World;
 
+import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.config.ModConfig;
 
 /**
@@ -37,9 +38,12 @@ public final class ConditionUtils {
     /** Whether profiling is enabled (Java arg). Can be temporarily suppressed. */
     private static final boolean PROFILING_ARG = Boolean.getBoolean("supermobtracker.profile");
     private static boolean profilingSuppressed = false;
+    /** Whether to report complete crashes in spawn conditions for debugging (Java arg). */
+    private static final boolean SHOW_CRASHES = Boolean.getBoolean("supermobtracker.showcrashes");
 
     public static boolean isProfilingEnabled() { return PROFILING_ARG && !profilingSuppressed; }
     public static void suppressProfiling(boolean suppress) { profilingSuppressed = suppress; }
+    public static boolean shouldShowCrashes() { return SHOW_CRASHES; }
 
     /**
      * Translate a list of strings with an optional prefix.
@@ -67,6 +71,10 @@ public final class ConditionUtils {
 
             return c.newInstance(world);
         } catch (Exception e) {
+            if (ConditionUtils.shouldShowCrashes()) {
+                SuperMobTracker.LOGGER.error("Error creating entity instance for class " + entityClass.getName(), e);
+            }
+
             return null;
         }
     }
