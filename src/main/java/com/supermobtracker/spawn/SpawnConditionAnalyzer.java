@@ -67,9 +67,7 @@ public class SpawnConditionAnalyzer {
                     .filter(t -> t.getCreatureClass().isAssignableFrom(entry.getEntityClass()))
                     .findFirst()
                     .orElse(null);
-            if (type != null) {
-                cache.put(entry.getRegistryName(), type);
-            }
+            if (type != null) cache.put(entry.getRegistryName(), type);
         }
 
         return cache;

@@ -28,7 +28,6 @@ public final class ConditionUtils {
     public static final String KEY_UNKNOWN = I18n.translateToLocal("gui.mobtracker.unknown");
 
     /** Hint localization keys */
-    public static final String HINT_DIMENSION = I18n.translateToLocal("gui.mobtracker.hint.dimension");
     public static final String HINT_LIGHT = I18n.translateToLocal("gui.mobtracker.hint.light");
     public static final String HINT_GROUND = I18n.translateToLocal("gui.mobtracker.hint.ground");
     public static final String HINT_BIOME = I18n.translateToLocal("gui.mobtracker.hint.biome");

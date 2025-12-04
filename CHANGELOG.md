@@ -8,6 +8,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.0.0-rc1] - 2025-12-04
+### Fixed
+- Mark mod as client-side only to prevent potential issues when installed on dedicated servers.
+- Move `enableTracking` config from server to client category (requires restart to take effect).
+- Remove unused server-side code (server packet sending, server command registration).
+
+
 ## [0.2.2] - 2025-12-03
 ### Fixed
 - Fix crash related to how Lost Cities handles Biomes O' Plenty, overwriting the world type, due to using a non-BoP fake world for spawn checks.

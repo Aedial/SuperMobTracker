@@ -162,7 +162,6 @@ public class SampleFinder {
         List<String> hints = new ArrayList<>();
 
         if (lastQueriedConditions != null) {
-            if (lastQueriedConditions.getOrDefault("dimension", false)) hints.add(HINT_DIMENSION);
             if (lastQueriedConditions.getOrDefault("lightLevel", false)) hints.add(HINT_LIGHT);
             if (lastQueriedConditions.getOrDefault("groundBlock", false)) hints.add(HINT_GROUND);
             if (lastQueriedConditions.getOrDefault("biome", false)) hints.add(HINT_BIOME);

@@ -151,9 +151,7 @@ public class ConditionExpander {
         for (String time : DEFAULT_TIMES) {
             world.timeOfDay = time;
 
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) {
-                allValid.add(time);
-            }
+            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(time);
         }
 
         world.timeOfDay = "day";
@@ -169,9 +167,7 @@ public class ConditionExpander {
         for (String weather : DEFAULT_WEATHERS) {
             world.weather = weather;
 
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) {
-                allValid.add(weather);
-            }
+            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(weather);
         }
 
         world.weather = "clear";

@@ -1,18 +1,33 @@
 # Super Mob Tracker
 
-A Minecraft 1.12.2 mod that lets you select a mob to view spawn conditions and track live, no item required.
+A client-side Minecraft 1.12.2 mod that lets you select a mob to view spawn conditions and track live, no item required.
 
 ## Features
 - GUI accessible via keybinding (default O) or Inventory button.
 - Filterable scrolling list of mobs on the left; right panel shows details and spawn conditions.
 - Live tracking on the main screen for selected mob. Double-click a mob in the list to toggle tracking.
-- Server config: enableTracking to globally disable tracking.
-- Client config: detectionRange to set radius for considering spawn attempts.
+- Configs:
+  - enableTracking: Globally disable tracking (requires restart).0
+  - detectionRange: Set radius for considering spawn attempts.
+  - spawnCheckRetries: Set maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time on selection. This can lead to some high delays when selecting some mobs with tricky spawn conditions.
+
+## Questions
+### Do I need to install this on a server?
+No, this mod is client-side.
+
+### Is it fine to put in on server-side either way?
+It is fine, the mod will simply not do anything server-side.
+
+### How is the mobs list filtered?
+The filter box matches both localized and unlocalized mob names. This means you can type the mod name, the name in your selected language, or the default English name.
+
+### The spawn conditions seem off, why?
+Many mobs have inherently random spawn conditions that may not be fully captured by the analysis. Increasing the `spawnCheckRetries` config can help, but the conditions could still be sparse. Refreshing the selection may also yield different results due to this.
 
 ## Commands
 
 ### /smtanalyze
-Analyzes all registered mobs and exports results to the `supermobtracker/` folder. This is useful for mod developers to identify spawn condition issues or benchmark performance.
+Analyzes all registered mobs and exports results to the `supermobtracker/` folder. This is useful to identify spawn condition issues or benchmark performance.
 
 Running `/smtanalyze` with no arguments runs all analyses with default parameters. You can also run specific analyses:
 

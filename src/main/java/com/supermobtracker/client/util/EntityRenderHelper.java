@@ -44,6 +44,7 @@ public final class EntityRenderHelper {
     public static float getVisualRenderScale(Entity entity, float boxSize) {
         Vec3d modelSize = getModelBasedSize(entity);
         float maxDimension = Math.max(1.0f, (float) Math.max(modelSize.x, Math.max(modelSize.y, modelSize.z)));
+
         return boxSize / maxDimension / 1.3f;
     }
 
@@ -57,6 +58,7 @@ public final class EntityRenderHelper {
      */
     public static float getShadowBasedRenderScale(Entity entity, float boxSize) {
         float maxDimension = Math.max(1.0f, getMaxShadowBasedDimension(entity));
+
         return boxSize / maxDimension / 1.3f;
     }
 
@@ -145,9 +147,7 @@ public final class EntityRenderHelper {
             if (boxListModelField != null) {
                 @SuppressWarnings("unchecked")
                 List<ModelRenderer> renderers = (List<ModelRenderer>) boxListModelField.get(model);
-                for (ModelRenderer renderer : renderers) {
-                    accumulateRendererBounds(renderer, bounds, 0, 0, 0);
-                }
+                for (ModelRenderer renderer : renderers) accumulateRendererBounds(renderer, bounds, 0, 0, 0);
             }
         } catch (Exception e) {
             // Return current bounds (may be invalid)
@@ -193,9 +193,7 @@ public final class EntityRenderHelper {
 
         // Process child renderers recursively
         if (renderer.childModels != null) {
-            for (ModelRenderer child : renderer.childModels) {
-                accumulateRendererBounds(child, bounds, offsetX, offsetY, offsetZ);
-            }
+            for (ModelRenderer child : renderer.childModels) accumulateRendererBounds(child, bounds, offsetX, offsetY, offsetZ);
         }
     }
 
@@ -226,6 +224,7 @@ public final class EntityRenderHelper {
      */
     public static float getMaxShadowBasedDimension(Entity entity) {
         Vec3d size = getShadowBasedSize(entity);
+
         return (float) Math.max(size.x, Math.max(size.y, size.z));
     }
 

@@ -680,18 +680,14 @@ public class BiomeDimensionMapper {
                 Biome[] batchBiomes = biomeProvider.getBiomesForGeneration(null, batchX, batchZ, BATCH_SIZE, BATCH_SIZE);
                 if (batchBiomes != null) {
                     for (Biome biome : batchBiomes) {
-                        if (biome != null && biome.getRegistryName() != null) {
-                            biomes.add(biome.getRegistryName().toString());
-                        }
+                        if (biome != null && biome.getRegistryName() != null) biomes.add(biome.getRegistryName().toString());
                     }
                 }
             } catch (Exception ignored) {
                 // Fall back to single point sampling
                 try {
                     Biome biome = biomeProvider.getBiome(new BlockPos(batchX, 64, batchZ));
-                    if (biome != null && biome.getRegistryName() != null) {
-                        biomes.add(biome.getRegistryName().toString());
-                    }
+                    if (biome != null && biome.getRegistryName() != null) biomes.add(biome.getRegistryName().toString());
                 } catch (Exception ignored2) {
                     // Skip this position
                 }

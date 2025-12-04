@@ -23,7 +23,7 @@ public class ModConfig {
         BOTTOM_LEFT, BOTTOM_CENTER, BOTTOM_RIGHT
     }
 
-    public static boolean serverEnableTracking = true; // can disable tracking server-wide
+    public static boolean clientEnableTracking = true; // can disable tracking entirely
     public static double clientDetectionRange = 64.0; // range for spawn event consideration client side
     public static boolean clientI18nNames = true; // localize names in UI/HUD
     public static int clientSpawnCheckRetries = 100; // retry count for random spawn checks
@@ -36,7 +36,7 @@ public class ModConfig {
     public static int clientHudLineSpacing = 2; // spacing between lines
     public static boolean clientHudEnabled = true; // whether to show the HUD overlay
 
-    private static final String enableTrackingDesc = I18n.translateToLocal("config.supermobtracker.server.enableTracking.desc");
+    private static final String enableTrackingDesc = I18n.translateToLocal("config.supermobtracker.client.enableTracking.desc");
     private static final String detectionRangeDesc = I18n.translateToLocal("config.supermobtracker.client.detectionRange.desc");
     private static final String i18nNamesDesc = I18n.translateToLocal("config.supermobtracker.client.i18nNames.desc");
     private static final String spawnCheckRetriesDesc = I18n.translateToLocal("config.supermobtracker.client.spawnCheckRetries.desc");
@@ -75,12 +75,11 @@ public class ModConfig {
     public static void syncFromConfig() {
         Property prop;
 
-        // Server settings
-        prop = config.get("server", "enableTracking", serverEnableTracking, enableTrackingDesc);
-        prop.setLanguageKey("config.supermobtracker.server.enableTracking");
-        serverEnableTracking = prop.getBoolean();
-
         // Client settings
+        prop = config.get("client", "enableTracking", clientEnableTracking, enableTrackingDesc);
+        prop.setLanguageKey("config.supermobtracker.client.enableTracking");
+        clientEnableTracking = prop.getBoolean();
+
         prop = config.get("client", "detectionRange", (float) clientDetectionRange, detectionRangeDesc, 8f, 256f);
         prop.setLanguageKey("config.supermobtracker.client.detectionRange");
         clientDetectionRange = prop.getDouble();

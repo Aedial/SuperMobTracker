@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
@@ -21,6 +22,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.util.text.TextFormatting;
+import net.minecraftforge.client.IClientCommand;
 import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
@@ -31,16 +33,21 @@ import com.supermobtracker.spawn.SpawnConditionAnalyzer;
 
 
 /**
- * Command to analyze all mobs and export results to files.
+ * Client-side command to analyze all mobs and export results to files.
  * Usage:
  *   /smtanalyze - Run all analyses with default parameters
  *   /smtanalyze mobs [samples] - Analyze all mobs with performance metrics
  *   /smtanalyze dimension [samples] [extendedCount] [numGrids] - Benchmark dimension mapping
  */
-public class CommandAnalyze extends CommandBase {
+public class CommandAnalyze extends CommandBase implements IClientCommand {
 
     private static final int DEFAULT_SAMPLES = 10;
     private static final String OUTPUT_DIR = "supermobtracker";
+
+    @Override
+    public boolean allowUsageWithoutPrefix(ICommandSender sender, String message) {
+        return false;
+    }
 
     @Override
     public String getName() {
@@ -462,22 +469,20 @@ public class CommandAnalyze extends CommandBase {
         File file = getOutputFile(filename);
         try (PrintWriter writer = new PrintWriter(new FileWriter(file))) {
             writer.println("=== " + title + " ===");
-            if (description != null) {
-                writer.println(description);
-            }
+            if (description != null) writer.println(description);
+
             writer.println("Generated: " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
             writer.println("Total: " + entries.size());
             writer.println("Samples per mob: " + samples);
             writer.println();
+
             if (formatHint != null) {
                 writer.println(formatHint);
                 writer.println("Sorted by worst time (slowest first)");
                 writer.println();
             }
 
-            for (T entry : entries) {
-                entryWriter.write(writer, entry);
-            }
+            for (T entry : entries) entryWriter.write(writer, entry);
 
             return file;
         } catch (IOException e) {

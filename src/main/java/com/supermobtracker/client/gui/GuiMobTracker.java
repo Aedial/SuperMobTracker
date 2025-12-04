@@ -36,6 +36,7 @@ import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.client.ClientSettings;
 import com.supermobtracker.client.util.EntityRenderHelper;
 import com.supermobtracker.config.ModConfig;
+import com.supermobtracker.spawn.BiomeDimensionMapper;
 import com.supermobtracker.spawn.ConditionUtils;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
 import com.supermobtracker.tracking.SpawnTrackerManager;
@@ -242,7 +243,6 @@ public class GuiMobTracker extends GuiScreen {
 
         super.drawScreen(mouseX, mouseY, partialTicks);
 
-        // Draw tooltips last, so they appear above everything (buttons, mob preview, etc.)
         drawBiomeTooltip(mouseX, mouseY);
         drawDimensionTooltip(mouseX, mouseY);
     }
@@ -332,9 +332,7 @@ public class GuiMobTracker extends GuiScreen {
         buffer.pos(centerX, centerY, 0.0).endVertex();
 
         // Add all 10 points around the star, plus close the loop
-        for (int i = 0; i <= 10; i++) {
-            buffer.pos(pointsX[i % 10], pointsY[i % 10], 0.0).endVertex();
-        }
+        for (int i = 0; i <= 10; i++) buffer.pos(pointsX[i % 10], pointsY[i % 10], 0.0).endVertex();
 
         tessellator.draw();
 
@@ -756,7 +754,10 @@ public class GuiMobTracker extends GuiScreen {
             mouseY >= dimensionLabelY && mouseY <= dimensionLabelY + 12;
         if (!showTooltip) return;
 
-        String tooltipText = I18n.format("gui.mobtracker.dimension.unknown.tooltip");
+        String tooltipKey = BiomeDimensionMapper.isBackgroundSamplingActive()
+            ? "gui.mobtracker.dimension.unknown.tooltip.scanning"
+            : "gui.mobtracker.dimension.unknown.tooltip.complete";
+        String tooltipText = I18n.format(tooltipKey);
         drawHoveringText(java.util.Collections.singletonList(tooltipText), mouseX, mouseY);
     }
 
