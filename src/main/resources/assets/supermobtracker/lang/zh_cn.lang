@@ -6,8 +6,16 @@ key.categories.supermobtracker=超级生物追踪器
 config.supermobtracker.server.enableTracking.desc=启用服务端生物追踪。
 config.supermobtracker.client.detectionRange.desc=检测被追踪生物给予其发光效果的范围（以方块为单位）。
 config.supermobtracker.client.i18nNames.desc=在追踪器GUI中使用本地化名称。
+config.supermobtracker.client.spawnCheckRetries.desc=检查生成条件的最大重试次数。数值越高，越能有效处理随机生成条件，但会增加分析耗时。
 config.supermobtracker.client.trackedEntityIds.desc=当前正在追踪的生物ID列表。
 config.supermobtracker.client.lastSelectedEntity.desc=生物追踪器GUI中最后选中的实体。
+config.supermobtracker.client.filterText.desc=生物追踪器GUI中最后使用的过滤文本。
+config.supermobtracker.client.hudPosition.desc=追踪叠加层在屏幕上的显示位置。
+config.supermobtracker.client.hudPaddingExternal.desc=追踪叠加层与屏幕边缘的边距。
+config.supermobtracker.client.hudPaddingInternal.desc=追踪叠加层框体内部的边距。
+config.supermobtracker.client.hudLineSpacing.desc=追踪叠加层中文本的行间距。
+
+# TODO: add the config names
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=ID显示：本地化
@@ -21,7 +29,6 @@ gui.mobtracker.cannotSpawnNaturallyHint=可能只能通过刷怪箱、命令或�
 gui.mobtracker.analysisCrashed=生成分析失败。
 gui.mobtracker.analysisCrashedHint=分析该实体的生成条件时发生错误。
 gui.mobtracker.noSpawnConditions=无法确定生成条件；可能不会在此维度生成。
-
 
 gui.mobtracker.entityName=名称：%s
 gui.mobtracker.entityId=ID：%s
@@ -49,10 +56,18 @@ gui.mobtracker.weather.thunder=雷暴
 gui.mobtracker.weather.unknown=未知
 gui.mobtracker.weather.any=任意
 
+gui.mobtracker.dimension=维度：%s
+
+# Vanilla Dimensions
+dimension.overworld=主世界
+dimension.the_nether=下界
+dimension.the_end=末地
+
 gui.mobtracker.biomes=生物群系：%s
 gui.mobtracker.biomes.none=生物群系：无
 gui.mobtracker.biomes.unknown=生物群系：未知
 gui.mobtracker.biomes.any=生物群系：任意
+gui.mobtracker.biomesCopied=%s的生物群系已复制到剪贴板。
 
 gui.mobtracker.hintsHeader=备注：
 gui.mobtracker.any=任意
@@ -75,3 +90,16 @@ gui.mobtracker.hint.ground=可能需要特定地面方块。
 gui.mobtracker.hint.biome=可能需要特定生物群系。
 gui.mobtracker.hint.time=可能需要特定时间条件。
 gui.mobtracker.hint.weather=可能需要特定天气条件。
+
+# HUD Position Selector
+gui.supermobtracker.hudPosition.top_left=顶部左侧
+gui.supermobtracker.hudPosition.top_center=顶部中心
+gui.supermobtracker.hudPosition.top_right=顶部右侧
+gui.supermobtracker.hudPosition.center_left=中心左侧
+gui.supermobtracker.hudPosition.center=中心
+gui.supermobtracker.hudPosition.center_right=中心右侧
+gui.supermobtracker.hudPosition.bottom_left=底部左侧
+gui.supermobtracker.hudPosition.bottom_center=底部中心
+gui.supermobtracker.hudPosition.bottom_right=底部右侧
+gui.supermobtracker.hudPosition.button=HUD：%s
+gui.supermobtracker.hudPosition.label=HUD位置
