@@ -11,8 +11,10 @@ REPO_NAME=${3:?name required}
 TAG_COMMIT=${4:?commit sha required}
 GITHUB_SERVER_URL=${5:-https://github.com}
 
-# Normalize version core (strip leading v and any suffix like -rc1)
-VERSION_CORE=$(echo "$TAG" | sed -E 's/^v//; s/^([0-9]+(\.[0-9]+)*).*/\1/')
+# Normalize versions (strip leading v)
+# VERSION_FULL keeps suffixes like -rc1, VERSION_CORE strips them
+VERSION_FULL=$(echo "$TAG" | sed -E 's/^v//')
+VERSION_CORE=$(echo "$VERSION_FULL" | sed -E 's/^([0-9]+(\.[0-9]+)*).*/\1/')
 
 # Get tag message. Try annotated tag contents first, then fall back to the tagged commit message
 # but only if the tag actually exists. If the tag name doesn't resolve to a tag ref, do nothing.
@@ -49,16 +51,21 @@ TAG_MESSAGE=$(printf '%s' "${TAG_MESSAGE}" | sed -E ':a; /\n$/ {N; ba}; s/[[:spa
 CHANGELOG_CONTENT=""
 if git show "${TAG_COMMIT}:CHANGELOG.md" > /tmp/CHANGELOG_ALL 2>/dev/null; then
   # Grab section starting after heading line matching version until next heading
-  EXTRACTED=$(awk -v ver="${VERSION_CORE}" '
-    BEGIN{found=0}
-    $0 ~ "^##[[:space:]]*\\[" ver "\\]" {found=1; next}
-    found && $0 ~ "^##[[:space:]]*\\[" {exit}
-    found {print}
-  ' /tmp/CHANGELOG_ALL)
+  # Try full version first (e.g., 1.0.0-rc1), then fall back to core (e.g., 1.0.0)
+  EXTRACTED=""
+  for try_ver in "${VERSION_FULL}" "${VERSION_CORE}"; do
+    EXTRACTED=$(awk -v ver="${try_ver}" '
+      BEGIN{found=0}
+      $0 ~ "^##[[:space:]]*\\[" ver "\\]" {found=1; next}
+      found && $0 ~ "^##[[:space:]]*\\[" {exit}
+      found {print}
+    ' /tmp/CHANGELOG_ALL)
+    if [ -n "${EXTRACTED}" ]; then
+      break
+    fi
+  done
   if [ -n "${EXTRACTED}" ]; then
     CHANGELOG_CONTENT="${EXTRACTED}"
-  else
-    CHANGELOG_CONTENT=$(cat /tmp/CHANGELOG_ALL)
   fi
 fi
 
