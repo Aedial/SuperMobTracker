@@ -10,6 +10,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
@@ -17,9 +18,12 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
+import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityHanging;
@@ -30,7 +34,9 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.client.ClientSettings;
+import com.supermobtracker.client.util.EntityRenderHelper;
 import com.supermobtracker.config.ModConfig;
+import com.supermobtracker.spawn.BiomeDimensionMapper;
 import com.supermobtracker.spawn.ConditionUtils;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
 import com.supermobtracker.tracking.SpawnTrackerManager;
@@ -46,6 +52,11 @@ public class GuiMobTracker extends GuiScreen {
     private SpawnConditionAnalyzer.SpawnConditions spawnConditions;
     private long lastClickTime = 0L;
     private ResourceLocation lastClickId = null;
+    private boolean entityErrorReported = false;
+
+    // Cache for spawn conditions to avoid regenerating on window resize
+    private static ResourceLocation cachedEntityId = null;
+    private static SpawnConditionAnalyzer.SpawnConditions cachedSpawnConditions = null;
 
     // JEI button bounds (updated during draw)
     private int jeiButtonX, jeiButtonY, jeiButtonW, jeiButtonH;
@@ -57,6 +68,10 @@ public class GuiMobTracker extends GuiScreen {
     // Biome tooltip data (set during drawRightPanel, rendered in drawBiomeTooltip)
     private List<String> tooltipBiomes = null;
     private int tooltipBiomesLabelX, tooltipBiomesLabelY, tooltipBiomesLabelW;
+
+    // Unknown dimension tooltip data (set during drawRightPanel, rendered in drawDimensionTooltip)
+    private boolean showDimensionUnknownTooltip = false;
+    private int dimensionLabelX, dimensionLabelY, dimensionLabelW;
 
     private static final int entityBgColor = 0xFF404040;
     private static final int entityBorderColor = 0xFF808080;
@@ -83,13 +98,22 @@ public class GuiMobTracker extends GuiScreen {
 
         this.buttonList.add(new GuiButton(1, 10, height - 30, leftWidth - 20, 20, getI18nButtonString()));
 
-        // TODO: keep last spawn conditions around, so it doesn't regenerate constantly on window resize
-        // Restore last selected entity
+        // Restore last selected entity and its cached spawn conditions
         String lastEntity = ModConfig.getClientLastSelectedEntity();
         if (lastEntity != null && !lastEntity.isEmpty()) {
             ResourceLocation lastId = new ResourceLocation(lastEntity);
             if (analyzer.getEntityInstance(lastId) != null) {
-                selectEntity(lastId);
+                this.selected = lastId;
+
+                // Reuse cached spawn conditions if the entity ID matches
+                if (lastId.equals(cachedEntityId) && cachedSpawnConditions != null) {
+                    this.spawnConditions = cachedSpawnConditions;
+                } else {
+                    this.spawnConditions = analyzer.analyze(lastId);
+                    cachedEntityId = lastId;
+                    cachedSpawnConditions = this.spawnConditions;
+                }
+
                 listWidget.ensureVisible(lastId);
             }
         }
@@ -98,6 +122,8 @@ public class GuiMobTracker extends GuiScreen {
     public void selectEntity(ResourceLocation id) {
         this.selected = id;
         this.spawnConditions = analyzer.analyze(id);
+        cachedEntityId = id;
+        cachedSpawnConditions = this.spawnConditions;
         ModConfig.setClientLastSelectedEntity(id != null ? id.toString() : "");
     }
 
@@ -217,8 +243,8 @@ public class GuiMobTracker extends GuiScreen {
 
         super.drawScreen(mouseX, mouseY, partialTicks);
 
-        // Draw tooltip last, so it appears above everything (buttons, mob preview, etc.)
         drawBiomeTooltip(mouseX, mouseY);
+        drawDimensionTooltip(mouseX, mouseY);
     }
 
     private int drawElidedString(FontRenderer renderer, String text, int x, int y, int lineHeight, int maxWidth, int color) {
@@ -255,6 +281,67 @@ public class GuiMobTracker extends GuiScreen {
         renderer.drawString(text, x, y, color);
 
         return y + lineHeight;
+    }
+
+    /**
+     * Draws a 5-pointed star using the Tessellator for proper GUI rendering.
+     * The star is drawn as 5 triangles, each connecting the center to two adjacent points
+     * (alternating between outer tips and inner valleys).
+     *
+     * @param centerX center X coordinate
+     * @param centerY center Y coordinate
+     * @param outerRadius distance from center to outer points (tips)
+     * @param color ARGB color (e.g., 0xFFFFD700 for gold)
+     */
+    private void drawStar(float centerX, float centerY, float outerRadius, int color) {
+        // Extract color components
+        float a = ((color >> 24) & 0xFF) / 255.0f;
+        float r = ((color >> 16) & 0xFF) / 255.0f;
+        float g = ((color >> 8) & 0xFF) / 255.0f;
+        float b = (color & 0xFF) / 255.0f;
+
+        // Inner radius is typically ~38% of outer radius for a classic 5-pointed star
+        float innerRadius = outerRadius * 0.38f;
+
+        // Calculate 10 points: alternating outer (tips) and inner (valleys)
+        // Starting from top point, going clockwise (36 degrees apart)
+        float[] pointsX = new float[10];
+        float[] pointsY = new float[10];
+        for (int i = 0; i < 10; i++) {
+            double angle = Math.toRadians(-90 + i * 36);
+            float radius = (i % 2 == 0) ? outerRadius : innerRadius;
+            pointsX[i] = centerX + (float) (radius * Math.cos(angle));
+            pointsY[i] = centerY + (float) (radius * Math.sin(angle));
+        }
+
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.disableAlpha();
+        GlStateManager.disableDepth();
+        GlStateManager.disableCull();
+        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        GlStateManager.shadeModel(GL11.GL_SMOOTH);
+        GlStateManager.color(r, g, b, a);
+
+        Tessellator tessellator = net.minecraft.client.renderer.Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.getBuffer();
+
+        buffer.begin(GL11.GL_TRIANGLE_FAN,DefaultVertexFormats.POSITION);
+
+        // Center point
+        buffer.pos(centerX, centerY, 0.0).endVertex();
+
+        // Add all 10 points around the star, plus close the loop
+        for (int i = 0; i <= 10; i++) buffer.pos(pointsX[i % 10], pointsY[i % 10], 0.0).endVertex();
+
+        tessellator.draw();
+
+        GlStateManager.shadeModel(GL11.GL_FLAT);
+        GlStateManager.enableCull();
+        GlStateManager.enableDepth();
+        GlStateManager.disableBlend();
+        GlStateManager.enableAlpha();
+        GlStateManager.enableTexture2D();
     }
 
     private String format(double d) {
@@ -500,6 +587,7 @@ public class GuiMobTracker extends GuiScreen {
 
         // Format dimension as "ID (name)" where name is the translated dimension name
         String dimDisplay;
+        boolean isDimensionUnknown = false;
         if (spawnConditions.dimension != null) {
             String translatedName = translateDimensionName(spawnConditions.dimension);
             if (spawnConditions.dimensionId != Integer.MIN_VALUE) {
@@ -509,9 +597,19 @@ public class GuiMobTracker extends GuiScreen {
             }
         } else {
             dimDisplay = "?";
+            isDimensionUnknown = true;
         }
         String dimension = I18n.format("gui.mobtracker.dimension", dimDisplay);
+        int dimensionLabelYPos = textY;
         textY = drawWrappedString(fontRenderer, dimension, condsX, textY, 12, textW, dimensionColor);
+
+        // Store dimension tooltip data for rendering when dimension is unknown
+        showDimensionUnknownTooltip = isDimensionUnknown;
+        if (isDimensionUnknown) {
+            dimensionLabelX = condsX;
+            dimensionLabelY = dimensionLabelYPos;
+            dimensionLabelW = fontRenderer.getStringWidth(dimension);
+        }
 
         int biomesCount = spawnConditions.biomes.size();
         boolean hasBiomes = biomesCount > 0;
@@ -649,6 +747,20 @@ public class GuiMobTracker extends GuiScreen {
         GlStateManager.popMatrix();
     }
 
+    private void drawDimensionTooltip(int mouseX, int mouseY) {
+        if (!showDimensionUnknownTooltip) return;
+
+        boolean showTooltip = mouseX >= dimensionLabelX && mouseX <= dimensionLabelX + dimensionLabelW &&
+            mouseY >= dimensionLabelY && mouseY <= dimensionLabelY + 12;
+        if (!showTooltip) return;
+
+        String tooltipKey = BiomeDimensionMapper.isBackgroundSamplingActive()
+            ? "gui.mobtracker.dimension.unknown.tooltip.scanning"
+            : "gui.mobtracker.dimension.unknown.tooltip.complete";
+        String tooltipText = I18n.format(tooltipKey);
+        drawHoveringText(java.util.Collections.singletonList(tooltipText), mouseX, mouseY);
+    }
+
     private void drawMobPreview(ResourceLocation id, int x, int y, int size, float rotationY) {
         Entity entity = analyzer.getEntityInstance(id);
         if (entity == null || size <= 0) return;
@@ -657,13 +769,16 @@ public class GuiMobTracker extends GuiScreen {
         drawRect(x - 1, y - 1, x + size + 1, y + size + 1, entityBorderColor);
         drawRect(x, y, x + size, y + size, entityBgColor);
 
-        // Calculate scale based on entity's largest dimension (width, height/length)
+        // Calculate scale based on entity's visual model size (via shadow size or collision box)
+        // FIXME: both render scale methods have issues with certain entities, find a middle ground?
+        // float scale = EntityRenderHelper.getVisualRenderScale(entity, (float) size);  // issues with tall/big entities
+        // float scale = EntityRenderHelper.getShadowBasedRenderScale(entity, (float) size);    // issues with wide entities
         float maxDimension = Math.max(1.0f, Math.max(entity.height, entity.width));
         float scale = size / maxDimension / 1.5f;
 
-        // Center position
+        // Center position of the preview box
         int centerX = x + size / 2;
-        int centerY = y + (int)(size * 0.85f);
+        int centerY = y + size / 2;
 
         GlStateManager.pushMatrix();
         GlStateManager.color(1f, 1f, 1f);
@@ -679,14 +794,21 @@ public class GuiMobTracker extends GuiScreen {
         GlStateManager.rotate(20F, 1.0F, 0.0F, 0.0F); // isometric tilt
         GlStateManager.rotate(rotationY, 0.0F, 1.0F, 0.0F);
 
-        GlStateManager.translate(0.0F, (float) entity.getYOffset() + (entity instanceof EntityHanging ? 0.5F : 0.0F), 0.0F);
+        // Translate entity so its bounding box center aligns with the preview center
+        // Entity origin (0,0,0) is at their feet, so we shift up by half their height
+        float verticalOffset = entity.height / 2.0f;
+        // Also apply entity's intrinsic Y offset (e.g., for hanging entities)
+        verticalOffset += (float) entity.getYOffset();
+        GlStateManager.translate(0.0F, -verticalOffset, 0.0F);
         Minecraft.getMinecraft().getRenderManager().playerViewY = 180F;
 
         try {
             Minecraft.getMinecraft().getRenderManager().renderEntity(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
+            this.entityErrorReported = false;
         } catch (Exception e) {
             // TODO: would be funny to show MissingNo there instead
-            SuperMobTracker.LOGGER.error("Error rendering entity!", e);
+            if (!this.entityErrorReported) SuperMobTracker.LOGGER.error("Error rendering entity!", e);
+            this.entityErrorReported = true;
         }
 
         GlStateManager.popMatrix();
@@ -965,15 +1087,10 @@ public class GuiMobTracker extends GuiScreen {
                 fontRenderer.drawString(elided, x + 4, drawY + 2, isSel ? 0xFFFFA0 : 0xFFFFFF);
 
                 if (SpawnTrackerManager.isTracked(entry.id)) {
-                    float scale = 2.0f;
-                    int starX = (int) ((x + w - 16) / scale);
-                    int starY = (int) ((drawY / scale)) - 1;
-
-                    // TODO: the star looks a bit ugly due to lack of anti-aliasing
-                    GlStateManager.pushMatrix();
-                    GlStateManager.scale(scale, scale, scale);
-                    fontRenderer.drawString("★", starX, starY, 0xFFD700);
-                    GlStateManager.popMatrix();
+                    float starCenterX = x + w - 16;
+                    float starCenterY = drawY + 6;
+                    float starRadius = 4.0f;
+                    drawStar(starCenterX, starCenterY, starRadius, 0xFFFFD700);
                 }
             }
 

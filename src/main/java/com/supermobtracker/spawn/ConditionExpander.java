@@ -6,7 +6,9 @@ import java.util.List;
 
 import net.minecraft.entity.EntityLiving;
 
-import static com.supermobtracker.spawn.ConditionUtils.*;
+import static com.supermobtracker.spawn.ConditionUtils.DEFAULT_TIMES;
+import static com.supermobtracker.spawn.ConditionUtils.DEFAULT_WEATHERS;
+import static com.supermobtracker.spawn.ConditionUtils.canSpawn;
 
 
 /**
@@ -44,7 +46,7 @@ public class ConditionExpander {
                                         List<String> candidateGroundBlocks) {
         ExpandedConditions result = new ExpandedConditions();
 
-        world.biome = extractBiomePath(sample.biome);
+        world.biomeId = sample.biome;
         world.groundBlock = sample.ground;
         world.lightLevel = sample.light;
 
@@ -149,9 +151,7 @@ public class ConditionExpander {
         for (String time : DEFAULT_TIMES) {
             world.timeOfDay = time;
 
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) {
-                allValid.add(time);
-            }
+            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(time);
         }
 
         world.timeOfDay = "day";
@@ -167,9 +167,7 @@ public class ConditionExpander {
         for (String weather : DEFAULT_WEATHERS) {
             world.weather = weather;
 
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) {
-                allValid.add(weather);
-            }
+            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(weather);
         }
 
         world.weather = "clear";

@@ -67,9 +67,7 @@ public class SpawnConditionAnalyzer {
                     .filter(t -> t.getCreatureClass().isAssignableFrom(entry.getEntityClass()))
                     .findFirst()
                     .orElse(null);
-            if (type != null) {
-                cache.put(entry.getRegistryName(), type);
-            }
+            if (type != null) cache.put(entry.getRegistryName(), type);
         }
 
         return cache;
@@ -159,7 +157,7 @@ public class SpawnConditionAnalyzer {
     public static class SimulatedWorld extends World {
         public int lightLevel = 15;
         public String groundBlock = "grass";
-        public String biome = "plains";
+        public String biomeId = "minecraft:plains";
         public String dimension = "overworld";
         public String timeOfDay = "day";
         public String weather = "clear";
@@ -246,7 +244,10 @@ public class SpawnConditionAnalyzer {
         @Override
         public Biome getBiome(BlockPos pos) {
             queriedConditions.put("biome", true);
-            return ForgeRegistries.BIOMES.getValue(new ResourceLocation("minecraft", biome));
+            Biome biome = ForgeRegistries.BIOMES.getValue(new ResourceLocation(biomeId));
+
+            // Fall back to plains if biome not found (should not happen with valid biomeId)
+            return biome != null ? biome : ForgeRegistries.BIOMES.getValue(new ResourceLocation("minecraft", "plains"));
         }
 
         @Override
@@ -401,14 +402,10 @@ public class SpawnConditionAnalyzer {
      * Get or create a cached entity instance for analysis.
      */
     public EntityLiving getEntityInstance(ResourceLocation entityId) {
-        if (entityInstanceCache.containsKey(entityId)) {
-            return entityInstanceCache.get(entityId);
-        }
+        if (entityInstanceCache.containsKey(entityId)) return entityInstanceCache.get(entityId);
 
         EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
-        if (entry == null || !(EntityLiving.class.isAssignableFrom(entry.getEntityClass()))) {
-            return null;
-        }
+        if (entry == null || !(EntityLiving.class.isAssignableFrom(entry.getEntityClass()))) return null;
 
         try {
             World world = Minecraft.getMinecraft().world;
@@ -422,7 +419,11 @@ public class SpawnConditionAnalyzer {
                 entityInstanceCache.put(entityId, (EntityLiving) entity);
                 return (EntityLiving) entity;
             }
-        } catch (Exception ignored) { }
+        } catch (Exception e) {
+            if (ConditionUtils.shouldShowCrashes()) {
+                SuperMobTracker.LOGGER.error("Error creating entity instance for " + entityId, e);
+            }
+        }
 
         entityInstanceCache.put(entityId, null);
         return null;
@@ -473,7 +474,6 @@ public class SpawnConditionAnalyzer {
     }
 
     public Vec3d getEntitySize(ResourceLocation entityId) {
-        // TODO: use EntityLiving.getRenderBoundingBox() for more accurate size
         EntityLiving entity = getEntityInstance(entityId);
         if (entity == null) return new Vec3d(0, 0, 0);
 
@@ -501,10 +501,7 @@ public class SpawnConditionAnalyzer {
             // Get native biomes from the entity spawn tables
             List<String> nativeBiomes = getNativeBiomes(entityId, entry.getEntityClass());
             lastHadNativeBiomes = nativeBiomes != null && !nativeBiomes.isEmpty();
-            if (!lastHadNativeBiomes) {
-                // Entities without native biomes cannot spawn naturally
-                return null;
-            }
+            if (!lastHadNativeBiomes)  return null;  // Entities without native biomes cannot spawn naturally
 
             List<String> groundBlocks;
             if (isFlying(entityId)) {
@@ -546,6 +543,10 @@ public class SpawnConditionAnalyzer {
             if (ConditionUtils.isProfilingEnabled()) {
                 long elapsed = System.nanoTime() - startTime;
                 SuperMobTracker.LOGGER.info("Analysis of " + entityId + " crashed after " + (elapsed / 1_000_000.0) + "ms: " + t.getMessage());
+            }
+
+            if (ConditionUtils.shouldShowCrashes()) {
+                SuperMobTracker.LOGGER.error("Error analyzing spawn conditions for " + entityId, t);
             }
 
             return null;

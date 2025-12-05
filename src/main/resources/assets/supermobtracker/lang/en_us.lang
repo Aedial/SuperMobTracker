@@ -3,7 +3,8 @@
 key.supermobtracker.open=Open Mob Tracker
 key.categories.supermobtracker=Super Mob Tracker
 
-config.supermobtracker.server.enableTracking.desc=Enable server-side tracking of mobs.
+# Config descriptions
+config.supermobtracker.client.enableTracking.desc=Enable tracking of mobs (requires Minecraft restart).
 config.supermobtracker.client.detectionRange.desc=Range in blocks to detect tracked mobs for glowing effect.
 config.supermobtracker.client.i18nNames.desc=Use localized names in the tracker GUI.
 config.supermobtracker.client.spawnCheckRetries.desc=Maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time.
@@ -14,8 +15,21 @@ config.supermobtracker.client.hudPosition.desc=Position of the tracking overlay 
 config.supermobtracker.client.hudPaddingExternal.desc=Padding from screen edge for the tracking overlay.
 config.supermobtracker.client.hudPaddingInternal.desc=Padding inside the tracking overlay box.
 config.supermobtracker.client.hudLineSpacing.desc=Spacing between lines in the tracking overlay.
+config.supermobtracker.client.hudEnabled.desc=Whether to show the tracking overlay on screen.
 
-# TODO: add the config names
+# Config names (displayed in config GUI)
+config.supermobtracker.client.enableTracking=Enable Tracking
+config.supermobtracker.client.detectionRange=Detection Range
+config.supermobtracker.client.i18nNames=Localized Names
+config.supermobtracker.client.spawnCheckRetries=Spawn Check Retries
+config.supermobtracker.client.trackedEntityIds=Tracked Entity IDs
+config.supermobtracker.client.lastSelectedEntity=Last Selected Entity
+config.supermobtracker.client.filterText=Filter Text
+config.supermobtracker.client.hudPosition=HUD Position
+config.supermobtracker.client.hudPaddingExternal=HUD External Padding
+config.supermobtracker.client.hudPaddingInternal=HUD Internal Padding
+config.supermobtracker.client.hudLineSpacing=HUD Line Spacing
+config.supermobtracker.client.hudEnabled=HUD Enabled
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=IDs: Localized
@@ -57,6 +71,8 @@ gui.mobtracker.weather.unknown=Unknown
 gui.mobtracker.weather.any=Any
 
 gui.mobtracker.dimension=Dimension: %s
+gui.mobtracker.dimension.unknown.tooltip.scanning=Could not determine dimension: the entity's native biome has not been found so far in scans. May appear later, once scans finish.
+gui.mobtracker.dimension.unknown.tooltip.complete=Could not determine dimension: the entity's native biome was not found in any dimension scans.
 
 # Vanilla Dimensions
 dimension.overworld=Overworld
@@ -84,7 +100,6 @@ gui.mobtracker.attribute.flying=Flying
 gui.mobtracker.attribute.tameable=Tameable
 
 # Hints
-gui.mobtracker.hint.dimension=May spawn in another dimension.
 gui.mobtracker.hint.light=May require a specific light level.
 gui.mobtracker.hint.ground=May require a specific ground block.
 gui.mobtracker.hint.biome=May require a specific biome.

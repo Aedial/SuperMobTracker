@@ -132,9 +132,7 @@ public class HudPositionConfigElement implements IConfigElement {
 
     @Override
     public void set(Object[] aVal) {
-        if (aVal != null && aVal.length > 0) {
-            set(aVal[0]);
-        }
+        if (aVal != null && aVal.length > 0) set(aVal[0]);
     }
 
     @Override

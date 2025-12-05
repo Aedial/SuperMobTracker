@@ -22,8 +22,6 @@ public class KeyBindings {
     }
 
     public static void onClientTick() {
-        if (openTracker.isPressed()) {
-            Minecraft.getMinecraft().displayGuiScreen(new GuiMobTracker());
-        }
+        if (openTracker.isPressed()) Minecraft.getMinecraft().displayGuiScreen(new GuiMobTracker());
     }
 }

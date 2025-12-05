@@ -2,17 +2,13 @@ package com.supermobtracker.tracking;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLiving;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.network.play.server.SPacketEntityMetadata;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -50,9 +46,7 @@ public class SpawnTrackerManager {
 
     public static void removeTracked(ResourceLocation id) {
         Tracker t = tracked.remove(id);
-        if (t != null) {
-            t.uuids.clear();
-        }
+        if (t != null) t.uuids.clear();
     }
 
     public static void toggleTracked(ResourceLocation id) {
@@ -67,6 +61,7 @@ public class SpawnTrackerManager {
         for (Tracker t : tracked.values()) {
             if (t.clazz.isInstance(entity)) return true;
         }
+
         return false;
     }
 
@@ -77,6 +72,7 @@ public class SpawnTrackerManager {
     public static List<String> getTrackedIdStrings() {
         List<String> list = new ArrayList<>();
         for (ResourceLocation id : tracked.keySet()) list.add(id.toString());
+
         return list;
     }
 
@@ -115,38 +111,25 @@ public class SpawnTrackerManager {
 
         for (Map.Entry<ResourceLocation, Tracker> e : tracked.entrySet()) {
             Tracker t = e.getValue();
-            if (t.clazz.isInstance(entity)) {
-                if (t.uuids.add(entity.getUniqueID())) t.liveCount++;
-            }
+            if (t.clazz.isInstance(entity) && t.uuids.add(entity.getUniqueID())) t.liveCount++;
         }
     }
 
     public static void maybeTrackDespawn(Entity entity) {
         for (Tracker t : tracked.values()) {
-            if (t.uuids.remove(entity.getUniqueID())) {
-                t.liveCount = Math.max(0, t.liveCount - 1);
-            }
+            if (t.uuids.remove(entity.getUniqueID())) t.liveCount = Math.max(0, t.liveCount - 1);
         }
     }
 
     public static void maybeTrackDeath(Entity entity) {
         for (Tracker t : tracked.values()) {
-            if (t.uuids.remove(entity.getUniqueID())) {
-                t.liveCount = Math.max(0, t.liveCount - 1);
-            }
+            if (t.uuids.remove(entity.getUniqueID())) t.liveCount = Math.max(0, t.liveCount - 1);
         }
-    }
-
-    public static void makeGlowForPlayer(Entity target, EntityPlayerMP viewer, boolean glow) {
-        target.setGlowing(glow);
-        viewer.connection.sendPacket(new SPacketEntityMetadata(target.getEntityId(), target.getDataManager(), true));
     }
 
     public static void scanWorld(World world) {
         if (world == null) return;
 
-        for (Entity entity : world.loadedEntityList) {
-            maybeTrackJoin(entity);
-        }
+        for (Entity entity : world.loadedEntityList) maybeTrackJoin(entity);
     }
 }
