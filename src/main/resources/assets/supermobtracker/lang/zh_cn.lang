@@ -3,7 +3,8 @@
 key.supermobtracker.open=打开生物追踪器
 key.categories.supermobtracker=超级生物追踪器
 
-config.supermobtracker.server.enableTracking.desc=启用服务端生物追踪。
+# Config descriptions
+config.supermobtracker.client.enableTracking.desc=启用生物追踪（需要重启客户端）。
 config.supermobtracker.client.detectionRange.desc=检测被追踪生物给予其发光效果的范围（以方块为单位）。
 config.supermobtracker.client.i18nNames.desc=在追踪器GUI中使用本地化名称。
 config.supermobtracker.client.spawnCheckRetries.desc=检查生成条件的最大重试次数。数值越高，越能有效处理随机生成条件，但会增加分析耗时。
@@ -14,8 +15,21 @@ config.supermobtracker.client.hudPosition.desc=追踪叠加层在屏幕上的显
 config.supermobtracker.client.hudPaddingExternal.desc=追踪叠加层与屏幕边缘的边距。
 config.supermobtracker.client.hudPaddingInternal.desc=追踪叠加层框体内部的边距。
 config.supermobtracker.client.hudLineSpacing.desc=追踪叠加层中文本的行间距。
+config.supermobtracker.client.hudEnabled.desc=是否在屏幕上显示追踪叠加层。
 
-# TODO: add the config names
+# Config names (displayed in config GUI)
+config.supermobtracker.client.enableTracking=启用追踪
+config.supermobtracker.client.detectionRange=检测范围
+config.supermobtracker.client.i18nNames=本地化名称
+config.supermobtracker.client.spawnCheckRetries=生成检查条目
+config.supermobtracker.client.trackedEntityIds=追踪的实体ID
+config.supermobtracker.client.lastSelectedEntity=最后选中的实体
+config.supermobtracker.client.filterText=过滤文本
+config.supermobtracker.client.hudPosition=HUD位置
+config.supermobtracker.client.hudPaddingExternal=HUD外部边距
+config.supermobtracker.client.hudPaddingInternal=HUD内部边距
+config.supermobtracker.client.hudLineSpacing=HUD行间距
+config.supermobtracker.client.hudEnabled=启用HUD
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=ID显示：本地化
@@ -57,6 +71,8 @@ gui.mobtracker.weather.unknown=未知
 gui.mobtracker.weather.any=任意
 
 gui.mobtracker.dimension=维度：%s
+gui.mobtracker.dimension.unknown.tooltip.scanning=无法确定维度：在已扫描区域中尚未发现该实体的原生生物群系。扫描完成后可能出现。
+gui.mobtracker.dimension.unknown.tooltip.complete=无法确定维度：在所有维度扫描中均未发现该实体的原生生物群系。
 
 # Vanilla Dimensions
 dimension.overworld=主世界
@@ -84,7 +100,6 @@ gui.mobtracker.attribute.flying=飞行
 gui.mobtracker.attribute.tameable=可驯服
 
 # Hints
-gui.mobtracker.hint.dimension=可能在其他维度生成。
 gui.mobtracker.hint.light=可能需要特定亮度等级。
 gui.mobtracker.hint.ground=可能需要特定地面方块。
 gui.mobtracker.hint.biome=可能需要特定生物群系。
