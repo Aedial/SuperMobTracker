@@ -113,6 +113,8 @@ public class ModConfig {
         prop.setLanguageKey("config.supermobtracker.client.hudEnabled");
         clientHudEnabled = prop.getBoolean();
 
+        // TODO: add mob blacklist/whitelist here (whitelist takes priority over blacklist)
+
         // Hidden configs (still set language keys for consistency)
         prop = config.get("client", "i18nNames", clientI18nNames, i18nNamesDesc);
         prop.setLanguageKey("config.supermobtracker.client.i18nNames");

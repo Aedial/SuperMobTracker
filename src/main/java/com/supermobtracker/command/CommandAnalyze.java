@@ -130,6 +130,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
 
         List<MobPerformanceEntry> successfulMobs = new ArrayList<>();
         List<MobPerformanceEntry> failedMobs = new ArrayList<>();
+        List<MobPerformanceEntry> sparseMobs = new ArrayList<>();
         List<MobPerformanceEntry> noDimensionMobs = new ArrayList<>();
         List<MobPerformanceEntry> noNativeBiomeMobs = new ArrayList<>();
         List<MobPerformanceEntry> crashedMobs = new ArrayList<>();
@@ -184,6 +185,9 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
             } else if (result.dimension == null) {
                 // Has biomes but couldn't map to dimension
                 noDimensionMobs.add(new MobPerformanceEntry(entityId.toString(), timings, false, null, result.biomes, null));
+            } else if (result.isSparse()) {
+                // Analysis returned multiple ranges (sparse) which indicates incomplete or ambiguous sampling
+                sparseMobs.add(new MobPerformanceEntry(entityId.toString(), timings, false, result.dimension, result.biomes, null));
             } else if (result.failed()) {
                 failedMobs.add(new MobPerformanceEntry(entityId.toString(), timings, false, result.dimension, result.biomes, null));
             } else {
@@ -191,13 +195,14 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
             }
         }
 
-        // Sort each list by worst (slowest) time first
-        Comparator<MobPerformanceEntry> byWorstTime = (a, b) -> Long.compare(b.getWorstTime(), a.getWorstTime());
-        successfulMobs.sort(byWorstTime);
-        failedMobs.sort(byWorstTime);
-        noDimensionMobs.sort(byWorstTime);
-        noNativeBiomeMobs.sort(byWorstTime);
-        crashedMobs.sort(byWorstTime);
+        // Sort each list by average (slowest time first)
+        Comparator<MobPerformanceEntry> byAverageTime = (a, b) -> Double.compare(b.getAverageTime(), a.getAverageTime());
+        successfulMobs.sort(byAverageTime);
+        failedMobs.sort(byAverageTime);
+        sparseMobs.sort(byAverageTime);
+        noDimensionMobs.sort(byAverageTime);
+        noNativeBiomeMobs.sort(byAverageTime);
+        crashedMobs.sort(byAverageTime);
 
         // Write successful mobs to file
         File successFile = writePerformanceReport(
@@ -206,12 +211,12 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
             null,
             successfulMobs,
             samples,
-            "Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Dimension: X",
-            (writer, entry) -> writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Dimension: %s%n",
+            "Format: [Entity ID] - Avg: Xms, Worst: Xms, Best: Xms | Dimension: X",
+            (writer, entry) -> writer.printf("%s - Avg: %.2fms, Worst: %.2fms, Best: %.2fms | Dimension: %s%n",
                 entry.entityId,
+                entry.getAverageTime() / 1_000_000.0,
                 entry.getWorstTime() / 1_000_000.0,
                 entry.getBestTime() / 1_000_000.0,
-                entry.getAverageTime() / 1_000_000.0,
                 entry.dimension != null ? entry.dimension : "?"),
             sender
         );
@@ -228,12 +233,31 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
                 "These mobs have native biomes but spawn conditions could not be determined.",
                 failedMobs,
                 samples,
-                "Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Dimension: X",
-                (writer, entry) -> writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Dimension: %s%n",
+                "Format: [Entity ID] - Avg: Xms, Worst: Xms, Best: Xms | Dimension: X",
+                (writer, entry) -> writer.printf("%s - Avg: %.2fms, Worst: %.2fms, Best: %.2fms | Dimension: %s%n",
                     entry.entityId,
+                    entry.getAverageTime() / 1_000_000.0,
                     entry.getWorstTime() / 1_000_000.0,
                     entry.getBestTime() / 1_000_000.0,
+                    entry.dimension != null ? entry.dimension : "?"),
+                sender
+            );
+        }
+
+        // Write sparse mobs to file (ambiguous/multiple-range results)
+        if (!sparseMobs.isEmpty()) {
+            writePerformanceReport(
+                "sparse_performance_" + samples + "samples_" + timestamp + ".txt",
+                "Sparse Mob Analysis Performance Report",
+                "These mobs produced sparse/ambiguous spawn condition results (multiple ranges detected).",
+                sparseMobs,
+                samples,
+                "Format: [Entity ID] - Avg: Xms, Worst: Xms, Best: Xms | Dimension: X",
+                (writer, entry) -> writer.printf("%s - Avg: %.2fms, Worst: %.2fms, Best: %.2fms | Dimension: %s%n",
+                    entry.entityId,
                     entry.getAverageTime() / 1_000_000.0,
+                    entry.getWorstTime() / 1_000_000.0,
+                    entry.getBestTime() / 1_000_000.0,
                     entry.dimension != null ? entry.dimension : "?"),
                 sender
             );
@@ -247,12 +271,12 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
                 "These mobs caused exceptions during spawn condition analysis.",
                 crashedMobs,
                 samples,
-                "Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Error: X",
-                (writer, entry) -> writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Error: %s%n",
+                "Format: [Entity ID] - Avg: Xms, Worst: Xms, Best: Xms | Error: X",
+                (writer, entry) -> writer.printf("%s - Avg: %.2fms, Worst: %.2fms, Best: %.2fms | Error: %s%n",
                     entry.entityId,
+                    entry.getAverageTime() / 1_000_000.0,
                     entry.getWorstTime() / 1_000_000.0,
                     entry.getBestTime() / 1_000_000.0,
-                    entry.getAverageTime() / 1_000_000.0,
                     entry.error),
                 sender
             );
@@ -266,14 +290,14 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
                 "These mobs have native biomes that couldn't be mapped to any dimension.",
                 noDimensionMobs,
                 samples,
-                "Format: [Entity ID] - Worst: Xms, Best: Xms, Avg: Xms | Biomes: [list]",
+                "Format: [Entity ID] - Avg: Xms, Worst: Xms, Best: Xms | Biomes: [list]",
                 (writer, entry) -> {
                     String biomeList = entry.biomes != null ? String.join(", ", entry.biomes) : "?";
-                    writer.printf("%s - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Biomes: %s%n",
+                    writer.printf("%s - Avg: %.2fms, Worst: %.2fms, Best: %.2fms | Biomes: %s%n",
                         entry.entityId,
+                        entry.getAverageTime() / 1_000_000.0,
                         entry.getWorstTime() / 1_000_000.0,
                         entry.getBestTime() / 1_000_000.0,
-                        entry.getAverageTime() / 1_000_000.0,
                         biomeList);
                 },
                 sender
@@ -300,7 +324,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
         long elapsed = System.nanoTime() - startTime;
         sendMessage(sender, TextFormatting.GREEN, "Mob analysis complete! Time: " + formatDuration(elapsed));
         sendMessage(sender, TextFormatting.AQUA, "Successful: " + successfulMobs.size() + ", Failed: " + failedMobs.size() + 
-            ", No dimension: " + noDimensionMobs.size() + ", Crashed: " + crashedMobs.size() + ", No biomes: " + noNativeBiomeMobs.size());
+            ", Sparse: " + sparseMobs.size() + ", No dimension: " + noDimensionMobs.size() + ", Crashed: " + crashedMobs.size() + ", No biomes: " + noNativeBiomeMobs.size());
         sendMessage(sender, TextFormatting.AQUA, "Results saved to: " + successFile.getParent());
     }
 
@@ -364,25 +388,25 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
 
             // Total init performance
             writer.println("=== Total Initialization Time ===");
-            writer.printf("Worst: %.2fms, Best: %.2fms, Avg: %.2fms%n",
+            writer.printf("Avg: %.2fms, Worst: %.2fms, Best: %.2fms%n",
+                totalTimings.stream().mapToLong(Long::longValue).average().orElse(0) / 1_000_000.0,
                 Collections.max(totalTimings) / 1_000_000.0,
-                Collections.min(totalTimings) / 1_000_000.0,
-                totalTimings.stream().mapToLong(Long::longValue).average().orElse(0) / 1_000_000.0
+                Collections.min(totalTimings) / 1_000_000.0
             );
             writer.println();
 
             // Per-dimension performance
             writer.println("=== Per-Dimension Performance ===");
-            writer.println("Sorted by worst time (slowest first)");
+            writer.println("Sorted by average time (slowest first)");
             writer.println();
 
             for (DimensionPerformanceEntry entry : entries) {
-                writer.printf("%d (%s) - Worst: %.2fms, Best: %.2fms, Avg: %.2fms | Biomes: %d%n",
+                writer.printf("%d (%s) - Avg: %.2fms, Worst: %.2fms, Best: %.2fms | Biomes: %d%n",
                     entry.dimId,
                     entry.dimName,
+                    entry.getAverageTime() / 1_000_000.0,
                     entry.getWorstTime() / 1_000_000.0,
                     entry.getBestTime() / 1_000_000.0,
-                    entry.getAverageTime() / 1_000_000.0,
                     entry.biomeCount
                 );
             }
@@ -478,7 +502,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
 
             if (formatHint != null) {
                 writer.println(formatHint);
-                writer.println("Sorted by worst time (slowest first)");
+                writer.println("Sorted by average time (slowest first)");
                 writer.println();
             }
 

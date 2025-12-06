@@ -35,16 +35,17 @@ public class ConditionRefiner {
      */
     public SpawnConditionAnalyzer.SpawnConditions findValidConditions(
             List<String> candidateBiomes,
-            List<String> groundBlocks,
+            List<String> groundBlocksFinder,
+            List<String> groundBlocksExpander,
             List<Integer> lightProbe,
             List<Integer> yLevels) {
 
-        if (candidateBiomes.isEmpty() || groundBlocks.isEmpty()) return null;
+        if (candidateBiomes.isEmpty() || groundBlocksFinder.isEmpty() || groundBlocksExpander.isEmpty()) return null;
 
-        SampleFinder.ValidSample sample = sampleFinder.find(candidateBiomes, groundBlocks, lightProbe, yLevels);
+        SampleFinder.ValidSample sample = sampleFinder.find(candidateBiomes, groundBlocksFinder, lightProbe, yLevels);
         if (sample == null) return sampleFinder.buildFailureResult(lightProbe);
 
-        ConditionExpander.ExpandedConditions expanded = expander.expandAll(sample, candidateBiomes, groundBlocks);
+        ConditionExpander.ExpandedConditions expanded = expander.expandAll(sample, candidateBiomes, groundBlocksExpander);
         return expander.toSpawnConditions(expanded);
     }
 }

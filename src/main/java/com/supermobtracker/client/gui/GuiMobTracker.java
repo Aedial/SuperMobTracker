@@ -6,6 +6,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -13,6 +15,7 @@ import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.block.Block;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
@@ -52,7 +55,9 @@ public class GuiMobTracker extends GuiScreen {
     private SpawnConditionAnalyzer.SpawnConditions spawnConditions;
     private long lastClickTime = 0L;
     private ResourceLocation lastClickId = null;
-    private boolean entityErrorReported = false;
+
+    // Track entities that have already had render errors reported
+    private static final Set<ResourceLocation> entitiesWithRenderErrors = new HashSet<>();
 
     // Cache for spawn conditions to avoid regenerating on window resize
     private static ResourceLocation cachedEntityId = null;
@@ -80,6 +85,7 @@ public class GuiMobTracker extends GuiScreen {
     private static final int groundColor = 0xAAFFAA;
     private static final int timeOfDayColor = 0xFFAAFF;
     private static final int weatherColor = 0xAABBFF;
+    private static final int skyColor = 0xAAFFFF;
     private static final int dimensionColor = 0xFFDDAA;
     private static final int biomeColor = 0xAADDFF;
     private static final int hintColor = 0xFFAAAA;
@@ -352,20 +358,66 @@ public class GuiMobTracker extends GuiScreen {
     }
 
     private String translateBlockName(String blockName) {
-        // Try standard block translation keys
-        String[] keys = {
-            blockName,
-            "tile." + blockName + ".name",
-            "tile.minecraft." + blockName + ".name",
-            "block.minecraft." + blockName
-        };
+        if (blockName == null || blockName.isEmpty()) return "";
 
-        for (String key : keys) {
-            if (I18n.hasKey(key)) return I18n.format(key);
+        // Try resolving the Block instance to leverage its translation key or localized name
+        Block blk = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockName));
+        if (blk != null) {
+            // In 1.12, many mods set a custom translation key based on a display-name-like identifier
+            String transKey = blk.getTranslationKey();
+            if (transKey != null && !transKey.isEmpty()) {
+                String k1 = transKey.endsWith(".name") ? transKey : (transKey + ".name");
+                if (I18n.hasKey(k1)) return I18n.format(k1);
+
+                // Some resource packs/mods provide direct key without .name
+                if (I18n.hasKey(transKey)) return I18n.format(transKey);
+            }
+
+            // If the block has a localized name available already, use it directly
+            // getLocalizedName() triggers I18n lookup using the block's unlocalized key
+            try {
+                String localized = blk.getLocalizedName();
+                if (localized != null && !localized.isEmpty()) return localized;
+            } catch (Throwable ignored) {
+                // Some blocks may throw during early GUI contexts; ignore and continue with fallbacks
+            }
         }
 
-        // Fallback: capitalize the block name
-        return blockName.substring(0, 1).toUpperCase() + blockName.substring(1).replace("_", " ");
+        // Parse namespace and path from registry name strings like "minecraft:grass"
+        String namespace = "minecraft";
+        String path = blockName;
+        int colonIdx = blockName.indexOf(":");
+        if (colonIdx >= 0) {
+            namespace = blockName.substring(0, colonIdx);
+            path = blockName.substring(colonIdx + 1);
+        }
+
+        // Common 1.12 language key patterns used by vanilla and many mods
+        // 1) tile.<namespace>.<path>.name (typical modded style)
+        String key1 = "tile." + namespace + "." + path + ".name";
+        if (I18n.hasKey(key1)) return I18n.format(key1);
+
+        // 2) tile.<path>.name (older vanilla style)
+        String key2 = "tile." + path + ".name";
+        if (I18n.hasKey(key2)) return I18n.format(key2);
+
+        // 3) tile.<namespace>:<path>.name (some mods use a colon in keys)
+        String key3 = "tile." + namespace + ":" + path + ".name";
+        if (I18n.hasKey(key3)) return I18n.format(key3);
+
+        // 4) block.<namespace>.<path> (newer style seen in resource packs)
+        String key4 = "block." + namespace + "." + path;
+        if (I18n.hasKey(key4)) return I18n.format(key4);
+
+        // 5) block.<path> (fallback variant)
+        String key5 = "block." + path;
+        if (I18n.hasKey(key5)) return I18n.format(key5);
+
+        // 6) Direct registry string when mods register explicit keys
+        if (I18n.hasKey(blockName)) return I18n.format(blockName);
+
+        // Fallback: give up and return the raw registry name
+        return blockName;
     }
 
     /**
@@ -376,15 +428,6 @@ public class GuiMobTracker extends GuiScreen {
     private String translateBiomeName(String biomeRegistryName) {
         Biome biome = ForgeRegistries.BIOMES.getValue(new ResourceLocation(biomeRegistryName));
         if (biome == null) return biomeRegistryName;
-
-        // First try the biome's internal name - works for most mods including DivineRPG
-        // which set display names directly in BiomeProperties
-        String biomeName = biome.getBiomeName();
-        if (biomeName != null && !biomeName.isEmpty() && !biomeName.equals(biomeRegistryName)) {
-            // Check if the name looks like a valid display name (not a registry path)
-            // Valid display names typically don't contain colons or underscores
-            if (!biomeName.contains(":") && !biomeName.contains("_")) return biomeName;
-        }
 
         // Parse namespace and path from registry name string for translation lookup
         String namespace = "minecraft";
@@ -411,8 +454,12 @@ public class GuiMobTracker extends GuiScreen {
         String translated3 = I18n.format(key3);
         if (!translated3.equals(key3)) return translated3;
 
-        // No translation found - return biome name or registry name so user knows what key to add
-        if (biomeName != null && !biomeName.isEmpty()) return biomeName;
+        // Try the biome's internal name - works for most mods which set display names directly in BiomeProperties
+        // It will, however, not be "localized"
+        String biomeName = biome.getBiomeName();
+        if (biomeName != null && !biomeName.isEmpty() && !biomeName.equals(biomeRegistryName) && !biomeName.contains(":") && !biomeName.contains("_")) {
+            return biomeName;
+        }
 
         return biomeRegistryName;
     }
@@ -567,7 +614,16 @@ public class GuiMobTracker extends GuiScreen {
             String yPos = I18n.format("gui.mobtracker.yPos", Utils.formatRangeFromList(spawnConditions.yLevels, sep));
             textY = drawWrappedString(fontRenderer, yPos, condsX, textY, 12, textW, ylevelColor);
 
-            String groundBlocksTranslated = spawnConditions.groundBlocks.stream()
+            // Limit displayed ground blocks to avoid excessively long lines
+            int maxGroundBlocksToShow = 20;
+            List<String> groundBlocksList = spawnConditions.groundBlocks;
+            List<String> groundBlocksLimited = groundBlocksList;
+            if (groundBlocksList.size() > maxGroundBlocksToShow) {
+                groundBlocksLimited = groundBlocksList.subList(0, maxGroundBlocksToShow);
+                groundBlocksLimited.add("…");
+            }
+
+            String groundBlocksTranslated = groundBlocksLimited.stream()
                 .map(this::translateBlockName)
                 .collect(Collectors.joining(sep));
             String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", groundBlocksTranslated);
@@ -580,6 +636,13 @@ public class GuiMobTracker extends GuiScreen {
             String weatherTL = String.join(sep, ConditionUtils.translateList(spawnConditions.weather, "gui.mobtracker.weather"));
             String weather = I18n.format("gui.mobtracker.weather", weatherTL);
             textY = drawWrappedString(fontRenderer, weather, condsX, textY, 12, textW, weatherColor);
+
+            // Display sky requirement if determined
+            if (spawnConditions.requiresSky != null) {
+                String skyKey = spawnConditions.requiresSky ? "gui.mobtracker.sky.outside" : "gui.mobtracker.sky.underground";
+                String skyText = I18n.format(skyKey);
+                textY = drawWrappedString(fontRenderer, skyText, condsX, textY, 12, textW, skyColor);
+            }
         } else {
             String noConditions = I18n.format("gui.mobtracker.noSpawnConditions");
             textY = drawWrappedString(fontRenderer, noConditions, condsX, textY, 12, textW, 0xFFAAAA);
@@ -803,12 +866,15 @@ public class GuiMobTracker extends GuiScreen {
         Minecraft.getMinecraft().getRenderManager().playerViewY = 180F;
 
         try {
-            Minecraft.getMinecraft().getRenderManager().renderEntity(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
-            this.entityErrorReported = false;
-        } catch (Exception e) {
-            // TODO: would be funny to show MissingNo there instead
-            if (!this.entityErrorReported) SuperMobTracker.LOGGER.error("Error rendering entity!", e);
-            this.entityErrorReported = true;
+            // FIXME: Gaia 3 seems to throw FML errors, which are logged deepder. It doesn't throw, so we cannot catch them here.
+            if (!entitiesWithRenderErrors.contains(id)) {
+                Minecraft.getMinecraft().getRenderManager().renderEntity(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
+            }
+        } catch (Throwable t) {
+            if (!entitiesWithRenderErrors.contains(id)) {
+                entitiesWithRenderErrors.add(id);
+                SuperMobTracker.LOGGER.warn("Failed to render entity preview for " + id + ": " + t.getMessage());
+            }
         }
 
         GlStateManager.popMatrix();

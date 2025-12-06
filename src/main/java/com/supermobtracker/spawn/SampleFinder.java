@@ -72,14 +72,16 @@ public class SampleFinder {
         public final int light;
         public final String ground;
         public final String biome;
+        public final boolean canSeeSky;
         public final Map<String, Boolean> queriedConditions;
 
-        public ValidSample(int y, int light, String ground, String biome,
+        public ValidSample(int y, int light, String ground, String biome, boolean canSeeSky,
                            Map<String, Boolean> queriedConditions) {
             this.y = y;
             this.light = light;
             this.ground = ground;
             this.biome = biome;
+            this.canSeeSky = canSeeSky;
             this.queriedConditions = queriedConditions;
         }
     }
@@ -99,16 +101,21 @@ public class SampleFinder {
 
         List<Integer> narrowedLight = refineLightLevels(lightProbe);
 
-        ValidSample sample = findWithCurrentConfig(biomeId, groundBlocks.get(0), narrowedLight, yLevels);
-        if (sample != null) return sample;
+        // Try with canSeeSky=true first (default), then canSeeSky=false
+        for (boolean seeSky : new boolean[]{true, false}) {
+            world.canSeeSky = seeSky;
 
-        if (lastQueriedConditions != null && lastQueriedConditions.getOrDefault("groundBlock", false)) {
-            for (String groundBlock : groundBlocks) {
-                if (groundBlock.equals(groundBlocks.get(0))) continue;
+            ValidSample sample = findWithCurrentConfig(biomeId, groundBlocks.get(0), narrowedLight, yLevels);
+            if (sample != null) return sample;
 
-                world.groundBlock = groundBlock;
-                sample = findWithCurrentConfig(biomeId, groundBlock, narrowedLight, yLevels);
-                if (sample != null) return sample;
+            if (lastQueriedConditions != null && lastQueriedConditions.getOrDefault("groundBlock", false)) {
+                for (String groundBlock : groundBlocks) {
+                    if (groundBlock.equals(groundBlocks.get(0))) continue;
+
+                    world.groundBlock = groundBlock;
+                    sample = findWithCurrentConfig(biomeId, groundBlock, narrowedLight, yLevels);
+                    if (sample != null) return sample;
+                }
             }
         }
 
@@ -138,7 +145,7 @@ public class SampleFinder {
                         if (entry.getValue()) lastQueriedConditions.put(entry.getKey(), true);
                     }
 
-                    return new ValidSample(y, light, groundBlock, biomeId, lastQueriedConditions);
+                    return new ValidSample(y, light, groundBlock, biomeId, world.canSeeSky, lastQueriedConditions);
                 } else {
                     // Capture what was queried even on failure so we know what to try next
                     lastQueriedConditions = world.getAndResetQueriedConditions();
@@ -167,10 +174,11 @@ public class SampleFinder {
             if (lastQueriedConditions.getOrDefault("biome", false)) hints.add(HINT_BIOME);
             if (lastQueriedConditions.getOrDefault("timeOfDay", false)) hints.add(HINT_TIME);
             if (lastQueriedConditions.getOrDefault("weather", false)) hints.add(HINT_WEATHER);
+            if (lastQueriedConditions.getOrDefault("canSeeSky", false)) hints.add(HINT_SKY);
         }
 
         return new SpawnConditionAnalyzer.SpawnConditions(
-            failBiomes, failGround, narrowedLight, emptyY, time, weather, hints, null, Integer.MIN_VALUE
+            failBiomes, failGround, narrowedLight, emptyY, time, weather, hints, null, null, Integer.MIN_VALUE
         );
     }
 }

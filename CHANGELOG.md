@@ -8,6 +8,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.0.0-rc2] - 2025-12-05
+### Added
+- Add canSeeSky spawn condition detection and display in the spawn conditions panel.
+
+### Fixed
+- Fix the spawn conditions not working for some mobs due to canSeeSky checks and restrictive ground block checks.
+- Fix each analysis creating a new fake world instead of reusing the same one, leading to BoP logs spam in BoP worlds.
+
+### Changed
+- Improve ground block logic to make mobs relying on them faster much faster (up to 10-100x for the worst cases).
+- Differentiate between successful analysis with sparse conditions and complete conditions in the /smtanalyze command output.
+
+
 ## [1.0.0-rc1] - 2025-12-04
 ### Fixed
 - Mark mod as client-side only to prevent potential issues when installed on dedicated servers.
@@ -21,17 +34,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 
 ## [0.2.1] - 2025-12-03
-### Fixed
-- Improve the selection star in the mob list.
-- Fix some mobs crashing the spawn conditions analyzer, due to wrong biome ID handling.
-- Fix Biomes to Dimension mapping sometimes undersampling rare biomes: now it will sample over time, accumulating more data instead of sampling once at startup. So far, only ultra-rare biomes like Mushroom Islands are still affected.
-
 ### Added
 - Add option to hide the HUD.
 - Localize the names for the configs.
 - Add info tooltip on why a dimension may be unknown in the spawn conditions panel.
 - Add Java arg to log spawn condition crashes: -Dsupermobtracker.showcrashes=true
 - Save config on Escape key (instead of only on Done button).
+
+### Fixed
+- Fix some mobs crashing the spawn conditions analyzer, due to wrong biome ID handling.
+- Fix Biomes to Dimension mapping sometimes undersampling rare biomes: now it will sample over time, accumulating more data instead of sampling once at startup. So far, only ultra-rare biomes like Mushroom Islands are still affected.
+
+### Changed
+- Improve the selection star in the mob list.
 
 
 ## [0.2.0] - 2025-12-02
