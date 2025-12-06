@@ -8,7 +8,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
-## [1.0.0-rc2] - 2025-12-05
+## [1.0.0-rc4] - 2025-12-05
 ### Added
 - Add canSeeSky spawn condition detection and display in the spawn conditions panel.
 

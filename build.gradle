@@ -4,15 +4,17 @@ buildscript {
         maven { url = "https://maven.minecraftforge.net" }
         maven { url = "https://files.minecraftforge.net/maven" } // legacy fallback
         mavenCentral()
+        maven { url = "https://plugins.gradle.org/m2/" }
     }
     dependencies {
         classpath 'net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT'
+        classpath 'gradle.plugin.com.matthewprenger:CurseGradle:1.2.0'
     }
 }
 
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = "1.0.0-rc2"
+version = "1.0.0-rc4"
 group = "com.supermobtracker"
 archivesBaseName = "supermobtracker"
 
@@ -55,6 +57,54 @@ processResources {
     }
 }
 
+// --------------------
+// CurseForge publishing
+// --------------------
+// Configure CurseGradle only if a project id is provided via -PcurseforgeProjectId or env CURSEFORGE_PROJECT_ID
+def cfProjectId = (project.findProperty('curseforgeProjectId') ?: System.getenv('CURSEFORGE_PROJECT_ID'))
+if (cfProjectId) {
+    apply plugin: 'com.matthewprenger.cursegradle'
+
+    def cfReleaseType = (project.findProperty('curseforgeReleaseType') ?: 'release')
+    def cfChangelog = (project.findProperty('curseforgeChangelog') ?: '')
+    def cfApiKey = (System.getenv('CURSEFORGE_TOKEN') ?: '')
+
+    curseforge {
+        apiKey = cfApiKey
+
+        project {
+            id = cfProjectId.toString()
+            releaseType = cfReleaseType.toString()
+
+            addGameVersion '1.12.2'
+
+            mainArtifact(jar) {
+                displayName = "Super Mob Tracker ${project.version}"
+                changelog = cfChangelog
+                changelogType = 'markdown'
+            }
+
+            // Declare relations for CurseForge page
+            relations {
+                // Optional: JEI
+                optionalDependency 'jei'
+                // Optional: JER
+                optionalDependency 'just-enough-resources-jer'
+            }
+        }
+
+        // options {
+        //     javaVersionAutoDetect = false
+        // }
+    }
+
+    // Ensure the uploaded artifact is reobfuscated for release
+    afterEvaluate {
+        tasks.findAll { it.name.startsWith('curseforge') }.each { t ->
+            t.dependsOn 'reobfJar'
+        }
+    }
+}
 
 // Create uppercase-case duplicates of language files in the built resources directory
 // This avoids having to maintain duplicate source files for casing-sensitive loaders
