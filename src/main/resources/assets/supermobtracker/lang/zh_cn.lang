@@ -70,6 +70,9 @@ gui.mobtracker.weather.thunder=雷暴
 gui.mobtracker.weather.unknown=未知
 gui.mobtracker.weather.any=任意
 
+gui.mobtracker.sky.outside=位置：仅限地表
+gui.mobtracker.sky.underground=位置：仅限地下
+
 gui.mobtracker.dimension=维度：%s
 gui.mobtracker.dimension.unknown.tooltip.scanning=无法确定维度：在已扫描区域中尚未发现该实体的原生生物群系。扫描完成后可能出现。
 gui.mobtracker.dimension.unknown.tooltip.complete=无法确定维度：在所有维度扫描中均未发现该实体的原生生物群系。
@@ -105,6 +108,7 @@ gui.mobtracker.hint.ground=可能需要特定地面方块。
 gui.mobtracker.hint.biome=可能需要特定生物群系。
 gui.mobtracker.hint.time=可能需要特定时间条件。
 gui.mobtracker.hint.weather=可能需要特定天气条件。
+gui.mobtracker.hint.sky=可能需要天空可见（地表生成）。
 
 # HUD Position Selector
 gui.supermobtracker.hudPosition.top_left=顶部左侧
