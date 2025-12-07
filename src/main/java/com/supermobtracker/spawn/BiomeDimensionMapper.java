@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -14,10 +15,13 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import net.minecraft.block.Block;
 import net.minecraft.profiler.Profiler;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.DimensionType;
 import net.minecraft.world.EnumDifficulty;
+import net.minecraft.world.GameType;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
 import net.minecraft.world.WorldServer;
@@ -30,6 +34,7 @@ import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.storage.ISaveHandler;
 import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.common.DimensionManager;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import com.supermobtracker.SuperMobTracker;
 
@@ -65,6 +70,10 @@ public class BiomeDimensionMapper {
     private static Map<Integer, Set<String>> dimensionToBiomes = null;
     private static List<Integer> sortedDimensionIds = null;
     private static boolean initialized = false;
+
+    // Biome to ground blocks mapping (top blocks that mobs can spawn on)
+    // Maps biome registry name to list of block registry names
+    private static Map<String, Set<String>> biomeToGroundBlocks = null;
 
     // Background sampling state
     private static ScheduledExecutorService backgroundSampler = null;
@@ -155,6 +164,10 @@ public class BiomeDimensionMapper {
         dimensionToBiomes = new HashMap<>();
         dimensionTimings = new HashMap<>();
         sortedDimensionIds = new ArrayList<>();
+        biomeToGroundBlocks = new HashMap<>();
+
+        // Build biome-to-ground-blocks mapping from all registered biomes
+        buildBiomeGroundBlocksMapping();
 
         Integer[] registeredDimensions = DimensionManager.getStaticDimensionIDs();
         for (Integer dimId : registeredDimensions) sortedDimensionIds.add(dimId);
@@ -212,7 +225,7 @@ public class BiomeDimensionMapper {
 
         // Create minimal WorldInfo with DEFAULT type - this is safe as a fallback
         // since we wrap provider initialization in try-catch
-        WorldSettings settings = new WorldSettings(0, net.minecraft.world.GameType.SURVIVAL, true, false, WorldType.DEFAULT);
+        WorldSettings settings = new WorldSettings(0, GameType.SURVIVAL, true, false, WorldType.DEFAULT);
         return new WorldInfo(settings, "BiomeMapper");
     }
 
@@ -233,6 +246,49 @@ public class BiomeDimensionMapper {
         WorldInfo cloned = new WorldInfo(settings, original.getWorldName());
 
         return cloned;
+    }
+
+    /**
+     * Build the biome-to-ground-blocks mapping from all registered biomes.
+     * This extracts the topBlock and fillerBlock from each biome, which are the blocks
+     * that mobs typically spawn on in that biome.
+     */
+    private static void buildBiomeGroundBlocksMapping() {
+        long startTime = System.nanoTime();
+        int totalBlocks = 0;
+
+        for (Biome biome : ForgeRegistries.BIOMES.getValuesCollection()) {
+            ResourceLocation biomeId = biome.getRegistryName();
+            if (biomeId == null) continue;
+
+            String biomeKey = biomeId.toString();
+            Set<String> groundBlocks = new LinkedHashSet<>();
+
+            // Add topBlock (what mobs typically spawn on)
+            if (biome.topBlock != null) {
+                Block topBlock = biome.topBlock.getBlock();
+                ResourceLocation blockId = topBlock.getRegistryName();
+                if (blockId != null) groundBlocks.add(blockId.toString());
+            }
+
+            // Add fillerBlock (underneath topBlock, some mobs may spawn on this too)
+            if (biome.fillerBlock != null) {
+                Block fillerBlock = biome.fillerBlock.getBlock();
+                ResourceLocation blockId = fillerBlock.getRegistryName();
+                if (blockId != null) groundBlocks.add(blockId.toString());
+            }
+
+            if (!groundBlocks.isEmpty()) {
+                biomeToGroundBlocks.put(biomeKey, groundBlocks);
+                totalBlocks += groundBlocks.size();
+            }
+        }
+
+        if (ConditionUtils.isProfilingEnabled()) {
+            long elapsed = System.nanoTime() - startTime;
+            SuperMobTracker.LOGGER.info("Built biome ground blocks mapping: " + biomeToGroundBlocks.size() +
+                " biomes, " + totalBlocks + " total block entries in " + (elapsed / 1_000_000.0) + "ms");
+        }
     }
 
     /**
@@ -372,7 +428,7 @@ public class BiomeDimensionMapper {
     /**
      * Sample biomes across multiple grids spread across the dimension.
      * Uses getBiomesForGeneration for batched retrieval (much faster than individual calls).
-     * 
+     *
      * @return Number of NEW biomes found during this sampling
      */
     private static int sampleBiomesMultiGrid(BiomeProvider biomeProvider, Set<String> biomes, int totalSamples) {
@@ -484,6 +540,39 @@ public class BiomeDimensionMapper {
     }
 
     /**
+     * Get ground blocks (top block and filler block) for a specific biome.
+     * These are the blocks that mobs typically spawn on in that biome.
+     *
+     * @param biomeId The biome registry name (e.g., "minecraft:plains")
+     * @return Set of block registry names, or empty set if biome not found
+     */
+    public static Set<String> getGroundBlocksForBiome(String biomeId) {
+        init();
+        return biomeToGroundBlocks.getOrDefault(biomeId, new HashSet<>());
+    }
+
+    /**
+     * Get ground blocks for multiple biomes, combined into a single set.
+     * Used for getting all possible spawn blocks for a mob that spawns in multiple biomes.
+     *
+     * @param biomeIds List of biome registry names
+     * @return Combined set of block registry names from all specified biomes
+     */
+    public static Set<String> getGroundBlocksForBiomes(List<String> biomeIds) {
+        init();
+
+        if (biomeIds == null || biomeIds.isEmpty()) return new HashSet<>();
+
+        Set<String> allBlocks = new LinkedHashSet<>();
+        for (String biomeId : biomeIds) {
+            Set<String> biomeBlocks = biomeToGroundBlocks.get(biomeId);
+            if (biomeBlocks != null) allBlocks.addAll(biomeBlocks);
+        }
+
+        return allBlocks;
+    }
+
+    /**
      * Get all dimensions sorted by abs(id).
      */
     public static List<Integer> getSortedDimensionIds() {
@@ -520,6 +609,7 @@ public class BiomeDimensionMapper {
         biomeToDimensions = null;
         dimensionToBiomes = null;
         sortedDimensionIds = null;
+        biomeToGroundBlocks = null;
         initialized = false;
     }
 
@@ -587,9 +677,7 @@ public class BiomeDimensionMapper {
         }
 
         void cancel() {
-            if (future != null) {
-                future.cancel(false);
-            }
+            if (future != null) future.cancel(false);
         }
 
         @Override
@@ -620,10 +708,10 @@ public class BiomeDimensionMapper {
                         }
                     }
 
-                    if (ConditionUtils.isProfilingEnabled()) {
+                    /* if (ConditionUtils.isProfilingEnabled()) {
                         SuperMobTracker.LOGGER.info("Background sampling for dimension " + dimId +
                             " found " + (biomes.size() - initialSize) + " new biomes in ring " + currentRing);
-                    }
+                    } */
                 }
 
                 // Move to next position in ring, or next ring

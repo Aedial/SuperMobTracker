@@ -33,6 +33,7 @@ public final class ConditionUtils {
     public static final String HINT_BIOME = I18n.translateToLocal("gui.mobtracker.hint.biome");
     public static final String HINT_TIME = I18n.translateToLocal("gui.mobtracker.hint.time");
     public static final String HINT_WEATHER = I18n.translateToLocal("gui.mobtracker.hint.weather");
+    public static final String HINT_SKY = I18n.translateToLocal("gui.mobtracker.hint.sky");
 
     /** Whether profiling is enabled (Java arg). Can be temporarily suppressed. */
     private static final boolean PROFILING_ARG = Boolean.getBoolean("supermobtracker.profile");
