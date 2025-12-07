@@ -6,6 +6,7 @@ A client-side Minecraft 1.12.2 mod that lets you select mobs to view spawn condi
 - GUI accessible via keybinding (default O) or Inventory button.
 - Filterable scrolling list of mobs on the left; right panel shows details and spawn conditions.
 - Live tracking on the main screen for selected mob. Double-click a mob in the list to toggle tracking.
+- Click on the biomes list to copy biome names to clipboard.
 - Configs:
   - enableTracking: Globally disable tracking (requires restart).
   - detectionRange: Set radius for considering spawn attempts.

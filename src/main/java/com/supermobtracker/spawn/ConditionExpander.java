@@ -3,6 +3,7 @@ package com.supermobtracker.spawn;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import net.minecraft.entity.EntityLiving;
 
@@ -27,13 +28,16 @@ public class ConditionExpander {
 
     public static class ExpandedConditions {
         public List<String> biomes = new ArrayList<>();
-        public List<String> groundBlocks = new ArrayList<>();
         public List<Integer> lightLevels = new ArrayList<>();
         public List<Integer> yLevels = new ArrayList<>();
-        public List<String> times = new ArrayList<>();
-        public List<String> weathers = new ArrayList<>();
         public List<String> hints = new ArrayList<>();
-        public Boolean requiresSky = null; // null = doesn't matter, true = requires sky, false = requires no sky
+        public List<String> groundBlocks = null;    // null = doesn't matter, else list of valid ground blocks
+        public List<String> times = null;           // null = doesn't matter, else list of valid times
+        public List<String> weathers = null;        // null = doesn't matter, else list of valid weathers
+        public Boolean requiresSky = null;          // null = doesn't matter, true = requires sky, false = requires no sky
+        public List<Integer> moonPhases = null;     // null = doesn't matter, else list of valid moon phases (0-7)
+        public Boolean requiresSlimeChunk = null;   // null = doesn't matter, true = requires slime chunk, false = excludes slime chunk
+        public Boolean requiresNether = null;       // null = doesn't matter, true = requires nether-like, false = excludes nether-like
         public String dimension = null;
         public int dimensionId = 0;
     }
@@ -41,24 +45,34 @@ public class ConditionExpander {
     /**
      * Expand all conditions from a valid sample by exhaustively testing all values.
      * Biomes are taken as-is from native spawn tables (no expansion).
+     * Conditions are only expanded if they were queried during spawn checks.
      */
     public ExpandedConditions expandAll(SampleFinder.ValidSample sample,
                                         List<String> candidateBiomes,
                                         List<String> candidateGroundBlocks) {
         ExpandedConditions result = new ExpandedConditions();
+        Map<String, Boolean> queried = sample.queriedConditions;
 
         world.biomeId = sample.biome;
         world.groundBlock = sample.ground;
         world.lightLevel = sample.light;
         world.canSeeSky = sample.canSeeSky;
+        world.moonPhase = sample.moonPhase;
+        world.isSlimeChunk = sample.isSlimeChunk;
+        world.isNether = sample.isNether;
 
         result.yLevels = expandYLevels(sample.y);
         result.lightLevels = expandLightLevels(sample);
-        result.groundBlocks = expandGroundBlocks(sample, candidateGroundBlocks);
         result.biomes = new ArrayList<>(candidateBiomes);
-        result.times = expandTimes(sample);
-        result.weathers = expandWeathers(sample);
-        result.requiresSky = expandCanSeeSky(sample);
+
+        // Only expand these conditions if they were queried during spawn checks
+        if (queried != null && queried.getOrDefault("groundBlock", false)) result.groundBlocks = expandGroundBlocks(sample, candidateGroundBlocks);
+        if (queried != null && queried.getOrDefault("timeOfDay", false)) result.times = expandTimes(sample);
+        if (queried != null && queried.getOrDefault("weather", false)) result.weathers = expandWeathers(sample);
+        if (queried != null && queried.getOrDefault("canSeeSky", false)) result.requiresSky = expandCanSeeSky(sample);
+        if (queried != null && queried.getOrDefault("moonPhase", false)) result.moonPhases = expandMoonPhases(sample);
+        if (queried != null && queried.getOrDefault("isSlimeChunk", false)) result.requiresSlimeChunk = expandSlimeChunk(sample);
+        if (queried != null && queried.getOrDefault("isNether", false)) result.requiresNether = expandIsNether(sample);
 
         return result;
     }
@@ -109,6 +123,7 @@ public class ConditionExpander {
         return allValid;
     }
 
+    // TODO: refactor similar methods into a common utility (e.g., expandBooleanCondition, expandListCondition, etc.)
     private List<Integer> expandLightLevels(SampleFinder.ValidSample sample) {
         List<Integer> allValid = new ArrayList<>();
 
@@ -129,7 +144,7 @@ public class ConditionExpander {
         world.groundBlock = "sky";
         if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) {
             world.groundBlock = sample.ground;
-            return Arrays.asList("any");
+            return null;
         }
 
         List<String> allValid = new ArrayList<>();
@@ -142,7 +157,7 @@ public class ConditionExpander {
 
         world.groundBlock = sample.ground;
 
-        if (allValid.size() == candidateGroundBlocks.size() && !allValid.isEmpty()) return Arrays.asList("gui.mobtracker.any");
+        if (allValid.size() == candidateGroundBlocks.size() && !allValid.isEmpty()) return null;
 
         return allValid.isEmpty() ? Arrays.asList(sample.ground) : allValid;
     }
@@ -156,9 +171,9 @@ public class ConditionExpander {
             if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(time);
         }
 
-        world.timeOfDay = "day";
+        world.timeOfDay = sample.timeOfDay;
 
-        if (allValid.size() == DEFAULT_TIMES.size()) return Arrays.asList("any");
+        if (allValid.size() == DEFAULT_TIMES.size()) return null;
 
         return allValid.isEmpty() ? Arrays.asList("unknown") : allValid;
     }
@@ -172,9 +187,9 @@ public class ConditionExpander {
             if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(weather);
         }
 
-        world.weather = "clear";
+        world.weather = sample.weather;
 
-        if (allValid.size() == DEFAULT_WEATHERS.size()) return Arrays.asList("any");
+        if (allValid.size() == DEFAULT_WEATHERS.size()) return null;
 
         return allValid.isEmpty() ? Arrays.asList("unknown") : allValid;
     }
@@ -188,14 +203,10 @@ public class ConditionExpander {
         boolean worksWithoutSky = false;
 
         world.canSeeSky = true;
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) {
-            worksWithSky = true;
-        }
+        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksWithSky = true;
 
         world.canSeeSky = false;
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) {
-            worksWithoutSky = true;
-        }
+        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksWithoutSky = true;
 
         // Restore to sample value
         world.canSeeSky = sample.canSeeSky;
@@ -212,6 +223,86 @@ public class ConditionExpander {
         return null;
     }
 
+    /**
+     * Expand moon phase condition by testing all 8 moon phases.
+     * @return null if all phases work (doesn't matter), else list of valid phases
+     */
+    private List<Integer> expandMoonPhases(SampleFinder.ValidSample sample) {
+        List<Integer> validPhases = new ArrayList<>();
+
+        for (int phase = 0; phase < 8; phase++) {
+            world.moonPhase = phase;
+            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) validPhases.add(phase);
+        }
+
+        // Restore to sample value
+        world.moonPhase = sample.moonPhase;
+
+        // If all 8 phases work, it doesn't matter
+        if (validPhases.size() == 8) return null;
+
+        // If no phases work, return the sample phase (shouldn't happen since we found a valid sample)
+        if (validPhases.isEmpty()) return Arrays.asList(sample.moonPhase);
+
+        return validPhases;
+    }
+
+    /**
+     * Expand slime chunk condition by testing slime chunk vs non-slime chunk.
+     * @return null if both work (doesn't matter), true if requires slime chunk, false if excludes slime chunk
+     */
+    private Boolean expandSlimeChunk(SampleFinder.ValidSample sample) {
+        boolean worksInSlimeChunk = false;
+        boolean worksOutsideSlimeChunk = false;
+
+        world.isSlimeChunk = true;
+        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksInSlimeChunk = true;
+
+        world.isSlimeChunk = false;
+        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksOutsideSlimeChunk = true;
+
+        // Restore to sample value
+        world.isSlimeChunk = sample.isSlimeChunk;
+
+        if (worksInSlimeChunk && worksOutsideSlimeChunk) {
+            return null; // Doesn't matter
+        } else if (worksInSlimeChunk) {
+            return true; // Requires slime chunk
+        } else if (worksOutsideSlimeChunk) {
+            return false; // Requires non-slime chunk
+        }
+
+        return null;
+    }
+
+    /**
+     * Expand isNether condition by testing nether-like vs overworld-like.
+     * @return null if both work (doesn't matter), true if requires nether-like, false if excludes nether-like
+     */
+    private Boolean expandIsNether(SampleFinder.ValidSample sample) {
+        boolean worksInNether = false;
+        boolean worksOutsideNether = false;
+
+        world.isNether = true;
+        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksInNether = true;
+
+        world.isNether = false;
+        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksOutsideNether = true;
+
+        // Restore to sample value
+        world.isNether = sample.isNether;
+
+        if (worksInNether && worksOutsideNether) {
+            return null; // Doesn't matter
+        } else if (worksInNether) {
+            return true; // Requires nether-like dimension (doesWaterVaporize)
+        } else if (worksOutsideNether) {
+            return false; // Requires non-nether-like dimension
+        }
+
+        return null;
+    }
+
     public SpawnConditionAnalyzer.SpawnConditions toSpawnConditions(ExpandedConditions expanded) {
         return new SpawnConditionAnalyzer.SpawnConditions(
             expanded.biomes,
@@ -222,6 +313,9 @@ public class ConditionExpander {
             expanded.weathers,
             expanded.hints,
             expanded.requiresSky,
+            expanded.moonPhases,
+            expanded.requiresSlimeChunk,
+            expanded.requiresNether,
             expanded.dimension,
             expanded.dimensionId
         );

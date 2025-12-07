@@ -614,34 +614,66 @@ public class GuiMobTracker extends GuiScreen {
             String yPos = I18n.format("gui.mobtracker.yPos", Utils.formatRangeFromList(spawnConditions.yLevels, sep));
             textY = drawWrappedString(fontRenderer, yPos, condsX, textY, 12, textW, ylevelColor);
 
-            // Limit displayed ground blocks to avoid excessively long lines
-            int maxGroundBlocksToShow = 20;
-            List<String> groundBlocksList = spawnConditions.groundBlocks;
-            List<String> groundBlocksLimited = groundBlocksList;
-            if (groundBlocksList.size() > maxGroundBlocksToShow) {
-                groundBlocksLimited = groundBlocksList.subList(0, maxGroundBlocksToShow);
-                groundBlocksLimited.add("…");
+            // Show ground blocks only if this condition was queried (list is non-null)
+            if (spawnConditions.groundBlocks != null) {
+                // Limit displayed ground blocks to avoid excessively long lines
+                int maxGroundBlocksToShow = 20;
+                List<String> groundBlocksList = spawnConditions.groundBlocks;
+                List<String> groundBlocksLimited = groundBlocksList;
+                if (groundBlocksList.size() > maxGroundBlocksToShow) {
+                    groundBlocksLimited = groundBlocksList.subList(0, maxGroundBlocksToShow);
+                    groundBlocksLimited.add("…");
+                }
+
+                String groundBlocksTranslated = groundBlocksLimited.stream()
+                    .map(this::translateBlockName)
+                    .collect(Collectors.joining(sep));
+                String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", groundBlocksTranslated);
+                textY = drawWrappedString(fontRenderer, groundBlocks, condsX, textY, 12, textW, groundColor);
             }
 
-            String groundBlocksTranslated = groundBlocksLimited.stream()
-                .map(this::translateBlockName)
-                .collect(Collectors.joining(sep));
-            String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", groundBlocksTranslated);
-            textY = drawWrappedString(fontRenderer, groundBlocks, condsX, textY, 12, textW, groundColor);
+            // Show time of day only if queried (list is non-null)
+            if (spawnConditions.timeOfDay != null) {
+                String timeOfDayTL = String.join(sep, ConditionUtils.translateList(spawnConditions.timeOfDay, "gui.mobtracker.timeOfDay"));
+                String timeOfDay = I18n.format("gui.mobtracker.timeOfDay", timeOfDayTL);
+                textY = drawWrappedString(fontRenderer, timeOfDay, condsX, textY, 12, textW, timeOfDayColor);
+            }
 
-            String timeOfDayTL = String.join(sep, ConditionUtils.translateList(spawnConditions.timeOfDay, "gui.mobtracker.timeOfDay"));
-            String timeOfDay = I18n.format("gui.mobtracker.timeOfDay", timeOfDayTL);
-            textY = drawWrappedString(fontRenderer, timeOfDay, condsX, textY, 12, textW, timeOfDayColor);
-
-            String weatherTL = String.join(sep, ConditionUtils.translateList(spawnConditions.weather, "gui.mobtracker.weather"));
-            String weather = I18n.format("gui.mobtracker.weather", weatherTL);
-            textY = drawWrappedString(fontRenderer, weather, condsX, textY, 12, textW, weatherColor);
+            // Show weather only if queried (list is non-null)
+            if (spawnConditions.weather != null) {
+                String weatherTL = String.join(sep, ConditionUtils.translateList(spawnConditions.weather, "gui.mobtracker.weather"));
+                String weather = I18n.format("gui.mobtracker.weather", weatherTL);
+                textY = drawWrappedString(fontRenderer, weather, condsX, textY, 12, textW, weatherColor);
+            }
 
             // Display sky requirement if determined
             if (spawnConditions.requiresSky != null) {
-                String skyKey = spawnConditions.requiresSky ? "gui.mobtracker.sky.outside" : "gui.mobtracker.sky.underground";
-                String skyText = I18n.format(skyKey);
+                String skyKey = spawnConditions.requiresSky ? "outside" : "underground";
+                String skyText = I18n.format("gui.mobtracker.sky." + skyKey);
                 textY = drawWrappedString(fontRenderer, skyText, condsX, textY, 12, textW, skyColor);
+            }
+
+            // Display moon phases if determined
+            if (spawnConditions.moonPhases != null && !spawnConditions.moonPhases.isEmpty()) {
+                String moonPhasesStr = spawnConditions.moonPhases.stream()
+                    .map(phase -> I18n.format("gui.mobtracker.moonphase." + phase))
+                    .collect(Collectors.joining(sep));
+                String moonText = I18n.format("gui.mobtracker.moonphase", moonPhasesStr);
+                textY = drawWrappedString(fontRenderer, moonText, condsX, textY, 12, textW, skyColor);
+            }
+
+            // Display slime chunk requirement if determined
+            if (spawnConditions.requiresSlimeChunk != null) {
+                String slimeKey = spawnConditions.requiresSlimeChunk ? "required" : "excluded";
+                String slimeText = I18n.format("gui.mobtracker.slimechunk." + slimeKey);
+                textY = drawWrappedString(fontRenderer, slimeText, condsX, textY, 12, textW, skyColor);
+            }
+
+            // Display nether requirement if determined
+            if (spawnConditions.requiresNether != null) {
+                String netherKey = spawnConditions.requiresNether ? "required" : "excluded";
+                String netherText = I18n.format("gui.mobtracker.nether." + netherKey);
+                textY = drawWrappedString(fontRenderer, netherText, condsX, textY, 12, textW, skyColor);
             }
         } else {
             String noConditions = I18n.format("gui.mobtracker.noSpawnConditions");
