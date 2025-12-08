@@ -73,6 +73,20 @@ gui.mobtracker.weather.any=任意
 gui.mobtracker.sky.outside=位置：仅限地表
 gui.mobtracker.sky.underground=位置：仅限地下
 
+gui.mobtracker.moonphase=月相：%s
+gui.mobtracker.moonphase.0=满月
+gui.mobtracker.moonphase.1=亏凸月
+gui.mobtracker.moonphase.2=下弦月
+gui.mobtracker.moonphase.3=残月
+gui.mobtracker.moonphase.4=新月
+gui.mobtracker.moonphase.5=蛾眉月
+gui.mobtracker.moonphase.6=上弦月
+gui.mobtracker.moonphase.7=盈凸月
+gui.mobtracker.slimechunk.required=区块类型：仅限史莱姆区块
+gui.mobtracker.slimechunk.excluded=区块类型：仅限非史莱姆区块
+gui.mobtracker.nether.required=世界类型：仅限下界类维度
+gui.mobtracker.nether.excluded=世界类型：仅限非下界类维度
+
 gui.mobtracker.dimension=维度：%s
 gui.mobtracker.dimension.unknown.tooltip.scanning=无法确定维度：在已扫描区域中尚未发现该实体的原生生物群系。扫描完成后可能出现。
 gui.mobtracker.dimension.unknown.tooltip.complete=无法确定维度：在所有维度扫描中均未发现该实体的原生生物群系。
@@ -109,6 +123,9 @@ gui.mobtracker.hint.biome=可能需要特定生物群系。
 gui.mobtracker.hint.time=可能需要特定时间条件。
 gui.mobtracker.hint.weather=可能需要特定天气条件。
 gui.mobtracker.hint.sky=可能需要天空可见（地表生成）。
+gui.mobtracker.hint.moonphase=可能需要特定月相（例如：满月）。
+gui.mobtracker.hint.slimechunk=可能需要史莱姆区块。
+gui.mobtracker.hint.nether=可能需要下界类维度。
 
 # HUD Position Selector
 gui.supermobtracker.hudPosition.top_left=顶部左侧
