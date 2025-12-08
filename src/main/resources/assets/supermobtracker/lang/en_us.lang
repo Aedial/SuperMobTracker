@@ -73,6 +73,20 @@ gui.mobtracker.weather.any=Any
 gui.mobtracker.sky.outside=Location: Outside only
 gui.mobtracker.sky.underground=Location: Underground only
 
+gui.mobtracker.moonphase=Moon Phase: %s
+gui.mobtracker.moonphase.0=Full Moon
+gui.mobtracker.moonphase.1=Waning Gibbous
+gui.mobtracker.moonphase.2=Third Quarter
+gui.mobtracker.moonphase.3=Waning Crescent
+gui.mobtracker.moonphase.4=New Moon
+gui.mobtracker.moonphase.5=Waxing Crescent
+gui.mobtracker.moonphase.6=First Quarter
+gui.mobtracker.moonphase.7=Waxing Gibbous
+gui.mobtracker.slimechunk.required=Chunk Type: Slime chunk only
+gui.mobtracker.slimechunk.excluded=Chunk Type: Non-slime chunk only
+gui.mobtracker.nether.required=World Type: Nether-like only
+gui.mobtracker.nether.excluded=World Type: Non-nether only
+
 gui.mobtracker.dimension=Dimension: %s
 gui.mobtracker.dimension.unknown.tooltip.scanning=Could not determine dimension: the entity's native biome has not been found so far in scans. May appear later, once scans finish.
 gui.mobtracker.dimension.unknown.tooltip.complete=Could not determine dimension: the entity's native biome was not found in any dimension scans.
@@ -109,6 +123,9 @@ gui.mobtracker.hint.biome=May require a specific biome.
 gui.mobtracker.hint.time=May require a specific time of day.
 gui.mobtracker.hint.weather=May require specific weather.
 gui.mobtracker.hint.sky=May require sky visibility (surface spawning).
+gui.mobtracker.hint.moonphase=May require a specific moon phase (e.g., full moon).
+gui.mobtracker.hint.slimechunk=May require a slime chunk.
+gui.mobtracker.hint.nether=May require a Nether-like dimension.
 
 # HUD Position Selector
 gui.supermobtracker.hudPosition.top_left=Top Left

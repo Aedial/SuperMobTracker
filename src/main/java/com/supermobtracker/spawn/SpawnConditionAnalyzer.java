@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -119,13 +120,16 @@ public class SpawnConditionAnalyzer {
      */
     public static class SpawnConditions {
         public final List<String> biomes;
-        public final List<String> groundBlocks;
+        public final List<String> groundBlocks;    // null = doesn't matter, else list of valid ground blocks
         public final List<Integer> lightLevels;
         public final List<Integer> yLevels;
-        public final List<String> timeOfDay;
-        public final List<String> weather;
+        public final List<String> timeOfDay;       // null = doesn't matter, else list of valid times of day
+        public final List<String> weather;         // null = doesn't matter, else list of valid weathers
         public final List<String> hints;
-        public final Boolean requiresSky; // null = doesn't matter, true = requires sky, false = requires no sky
+        public final Boolean requiresSky;          // null = doesn't matter, true = requires sky, false = requires no sky
+        public final List<Integer> moonPhases;     // null = doesn't matter, else list of valid moon phases (0-7)
+        public final Boolean requiresSlimeChunk;   // null = doesn't matter, true = requires slime chunk, false = excludes slime chunk
+        public final Boolean requiresNether;       // null = doesn't matter, true = requires nether-like, false = excludes nether-like
         public final String dimension;
         public final int dimensionId;
 
@@ -139,6 +143,23 @@ public class SpawnConditionAnalyzer {
                                Boolean requiresSky,
                                String dimension,
                                int dimensionId) {
+            this(biomes, groundBlocks, lightLevels, yLevels, timeOfDay, weather, hints,
+                 requiresSky, null, null, null, dimension, dimensionId);
+        }
+
+        public SpawnConditions(List<String> biomes,
+                               List<String> groundBlocks,
+                               List<Integer> lightLevels,
+                               List<Integer> yLevels,
+                               List<String> timeOfDay,
+                               List<String> weather,
+                               List<String> hints,
+                               Boolean requiresSky,
+                               List<Integer> moonPhases,
+                               Boolean requiresSlimeChunk,
+                               Boolean requiresNether,
+                               String dimension,
+                               int dimensionId) {
             this.biomes = biomes;
             this.groundBlocks = groundBlocks;
             this.lightLevels = lightLevels;
@@ -147,6 +168,9 @@ public class SpawnConditionAnalyzer {
             this.weather = weather;
             this.hints = hints == null ? new ArrayList<>() : hints;
             this.requiresSky = requiresSky;
+            this.moonPhases = moonPhases;
+            this.requiresSlimeChunk = requiresSlimeChunk;
+            this.requiresNether = requiresNether;
             this.dimension = dimension;
             this.dimensionId = dimensionId;
         }
@@ -157,9 +181,9 @@ public class SpawnConditionAnalyzer {
         public boolean failed() {
             boolean hasLightLevels = !lightLevels.isEmpty();
             boolean hasYLevels = !yLevels.isEmpty();
-            boolean hasGroundBlocks = !groundBlocks.isEmpty() && !groundBlocks.get(0).equals("unknown");
-            boolean hasTimeOfDay = !timeOfDay.isEmpty() && !timeOfDay.get(0).equals("unknown");
-            boolean hasWeather = !weather.isEmpty() && !weather.get(0).equals("unknown");
+            boolean hasGroundBlocks =  groundBlocks != null && !groundBlocks.isEmpty() && !groundBlocks.get(0).equals("unknown");
+            boolean hasTimeOfDay =  timeOfDay != null && !timeOfDay.isEmpty() && !timeOfDay.get(0).equals("unknown");
+            boolean hasWeather = weather != null && !weather.isEmpty() && !weather.get(0).equals("unknown");
 
             return !(hasLightLevels || hasYLevels || hasGroundBlocks || hasTimeOfDay || hasWeather);
         }
@@ -169,7 +193,8 @@ public class SpawnConditionAnalyzer {
          */
         public boolean isSparse() {
             return Utils.formatRangeFromList(lightLevels, ",").contains(",") ||
-                   Utils.formatRangeFromList(yLevels, ",").contains(",");
+                   Utils.formatRangeFromList(yLevels, ",").contains(",") ||
+                   (lightLevels.isEmpty() || yLevels.isEmpty()) && !failed();
         }
     }
 
@@ -184,12 +209,16 @@ public class SpawnConditionAnalyzer {
         public String timeOfDay = "day";
         public String weather = "clear";
         public boolean canSeeSky = true;
+        public int moonPhase = 0;             // Moon phase 0-7 (0 = full moon, 4 = new moon)
+        public boolean isSlimeChunk = true;   // Whether the chunk is a slime chunk
+        public boolean isNether = false;      // Whether the world is Nether-like (doesWaterVaporize)
 
         private Map<String, Boolean> queriedConditions = new HashMap<>();
 
         static class SimulatedProvider extends WorldProvider {
             private WorldProvider baseProvider;
             private Map<String, Boolean> queriedConditions;
+            private SimulatedWorld simulatedWorld;
             String dimension;
 
             private SimulatedProvider(WorldProvider provider) {
@@ -199,8 +228,9 @@ public class SpawnConditionAnalyzer {
                 this.setDimension(provider.getDimensionType().getId());
             }
 
-            public void bindQueryTracker(Map<String, Boolean> queriedConditions) {
+            public void bindQueryTracker(Map<String, Boolean> queriedConditions, SimulatedWorld world) {
                 this.queriedConditions = queriedConditions;
+                this.simulatedWorld = world;
             }
 
             @Override
@@ -213,6 +243,18 @@ public class SpawnConditionAnalyzer {
             public int getDimension() {
                 if (this.queriedConditions != null) this.queriedConditions.put("dimension", true);
                 return baseProvider.getDimensionType().getId();
+            }
+
+            @Override
+            public boolean doesWaterVaporize() {
+                if (this.queriedConditions != null) this.queriedConditions.put("isNether", true);
+                return simulatedWorld != null ? simulatedWorld.isNether : baseProvider.doesWaterVaporize();
+            }
+
+            @Override
+            public boolean isNether() {
+                if (this.queriedConditions != null) this.queriedConditions.put("isNether", true);
+                return simulatedWorld != null ? simulatedWorld.isNether : baseProvider.isNether();
             }
         }
 
@@ -235,13 +277,16 @@ public class SpawnConditionAnalyzer {
             this.timeOfDay = "day";
             this.weather = "clear";
             this.canSeeSky = true;
+            this.moonPhase = 0;
+            this.isSlimeChunk = true;
+            this.isNether = false;
             this.queriedConditions.clear();
         }
 
         private SimulatedWorld(ISaveHandler saveHandler, WorldInfo info, WorldProvider provider, Profiler profiler, boolean isClient) {
             super(saveHandler, info, provider, profiler, isClient);
             this.provider.setWorld(this);
-            ((SimulatedProvider) provider).bindQueryTracker(queriedConditions);
+            ((SimulatedProvider) provider).bindQueryTracker(queriedConditions, this);
 
             if (this.chunkProvider == null) this.chunkProvider = this.createChunkProvider();
 
@@ -253,6 +298,9 @@ public class SpawnConditionAnalyzer {
             this.queriedConditions.put("timeOfDay", false);
             this.queriedConditions.put("weather", false);
             this.queriedConditions.put("canSeeSky", false);
+            this.queriedConditions.put("moonPhase", false);
+            this.queriedConditions.put("isSlimeChunk", false);
+            this.queriedConditions.put("isNether", false);
         }
 
         public Map<String, Boolean> getAndResetQueriedConditions() {
@@ -300,6 +348,29 @@ public class SpawnConditionAnalyzer {
         }
 
         @Override
+        public boolean isDaytime() {
+            queriedConditions.put("timeOfDay", true);
+            return timeOfDay.equals("day") || timeOfDay.equals("dawn") || timeOfDay.equals("dusk");
+        }
+
+        @Override
+        public float getCurrentMoonPhaseFactor() {
+            queriedConditions.put("moonPhase", true);
+            // Convert moon phase to factor: 0 (full) = 1.0, 4 (new) = 0.0
+            // Phases: 0=full(1.0), 1=waning gibbous(0.75), 2=third quarter(0.5), 3=waning crescent(0.25),
+            //         4=new(0.0), 5=waxing crescent(0.25), 6=first quarter(0.5), 7=waxing gibbous(0.75)
+            float[] factors = {1.0f, 0.75f, 0.5f, 0.25f, 0.0f, 0.25f, 0.5f, 0.75f};
+            return factors[moonPhase % 8];
+        }
+
+        @Override
+        public int getMoonPhase() {
+            queriedConditions.put("moonPhase", true);
+            return moonPhase;
+        }
+
+
+        @Override
         public boolean isRaining() {
             queriedConditions.put("weather", true);
             return weather.equals("rain") || weather.equals("thunder");
@@ -309,6 +380,18 @@ public class SpawnConditionAnalyzer {
         public boolean isThundering() {
             queriedConditions.put("weather", true);
             return weather.equals("thunder");
+        }
+
+        @Override
+        public boolean containsAnyLiquid(AxisAlignedBB bb) {
+            // Simulates no liquid in the entity's bounding box
+            return false;
+        }
+
+        @Override
+        public boolean checkNoEntityCollision(AxisAlignedBB aabb) {
+            // Simulates no entity collision
+            return true;
         }
 
         @Override
@@ -378,6 +461,16 @@ public class SpawnConditionAnalyzer {
         }
 
         @Override
+        public <T extends Entity> List<T> getEntitiesWithinAABB(Class<? extends T> clazz, AxisAlignedBB aabb) {
+            return new ArrayList<>();
+        }
+
+        @Override
+        public <T extends Entity> List<T> getEntitiesWithinAABB(Class<? extends T> classEntity, AxisAlignedBB bb, com.google.common.base.Predicate<? super T> filter) {
+            return new ArrayList<>();
+        }
+
+        @Override
         public boolean isAnyPlayerWithinRangeAt(double x, double y, double z, double range) {
             return false;
         }
@@ -414,8 +507,10 @@ public class SpawnConditionAnalyzer {
 
         @Override
         protected IChunkProvider createChunkProvider() {
+            SimulatedWorld outerWorld = this;
+
             return new IChunkProvider() {
-                private Chunk blankChunk;
+                private SimulatedChunk simulatedChunk;
 
                 @Override
                 public Chunk getLoadedChunk(int x, int z) {
@@ -424,13 +519,13 @@ public class SpawnConditionAnalyzer {
 
                 @Override
                 public Chunk provideChunk(int x, int z) {
-                    if (blankChunk == null) {
-                        blankChunk = new Chunk(SimulatedWorld.this, x, z);
-                        blankChunk.setTerrainPopulated(true);
-                        blankChunk.setLightPopulated(true);
+                    if (simulatedChunk == null) {
+                        simulatedChunk = new SimulatedChunk(outerWorld, x, z);
+                        simulatedChunk.setTerrainPopulated(true);
+                        simulatedChunk.setLightPopulated(true);
                     }
 
-                    return blankChunk;
+                    return simulatedChunk;
                 }
 
                 @Override
@@ -442,6 +537,30 @@ public class SpawnConditionAnalyzer {
                 @Override
                 public boolean isChunkGeneratedAt(int x, int z) { return true; }
             };
+        }
+
+        /**
+         * Custom chunk that can simulate slime chunk behavior via getRandomWithSeed.
+         * Slimes check: world.getChunkFromBlockCoords(pos).getRandomWithSeed(987234911L).nextInt(10) == 0
+         */
+        private class SimulatedChunk extends Chunk {
+            SimulatedChunk(World worldIn, int x, int z) {
+                super(worldIn, x, z);
+            }
+
+            @Override
+            public Random getRandomWithSeed(long seed) {
+                queriedConditions.put("isSlimeChunk", true);
+
+                // Return a Random that will make nextInt(10) return 0 if isSlimeChunk is true, otherwise non-zero
+                return new Random() {
+                    @Override
+                    public int nextInt(int bound) {
+                        // Slimes check nextInt(10) == 0 for slime chunks
+                        return isSlimeChunk ? 0 : 1;
+                    }
+                };
+            }
         }
     }
 
@@ -724,13 +843,15 @@ public class SpawnConditionAnalyzer {
         SimulatedWorld simulatedWorld = getOrCreateSimulatedWorld(targetDimId, entity.world.getWorldInfo(), targetProvider);
         simulatedWorld.dimension = dimensionName != null ? dimensionName : "unknown";
 
-        ConditionRefiner refiner = new ConditionRefiner(entity.getClass(), simulatedWorld);
-        // use only limited biome ground blocks to find the initial valid sample faster, then expand in the refiner
-        SpawnConditions result = refiner.findValidConditions(biomes, biomeGroundBlocksLimited, groundBlocksCombined, lightLevels, PROBE_Y_LEVELS);
+        // Find valid conditions using inline refinement (replacing ConditionRefiner)
+        SpawnConditions result = findValidConditions(entity.getClass(), simulatedWorld,
+            biomes, biomeGroundBlocksLimited, groundBlocksCombined, lightLevels, PROBE_Y_LEVELS);
 
         if (result != null) {
             return new SpawnConditions(
-                biomes, result.groundBlocks, result.lightLevels, result.yLevels, result.timeOfDay, result.weather, result.hints, result.requiresSky, dimensionName, targetDimId
+                biomes, result.groundBlocks, result.lightLevels, result.yLevels, result.timeOfDay, result.weather,
+                result.hints, result.requiresSky, result.moonPhases, result.requiresSlimeChunk, result.requiresNether,
+                dimensionName, targetDimId
             );
         }
 
@@ -741,6 +862,28 @@ public class SpawnConditionAnalyzer {
         List<String> weather = Arrays.asList("unknown");
 
         return new SpawnConditions(biomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null, null, dimensionName, targetDimId);
+    }
+
+    /**
+     * Find valid spawn conditions by probing the simulated world.
+     */
+    private SpawnConditions findValidConditions(Class<? extends EntityLiving> entityClass,
+                                                SimulatedWorld world,
+                                                List<String> candidateBiomes,
+                                                List<String> groundBlocksFinder,
+                                                List<String> groundBlocksExpander,
+                                                List<Integer> lightProbe,
+                                                List<Integer> yLevels) {
+        if (candidateBiomes.isEmpty() || groundBlocksFinder.isEmpty() || groundBlocksExpander.isEmpty()) return null;
+
+        SampleFinder sampleFinder = new SampleFinder(entityClass, world);
+        ConditionExpander expander = new ConditionExpander(entityClass, world);
+
+        SampleFinder.ValidSample sample = sampleFinder.find(candidateBiomes, groundBlocksFinder, lightProbe, yLevels);
+        if (sample == null) return sampleFinder.buildFailureResult(lightProbe);
+
+        ConditionExpander.ExpandedConditions expanded = expander.expandAll(sample, candidateBiomes, groundBlocksExpander);
+        return expander.toSpawnConditions(expanded);
     }
 
     public boolean hasResult() {

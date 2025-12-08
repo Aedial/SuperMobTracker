@@ -34,6 +34,9 @@ public final class ConditionUtils {
     public static final String HINT_TIME = I18n.translateToLocal("gui.mobtracker.hint.time");
     public static final String HINT_WEATHER = I18n.translateToLocal("gui.mobtracker.hint.weather");
     public static final String HINT_SKY = I18n.translateToLocal("gui.mobtracker.hint.sky");
+    public static final String HINT_MOON_PHASE = I18n.translateToLocal("gui.mobtracker.hint.moonphase");
+    public static final String HINT_SLIME_CHUNK = I18n.translateToLocal("gui.mobtracker.hint.slimechunk");
+    public static final String HINT_NETHER = I18n.translateToLocal("gui.mobtracker.hint.nether");
 
     /** Whether profiling is enabled (Java arg). Can be temporarily suppressed. */
     private static final boolean PROFILING_ARG = Boolean.getBoolean("supermobtracker.profile");

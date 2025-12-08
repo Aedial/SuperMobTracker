@@ -8,6 +8,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.0.0] - 2025-12-07
+### Added
+- Expand spawn condition analysis to include moon phase, slime chunk, and nether checks.
+
+### Technical
+- Refactor spawn condition analyzer to handle optional conditions more cleanly and extensibly. This allows for easier addition of new condition types in the future. It was the original plan with the queried conditions map, but performance wasn't bad enough to warrant it (especially after the ground blocks optimization).
+- Move ground blocks, time of day, weather, and requires sky conditions to the new optional conditions system.
+- Document the whole optional conditions system.
+
+
 ## [1.0.0-rc4] - 2025-12-05
 ### Added
 - Add canSeeSky spawn condition detection and display in the spawn conditions panel.
