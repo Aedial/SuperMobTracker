@@ -42,7 +42,7 @@ gui.mobtracker.cannotSpawnNaturally=This entity cannot spawn naturally.
 gui.mobtracker.cannotSpawnNaturallyHint=It may only be obtained via spawners, commands, or special game mechanics (like boss summoning).
 gui.mobtracker.analysisCrashed=Spawn analysis failed.
 gui.mobtracker.analysisCrashedHint=An error occurred while analyzing spawn conditions for this entity.
-gui.mobtracker.noSpawnConditions=Could not determine spawn; may not spawn in this dimension.
+gui.mobtracker.noSpawnConditions=Could not determine spawn; conditions might not be handled yet or the spawn chance very unlikely.
 
 gui.mobtracker.entityName=Name: %s
 gui.mobtracker.entityId=ID: %s

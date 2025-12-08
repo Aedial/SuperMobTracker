@@ -27,6 +27,7 @@ Many mobs have inherently random spawn conditions that may not be fully captured
 
 ### Some biomes/dimensions/blocks show up as raw registry names, why?
 Some mods do not provide proper localization keys for their biomes/dimensions//blocks. In this case, your modpack should provide a `lang` file with the appropriate keys to get proper names. Considering a raw name of `<modid>:<biome_name>`, the localization key format is `biome.<modid>.<biome_name>.path` for biomes, `dimension.<modid>.<dimension_name>.path` for dimensions, and `tile.<modid>.<block_name>.name` for blocks. I will not include other-mods-specific localization in the mod itself.
+Of course, if localization for these exist, it is a bug and should be reported.
 
 ## Commands
 

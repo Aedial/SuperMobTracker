@@ -8,9 +8,16 @@ The spawn condition analysis uses a queue-based combination system:
 
 1. **SimulatedWorld** - A fake world that intercepts condition checks
 2. **SampleFinder** - Tests combinations to find the first valid spawn
-3. **ConditionExpander** - Expands valid samples to find all acceptable values
+3. **ConditionExpander** - Expands valid samples to find all acceptable values (uses utility methods for consistency)
 4. **GUI Display** - Shows the results to the user
 5. **Localization** - Provides translated strings
+
+### Seed Management
+
+The system tracks the random seed that successfully finds the first spawn sample. This seed is then reused during condition expansion to improve consistency:
+- `ConditionUtils.resetSuccessfulSeed()` - Called at the start of analysis to clear the seed
+- `ConditionUtils.canSpawn()` - Records the seed when spawn succeeds
+- `ConditionUtils.canSpawnWithSeed()` - Used by ConditionExpander to try the saved seed first, falling back to retries if needed
 
 ## Condition Types
 
@@ -111,18 +118,10 @@ private static final List<OptionalCondition> OPTIONAL_CONDITIONS = Arrays.asList
 ```java
 private void applyConditionCombination(ConditionCombination combo) {
     // For boolean:
-    if (combo.has("myCondition")) {
-        world.myCondition = (Boolean) combo.get("myCondition");
-    } else {
-        world.myCondition = false;  // default
-    }
+    if (combo.has("myCondition")) world.myCondition = (Boolean) combo.get("myCondition");
 
     // For multi-value (Integer):
-    if (combo.has("myMultiCondition")) {
-        world.myConditionValue = (Integer) combo.get("myMultiCondition");
-    } else {
-        world.myConditionValue = 0;  // default
-    }
+    if (combo.has("myMultiCondition")) world.myConditionValue = (Integer) combo.get("myMultiCondition");
 }
 ```
 
@@ -130,9 +129,32 @@ private void applyConditionCombination(ConditionCombination combo) {
 
 Add the new field to the ValidSample constructor call.
 
+```java
+private ValidSample findWithCurrentConfig(List<Integer> lightLevels, List<Integer> yLevels) {
+    Map<String, Boolean> aggregatedQueried = new HashMap<>();
+
+    for (Integer y : yLevels) {
+        for (Integer light : lightLevels) {
+            world.lightLevel = light;
+
+            if (canSpawn(entityClass, world, 0.5, y, 0.5)) {
+                mergeQueriedConditions(aggregatedQueried, world.getAndResetQueriedConditions());
+                // Build and return ValidSample with all fields
+                return new ...; // <-- Your field should be included here
+            }
+
+            mergeQueriedConditions(aggregatedQueried, world.getAndResetQueriedConditions());
+            lastQueriedConditions = aggregatedQueried;
+        }
+    }
+
+    return null;
+}
+```
+
 ### 4. Update ConditionExpander
 
-In `ConditionExpander.java`:
+In `ConditionExpander.java`, use the built-in utility methods for expanding conditions:
 
 #### 4.1. Add to ExpandedConditions
 
@@ -147,59 +169,44 @@ public static class ExpandedConditions {
 
 #### 4.2. Add expand method
 
+The `ConditionExpander` class provides utility methods to simplify condition expansion. Use these instead of writing repetitive code:
+
 ##### For Boolean Conditions:
 
+Use `expandBooleanCondition()`:
+
 ```java
-/**
- * @return null if both work (doesn't matter), true if requires condition, false if excludes condition
- */
 private Boolean expandMyCondition(SampleFinder.ValidSample sample) {
-    boolean worksWithTrue = false;
-    boolean worksWithFalse = false;
-
-    world.myCondition = true;
-    if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksWithTrue = true;
-
-    world.myCondition = false;
-    if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksWithFalse = true;
-
-    // Restore to sample value
-    world.myCondition = sample.myCondition;
-
-    if (worksWithTrue && worksWithFalse) return null;  // Doesn't matter
-    if (worksWithTrue) return true;   // Requires condition to be true
-    if (worksWithFalse) return false; // Requires condition to be false
-
-    return null;
+    return expandBooleanCondition(sample.y, v -> world.myCondition = v, sample.myCondition);
 }
 ```
+
+The utility method handles:
+- Testing both true and false values
+- Restoring the original value after testing
+- Returning null if both work, true/false if only one works
 
 ##### For Multi-Value Conditions:
 
+Use `expandListCondition()`:
+
 ```java
-/**
- * @return null if all values work (doesn't matter), else list of valid values
- */
 private List<Integer> expandMyConditionValues(SampleFinder.ValidSample sample) {
-    List<Integer> validValues = new ArrayList<>();
+    List<Integer> allValues = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7);
 
-    for (int value = 0; value < 8; value++) {  // Or however many values
-        world.myConditionValue = value;
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) validValues.add(value);
-    }
-
-    // Restore to sample value
-    world.myConditionValue = sample.myConditionValue;
-
-    // If all values work, it doesn't matter
-    if (validValues.size() == 8) return null;
-
-    // If no values work, return the sample value (shouldn't happen)
-    if (validValues.isEmpty()) return Arrays.asList(sample.myConditionValue);
-
-    return validValues;
+    return expandListCondition(
+        sample.y, allValues,
+        v -> world.myConditionValue = v,
+        sample.myConditionValue
+    );
 }
 ```
+
+The utility method handles:
+- Testing all values in the list
+- Restoring the original value after testing
+- Returning null if all values work
+- Returning the sample value if no values work (fallback)
 
 #### 4.3. Call from expandAll()
 
@@ -306,3 +313,7 @@ gui.mobtracker.mycondition.2=Value Two
 6. **GUI Display**: For boolean conditions, always handle BOTH true and false cases. For multi-value conditions, display the list of valid values.
 
 7. **Localization Format**: Use "Prefix: %s" format for multi-value, "Prefix: Value" format for boolean.
+
+8. **Seed Reuse**: The `ConditionExpander` automatically uses the seed that found the first valid sample. This improves consistency for mobs with random spawn checks. Use `testSpawn(y)` or the utility methods which internally use `canSpawnWithSeed()`.
+
+9. **Utility Methods**: Always use `expandBooleanCondition()` and `expandListCondition()` for new conditions to maintain code consistency and reduce boilerplate.

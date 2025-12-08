@@ -2,6 +2,7 @@ package com.supermobtracker.client.gui;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityHanging;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
@@ -184,7 +186,7 @@ public class GuiMobTracker extends GuiScreen {
 
                 String entityName = formatEntityName(selected, true);
                 String msg = I18n.format("gui.mobtracker.biomesCopied", entityName);
-                mc.player.sendMessage(new net.minecraft.util.text.TextComponentString(msg));
+                mc.player.sendMessage(new TextComponentString(msg));
 
                 return;
             }
@@ -329,7 +331,7 @@ public class GuiMobTracker extends GuiScreen {
         GlStateManager.shadeModel(GL11.GL_SMOOTH);
         GlStateManager.color(r, g, b, a);
 
-        Tessellator tessellator = net.minecraft.client.renderer.Tessellator.getInstance();
+        Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
 
         buffer.begin(GL11.GL_TRIANGLE_FAN,DefaultVertexFormats.POSITION);
@@ -853,7 +855,7 @@ public class GuiMobTracker extends GuiScreen {
             ? "gui.mobtracker.dimension.unknown.tooltip.scanning"
             : "gui.mobtracker.dimension.unknown.tooltip.complete";
         String tooltipText = I18n.format(tooltipKey);
-        drawHoveringText(java.util.Collections.singletonList(tooltipText), mouseX, mouseY);
+        drawHoveringText(Collections.singletonList(tooltipText), mouseX, mouseY);
     }
 
     private void drawMobPreview(ResourceLocation id, int x, int y, int size, float rotationY) {

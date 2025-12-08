@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +18,7 @@ import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
@@ -338,7 +340,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
         String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
 
         List<Long> totalTimings = new ArrayList<>();
-        Map<Integer, List<Long>> perDimensionTimings = new java.util.HashMap<>();
+        Map<Integer, List<Long>> perDimensionTimings = new HashMap<>();
 
         // Run multiple samples of the full initialization
         for (int i = 0; i < samples; i++) {
@@ -542,8 +544,8 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
      * These disappear after a short time and don't clutter the chat.
      */
     private void sendProgress(ICommandSender sender, String message) {
-        if (sender.getServer() != null && sender instanceof net.minecraft.entity.player.EntityPlayerMP) {
-            net.minecraft.entity.player.EntityPlayerMP player = (net.minecraft.entity.player.EntityPlayerMP) sender;
+        if (sender.getServer() != null && sender instanceof EntityPlayerMP) {
+            EntityPlayerMP player = (EntityPlayerMP) sender;
             sender.getServer().addScheduledTask(() -> {
                 TextComponentString text = new TextComponentString("[SMT] " + message);
                 text.getStyle().setColor(TextFormatting.DARK_GREEN);

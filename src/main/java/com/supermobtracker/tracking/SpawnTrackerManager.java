@@ -1,12 +1,5 @@
 package com.supermobtracker.tracking;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityLiving;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
-import net.minecraftforge.fml.common.registry.EntityEntry;
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -15,6 +8,14 @@ import java.util.Map;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
+import net.minecraftforge.fml.common.registry.EntityEntry;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 
 public class SpawnTrackerManager {
@@ -76,7 +77,7 @@ public class SpawnTrackerManager {
         return list;
     }
 
-    public static void restoreTrackedIds(java.util.List<String> ids) {
+    public static void restoreTrackedIds(List<String> ids) {
         tracked.clear();
         for (String s : ids) {
             try {
@@ -87,23 +88,6 @@ public class SpawnTrackerManager {
 
     public static void clearAll() {
         tracked.clear();
-    }
-
-    public static int getLiveCount(ResourceLocation id) {
-        Tracker t = tracked.get(id);
-        return t == null ? 0 : t.liveCount;
-    }
-
-    public static int getLiveCountInRange(ResourceLocation id, net.minecraft.entity.player.EntityPlayer player, double rangeSq) {
-        Tracker t = tracked.get(id);
-        if (t == null || player == null || player.world == null) return 0;
-
-        int count = 0;
-        for (Entity entity : player.world.loadedEntityList) {
-            if (t.clazz.isInstance(entity) && player.getDistanceSq(entity) <= rangeSq) count++;
-        }
-
-        return count;
     }
 
     public static void maybeTrackJoin(Entity entity) {
