@@ -8,6 +8,21 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.1.0] - 2025-12-08
+### Added
+- Add whitelist/blacklist config options to prevent tracking of specific mobs (see README).
+
+### Fixed
+- (Almost entirely) fix incomplete spawn condition analysis for mobs with very random spawning logic (e.g., Aether mobs). Analysis should now be stable at default retry count for almost all mobs.
+
+### Changed
+- Streamline spawn condition expansion logic.
+
+### Technical
+- To eliminate most sources of randomness in spawn condition analysis, we cache the random seed used for the first valid spawn attempt. This ensures that all conditions succeed at the first attempt, as long as they are not covariant on the randomness itself (of course, considering the condition should succeed in that case).
+- The usual retries at random seeds are still performed as a fallback for to catch any remaining randomness.
+
+
 ## [1.0.0] - 2025-12-07
 ### Added
 - Expand spawn condition analysis to include moon phase, slime chunk, and nether checks.

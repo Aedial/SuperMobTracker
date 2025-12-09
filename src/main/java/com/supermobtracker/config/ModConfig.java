@@ -35,6 +35,8 @@ public class ModConfig {
     public static int clientHudPaddingInternal = 2; // padding inside the box
     public static int clientHudLineSpacing = 2; // spacing between lines
     public static boolean clientHudEnabled = true; // whether to show the HUD overlay
+    public static List<String> clientMobWhitelist = new ArrayList<>(); // entity ids allowed (takes precedence)
+    public static List<String> clientMobBlacklist = new ArrayList<>(); // entity ids blocked when whitelist empty
 
     private static final String enableTrackingDesc = I18n.translateToLocal("config.supermobtracker.client.enableTracking.desc");
     private static final String detectionRangeDesc = I18n.translateToLocal("config.supermobtracker.client.detectionRange.desc");
@@ -48,6 +50,8 @@ public class ModConfig {
     private static final String hudPaddingInternalDesc = I18n.translateToLocal("config.supermobtracker.client.hudPaddingInternal.desc");
     private static final String hudLineSpacingDesc = I18n.translateToLocal("config.supermobtracker.client.hudLineSpacing.desc");
     private static final String hudEnabledDesc = I18n.translateToLocal("config.supermobtracker.client.hudEnabled.desc");
+    private static final String mobWhitelistDesc = I18n.translateToLocal("config.supermobtracker.client.mobWhitelist.desc");
+    private static final String mobBlacklistDesc = I18n.translateToLocal("config.supermobtracker.client.mobBlacklist.desc");
 
     private static final List<String> hiddenConfigs = Arrays.asList(
         "i18nNames",
@@ -113,7 +117,26 @@ public class ModConfig {
         prop.setLanguageKey("config.supermobtracker.client.hudEnabled");
         clientHudEnabled = prop.getBoolean();
 
-        // TODO: add mob blacklist/whitelist here (whitelist takes priority over blacklist)
+        // Mob filtering: whitelist takes precedence over blacklist
+        prop = config.get("client", "mobWhitelist", new String[0], mobWhitelistDesc);
+        prop.setLanguageKey("config.supermobtracker.client.mobWhitelist");
+        clientMobWhitelist = new ArrayList<>();
+        for (String s : prop.getStringList()) {
+            if (s != null) {
+                String t = s.trim();
+                if (!t.isEmpty()) clientMobWhitelist.add(t);
+            }
+        }
+
+        prop = config.get("client", "mobBlacklist", new String[0], mobBlacklistDesc);
+        prop.setLanguageKey("config.supermobtracker.client.mobBlacklist");
+        clientMobBlacklist = new ArrayList<>();
+        for (String s : prop.getStringList()) {
+            if (s != null) {
+                String t = s.trim();
+                if (!t.isEmpty()) clientMobBlacklist.add(t);
+            }
+        }
 
         // Hidden configs (still set language keys for consistency)
         prop = config.get("client", "i18nNames", clientI18nNames, i18nNamesDesc);
@@ -146,10 +169,83 @@ public class ModConfig {
         return hiddenConfigs.contains(name);
     }
 
+    public enum FilterReason {
+        NONE,
+        NOT_WHITELISTED,
+        BLACKLISTED
+    }
+
+    public static boolean isWhitelistActive() {
+        return clientMobWhitelist != null && !clientMobWhitelist.isEmpty();
+    }
+
+    public static boolean isWhitelisted(String id) {
+        if (id == null) return false;
+        if (clientMobWhitelist.contains(id)) return true;
+
+        for (String entry : clientMobWhitelist) {
+            if (id.contains(entry)) return true;
+        }
+
+        return false;
+    }
+
+    public static boolean isBlacklisted(String id) {
+        if (id == null) return false;
+        if (clientMobBlacklist.contains(id)) return true;
+
+        for (String entry : clientMobBlacklist) {
+            if (id.contains(entry)) return true;
+        }
+
+        return false;
+    }
+
+    public static boolean isEntityAllowed(String id) {
+        if (id == null) return false;
+
+        if (isWhitelistActive()) return isWhitelisted(id);
+        if (isBlacklisted(id)) return false;
+
+        return true;
+    }
+
+    public static FilterReason getFilterReason(String id) {
+        if (id == null) return FilterReason.NONE;
+
+        if (isWhitelistActive()) return isWhitelisted(id) ? FilterReason.NONE : FilterReason.NOT_WHITELISTED;
+
+        return isBlacklisted(id) ? FilterReason.BLACKLISTED : FilterReason.NONE;
+    }
+
     public static void setClientI18nNames(boolean value) {
         clientI18nNames = value;
         if (config != null) {
             config.get("client", "i18nNames", clientI18nNames).set(value);
+            config.save();
+        }
+    }
+
+    public static List<String> getClientMobWhitelist() {
+        return new ArrayList<>(clientMobWhitelist);
+    }
+
+    public static void setClientMobWhitelist(Collection<String> ids) {
+        clientMobWhitelist = new ArrayList<>(ids);
+        if (config != null) {
+            config.get("client", "mobWhitelist", new String[0]).set(clientMobWhitelist.toArray(new String[0]));
+            config.save();
+        }
+    }
+
+    public static List<String> getClientMobBlacklist() {
+        return new ArrayList<>(clientMobBlacklist);
+    }
+
+    public static void setClientMobBlacklist(Collection<String> ids) {
+        clientMobBlacklist = new ArrayList<>(ids);
+        if (config != null) {
+            config.get("client", "mobBlacklist", new String[0]).set(clientMobBlacklist.toArray(new String[0]));
             config.save();
         }
     }

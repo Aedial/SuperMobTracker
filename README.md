@@ -11,6 +11,7 @@ A client-side Minecraft 1.12.2 mod that lets you select mobs to view spawn condi
   - enableTracking: Globally disable tracking (requires restart).
   - detectionRange: Set radius for considering spawn attempts.
   - spawnCheckRetries: Set maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time on selection. This can lead to some high delays when selecting some mobs with tricky spawn conditions.
+  - whitelist/blacklist: Configure which mobs are allowed/disallowed for tracking. Whitelist takes priority over blacklist. Partial matches are supported (e.g., `zomb` matches all mobs with "zombie" in their ID or `minecraft` matches all mobs from the Minecraft namespace). To avoid matching too broadly, keep the `:` separator for namespace matching (e.g., `aoa:`). As it is a purely client-side mod, there is no way to enforce server-side mob restrictions.
 
 ## Questions
 ### Do I need to install this on a server?

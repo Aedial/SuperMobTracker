@@ -16,6 +16,8 @@ config.supermobtracker.client.hudPaddingExternal.desc=Padding from screen edge f
 config.supermobtracker.client.hudPaddingInternal.desc=Padding inside the tracking overlay box.
 config.supermobtracker.client.hudLineSpacing.desc=Spacing between lines in the tracking overlay.
 config.supermobtracker.client.hudEnabled.desc=Whether to show the tracking overlay on screen.
+config.supermobtracker.client.mobWhitelist.desc=List of entity IDs that are whitelisted for tracking (takes precedence over blacklist).
+config.supermobtracker.client.mobBlacklist.desc=List of entity IDs that are blacklisted from tracking.
 
 # Config names (displayed in config GUI)
 config.supermobtracker.client.enableTracking=Enable Tracking
@@ -30,6 +32,8 @@ config.supermobtracker.client.hudPaddingExternal=HUD External Padding
 config.supermobtracker.client.hudPaddingInternal=HUD Internal Padding
 config.supermobtracker.client.hudLineSpacing=HUD Line Spacing
 config.supermobtracker.client.hudEnabled=HUD Enabled
+config.supermobtracker.client.mobWhitelist=Mob Whitelist
+config.supermobtracker.client.mobBlacklist=Mob Blacklist
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=IDs: Localized
@@ -49,6 +53,8 @@ gui.mobtracker.entityId=ID: %s
 gui.mobtracker.entitySize=Size: %s x %s x %s
 gui.mobtracker.attributes=Attributes: %s
 gui.mobtracker.jeiButton=[View in JEI]
+gui.mobtracker.blacklisted=This entity is blacklisted
+gui.mobtracker.whitelisted=This entity is not whitelisted
 
 gui.mobtracker.spawnConditions=Spawn Conditions:
 gui.mobtracker.lightLevels=Light: %s
