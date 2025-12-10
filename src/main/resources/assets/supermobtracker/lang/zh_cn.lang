@@ -16,6 +16,8 @@ config.supermobtracker.client.hudPaddingExternal.desc=追踪叠加层与屏幕�
 config.supermobtracker.client.hudPaddingInternal.desc=追踪叠加层框体内部的边距。
 config.supermobtracker.client.hudLineSpacing.desc=追踪叠加层中文本的行间距。
 config.supermobtracker.client.hudEnabled.desc=是否在屏幕上显示追踪叠加层。
+config.supermobtracker.client.mobWhitelist.desc=允许追踪的实体ID白名单列表（优先级高于黑名单）。
+config.supermobtracker.client.mobBlacklist.desc=禁止追踪的实体ID黑名单列表。
 
 # Config names (displayed in config GUI)
 config.supermobtracker.client.enableTracking=启用追踪
@@ -30,6 +32,8 @@ config.supermobtracker.client.hudPaddingExternal=HUD外部边距
 config.supermobtracker.client.hudPaddingInternal=HUD内部边距
 config.supermobtracker.client.hudLineSpacing=HUD行间距
 config.supermobtracker.client.hudEnabled=启用HUD
+config.supermobtracker.client.mobWhitelist=生物白名单
+config.supermobtracker.client.mobBlacklist=生物黑名单
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=ID显示：本地化
@@ -42,13 +46,15 @@ gui.mobtracker.cannotSpawnNaturally=该实体不会自然生成。
 gui.mobtracker.cannotSpawnNaturallyHint=可能只能通过刷怪箱、命令或者特殊游戏机制生成（例如Boss召唤）。
 gui.mobtracker.analysisCrashed=生成分析失败。
 gui.mobtracker.analysisCrashedHint=分析该实体的生成条件时发生错误。
-gui.mobtracker.noSpawnConditions=无法确定生成条件；可能不会在此维度生成。
+gui.mobtracker.noSpawnConditions=无法确定生成条件；可能尚未处理相关条件或生成概率极低。
 
 gui.mobtracker.entityName=名称：%s
 gui.mobtracker.entityId=ID：%s
 gui.mobtracker.entitySize=尺寸：%s x %s x %s
 gui.mobtracker.attributes=性质：%s
 gui.mobtracker.jeiButton=[在JEI中查看]
+gui.mobtracker.blacklisted=该实体已列入黑名单
+gui.mobtracker.whitelisted=该实体未列入白名单
 
 gui.mobtracker.spawnConditions=生成条件：
 gui.mobtracker.lightLevels=亮度：%s
