@@ -26,7 +26,7 @@ public class GuiIconButton extends GuiButton {
         // Draw frame and background of the button
         boolean hovered = mouseX >= this.x - 1 && mouseY >= this.y - 1 && mouseX < this.x + this.width + 1 && mouseY < this.y + this.height + 1;
         int color = hovered ? 0xFFBBBBBB : 0xFFCCCCCC;
-        int borderColor = 0xFF555555;
+        int borderColor = 0xFF333333;
         this.drawRect(this.x, this.y - 1, this.x + this.width, this.y, borderColor); // Top border
         this.drawRect(this.x, this.y + this.height, this.x + this.width, this.y + this.height + 1, borderColor); // Bottom border
         this.drawRect(this.x - 1, this.y, this.x, this.y + this.height, borderColor); // Left border

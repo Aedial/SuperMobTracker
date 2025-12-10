@@ -133,7 +133,7 @@ public class ClientEvents {
         }
 
         // Starting position: top of the inventory GUI, right of the player preview
-        int startX = guiLeft + 78;
+        int startX = guiLeft + 77;
         int startY = guiTop + 8;
 
         // For creative inventory, the layout is different, put it right to the search box
@@ -186,10 +186,10 @@ public class ClientEvents {
                 if (!collidesWithAnyButton(x, y, btnW, btnH, buttons)) return new int[] { x, y };
 
                 // Move down
-                y += btnH + 3;
+                y += btnH + 5;
             }
 
-            x += btnW + 3;
+            x += btnW + 5; // Move right to next column
             y = startY;
         }
 

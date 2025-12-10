@@ -412,11 +412,10 @@ public class GuiMobTracker extends GuiScreen {
         // Diagonal bar
         GlStateManager.color(r, g, b, a);
 
-        // TODO: incline the bar a bit more (middle between 0-1 and 4-5)
         GL11.glLineWidth(4.0f);
         GL11.glBegin(GL11.GL_LINES);
-        GL11.glVertex3f(pxInner[0], pyInner[0], 0f);
-        GL11.glVertex3f(pxInner[4], pyInner[4], 0f);
+        GL11.glVertex3f((px[7] + px[0]) / 2, (py[7] + py[0]) / 2, 0f);
+        GL11.glVertex3f((px[3] + px[4]) / 2, (py[3] + py[4]) / 2, 0f);
         GL11.glEnd();
 
         GlStateManager.shadeModel(GL11.GL_FLAT);
