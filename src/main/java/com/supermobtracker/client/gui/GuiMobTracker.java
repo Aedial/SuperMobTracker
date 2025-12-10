@@ -2,6 +2,7 @@ package com.supermobtracker.client.gui;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityHanging;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
@@ -184,7 +186,7 @@ public class GuiMobTracker extends GuiScreen {
 
                 String entityName = formatEntityName(selected, true);
                 String msg = I18n.format("gui.mobtracker.biomesCopied", entityName);
-                mc.player.sendMessage(new net.minecraft.util.text.TextComponentString(msg));
+                mc.player.sendMessage(new TextComponentString(msg));
 
                 return;
             }
@@ -244,13 +246,14 @@ public class GuiMobTracker extends GuiScreen {
         this.drawDefaultBackground();
 
         filterField.drawTextBox();
-        listWidget.draw();
+        listWidget.draw(mouseX, mouseY);
         drawRightPanel(mouseX, mouseY, partialTicks);
 
         super.drawScreen(mouseX, mouseY, partialTicks);
 
         drawBiomeTooltip(mouseX, mouseY);
         drawDimensionTooltip(mouseX, mouseY);
+        listWidget.drawTooltips(mouseX, mouseY);
     }
 
     private int drawElidedString(FontRenderer renderer, String text, int x, int y, int lineHeight, int maxWidth, int color) {
@@ -320,6 +323,7 @@ public class GuiMobTracker extends GuiScreen {
             pointsY[i] = centerY + (float) (radius * Math.sin(angle));
         }
 
+        GlStateManager.pushMatrix();
         GlStateManager.disableTexture2D();
         GlStateManager.enableBlend();
         GlStateManager.disableAlpha();
@@ -329,7 +333,7 @@ public class GuiMobTracker extends GuiScreen {
         GlStateManager.shadeModel(GL11.GL_SMOOTH);
         GlStateManager.color(r, g, b, a);
 
-        Tessellator tessellator = net.minecraft.client.renderer.Tessellator.getInstance();
+        Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
 
         buffer.begin(GL11.GL_TRIANGLE_FAN,DefaultVertexFormats.POSITION);
@@ -348,6 +352,118 @@ public class GuiMobTracker extends GuiScreen {
         GlStateManager.disableBlend();
         GlStateManager.enableAlpha();
         GlStateManager.enableTexture2D();
+        GlStateManager.popMatrix();
+    }
+
+    /**
+     * Draws a simple red stop-sign-like octagon.
+     */
+    private void drawStopSign(float centerX, float centerY, float radius, int color) {
+        float a = ((color >> 24) & 0xFF) / 255.0f;
+        float r = ((color >> 16) & 0xFF) / 255.0f;
+        float g = ((color >> 8) & 0xFF) / 255.0f;
+        float b = (color & 0xFF) / 255.0f;
+
+        float innerRadius = radius * 0.75f;
+
+        // Octagon points, flat top
+        float[] px = new float[8];
+        float[] py = new float[8];
+        float[] pxInner = new float[8];
+        float[] pyInner = new float[8];
+        // Start at -22.5 degrees to flatten top/bottom edges
+        for (int i = 0; i < 8; i++) {
+            double angle = Math.toRadians(-22.5 + i * 45.0);
+            px[i] = centerX + (float) (radius * Math.cos(angle));
+            py[i] = centerY + (float) (radius * Math.sin(angle));
+
+            pxInner[i] = centerX + (float) (innerRadius * Math.cos(angle));
+            pyInner[i] = centerY + (float) (innerRadius * Math.sin(angle));
+        }
+
+        GlStateManager.pushMatrix();
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.disableAlpha();
+        GlStateManager.disableDepth();
+        GlStateManager.disableCull();
+        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        GlStateManager.shadeModel(GL11.GL_SMOOTH);
+
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.getBuffer();
+
+        // Outer octagon
+        GlStateManager.color(r, g, b, a);
+
+        buffer.begin(GL11.GL_TRIANGLE_FAN, DefaultVertexFormats.POSITION);
+        buffer.pos(centerX, centerY, 0.0).endVertex();
+        for (int i = 0; i <= 8; i++) buffer.pos(px[i % 8], py[i % 8], 0.0).endVertex();
+        tessellator.draw();
+
+        // Inner octagon (cutout)
+        GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
+
+        buffer.begin(GL11.GL_TRIANGLE_FAN, DefaultVertexFormats.POSITION);
+        buffer.pos(centerX, centerY, 0.0).endVertex();
+        for (int i = 0; i <= 8; i++) buffer.pos(pxInner[i % 8], pyInner[i % 8], 0.0).endVertex();
+        tessellator.draw();
+
+        // Diagonal bar
+        GlStateManager.color(r, g, b, a);
+
+        GL11.glLineWidth(4.0f);
+        GL11.glBegin(GL11.GL_LINES);
+        GL11.glVertex3f((px[7] + px[0]) / 2, (py[7] + py[0]) / 2, 0f);
+        GL11.glVertex3f((px[3] + px[4]) / 2, (py[3] + py[4]) / 2, 0f);
+        GL11.glEnd();
+
+        GlStateManager.shadeModel(GL11.GL_FLAT);
+        GlStateManager.enableCull();
+        GlStateManager.enableDepth();
+        GlStateManager.disableBlend();
+        GlStateManager.enableAlpha();
+        GlStateManager.enableTexture2D();
+        GlStateManager.popMatrix();
+    }
+
+    /**
+     * Draws a red X between two corners with configurable thickness.
+     */
+    private void drawRedX(float x1, float y1, float x2, float y2, float thickness, int color) {
+        float a = ((color >> 24) & 0xFF) / 255.0f;
+        float r = ((color >> 16) & 0xFF) / 255.0f;
+        float g = ((color >> 8) & 0xFF) / 255.0f;
+        float b = (color & 0xFF) / 255.0f;
+
+        GlStateManager.pushMatrix();
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.disableAlpha();
+        GlStateManager.disableDepth();
+        GlStateManager.disableCull();
+        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        GlStateManager.color(r, g, b, a);
+
+        GL11.glLineWidth(thickness);
+
+        // First diagonal
+        GL11.glBegin(GL11.GL_LINES);
+        GL11.glVertex3f(x1, y1, 0f);
+        GL11.glVertex3f(x2, y2, 0f);
+        GL11.glEnd();
+
+        // Second diagonal
+        GL11.glBegin(GL11.GL_LINES);
+        GL11.glVertex3f(x1, y2, 0f);
+        GL11.glVertex3f(x2, y1, 0f);
+        GL11.glEnd();
+
+        GlStateManager.enableDepth();
+        GlStateManager.enableTexture2D();
+        GlStateManager.enableAlpha();
+        GlStateManager.disableBlend();
+        GlStateManager.popMatrix();
     }
 
     private String format(double d) {
@@ -853,7 +969,7 @@ public class GuiMobTracker extends GuiScreen {
             ? "gui.mobtracker.dimension.unknown.tooltip.scanning"
             : "gui.mobtracker.dimension.unknown.tooltip.complete";
         String tooltipText = I18n.format(tooltipKey);
-        drawHoveringText(java.util.Collections.singletonList(tooltipText), mouseX, mouseY);
+        drawHoveringText(Collections.singletonList(tooltipText), mouseX, mouseY);
     }
 
     private void drawMobPreview(ResourceLocation id, int x, int y, int size, float rotationY) {
@@ -953,6 +1069,9 @@ public class GuiMobTracker extends GuiScreen {
         private final int h;
         private FontRenderer fontRenderer;
         private GuiMobTracker tracker;
+        private int blacklistTooltipX = 0;
+        private int blacklistTooltipY = 0;
+        private String blacklistTooltipText = null;
 
         private List<ResourceLocation> all = new ArrayList<>();
         // Store entries as (displayName, id) pairs to handle duplicate names
@@ -1161,12 +1280,14 @@ public class GuiMobTracker extends GuiScreen {
             return true;
         }
 
-        void draw() {
+        void draw(int mouseX, int mouseY) {
             ensureI18nSync();
 
             List<MobEntry> displayList = getDisplayList();
             ResourceLocation selectedId = tracker.getSelectedEntity();
             int selectedIndex = selectedId != null ? findIndexById(selectedId) : -1;
+
+            blacklistTooltipText = null;
 
             GlStateManager.pushMatrix();
             int visible = h / 12;
@@ -1184,16 +1305,56 @@ public class GuiMobTracker extends GuiScreen {
                 if (!elided.equals(text)) elided += "…";
                 fontRenderer.drawString(elided, x + 4, drawY + 2, isSel ? 0xFFFFA0 : 0xFFFFFF);
 
-                if (SpawnTrackerManager.isTracked(entry.id)) {
-                    float starCenterX = x + w - 16;
-                    float starCenterY = drawY + 6;
-                    float starRadius = 4.0f;
-                    drawStar(starCenterX, starCenterY, starRadius, 0xFFFFD700);
+                float iconCenterX = x + w - 16;
+                float iconCenterY = drawY + 6;
+                float iconRadius = 4.0f;
+
+                boolean tracked = SpawnTrackerManager.isTracked(entry.id);
+                ModConfig.FilterReason reason = ModConfig.getFilterReason(entry.id.toString());
+
+                if (tracked) {
+                    drawStar(iconCenterX, iconCenterY, iconRadius, 0xFFFFD700);
+
+                    if (reason != ModConfig.FilterReason.NONE) {        // Draw red X over the star
+                        float bx1 = iconCenterX - iconRadius * 0.7f;
+                        float by1 = iconCenterY - iconRadius * 0.7f;
+                        float bx2 = iconCenterX + iconRadius * 0.7f;
+                        float by2 = iconCenterY + iconRadius * 0.7f;
+                        drawRedX(bx1, by1, bx2, by2, 3.0f, 0xFFFF4444);
+                    }
+                } else if (reason != ModConfig.FilterReason.NONE) {     // Draw stop sign for filtered entities
+                    drawStopSign(iconCenterX, iconCenterY, iconRadius + 0.5f, 0xE0FF4444);
+                }
+
+                // Tooltip for stop sign or red X if hovered
+                if (reason != ModConfig.FilterReason.NONE) {
+                    float iconLeft = iconCenterX - iconRadius;
+                    float iconTop = iconCenterY - iconRadius;
+                    float iconRight = iconCenterX + iconRadius;
+                    float iconBottom = iconCenterY + iconRadius;
+
+                    if (mouseX >= iconLeft && mouseX <= iconRight && mouseY >= iconTop && mouseY <= iconBottom) {
+                        String tip = reason == ModConfig.FilterReason.BLACKLISTED
+                            ? I18n.format("gui.mobtracker.blacklisted")
+                            : I18n.format("gui.mobtracker.filtered");
+                        blacklistTooltipX = mouseX;
+                        blacklistTooltipY = mouseY;
+                        blacklistTooltipText = tip;
+                    }
                 }
             }
 
             drawScrollbar();
             GlStateManager.popMatrix();
+        }
+
+        public void drawTooltips(int mouseX, int mouseY) {
+            if (blacklistTooltipText != null) {
+                GlStateManager.pushMatrix();
+                GlStateManager.translate(0.0F, 0.0F, 400.0F);
+                tracker.drawHoveringText(Collections.singletonList(blacklistTooltipText), blacklistTooltipX, blacklistTooltipY);
+                GlStateManager.popMatrix();
+            }
         }
 
         private void drawScrollbar() {

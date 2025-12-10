@@ -93,9 +93,26 @@ public final class ConditionUtils {
         }
     }
 
+    /** Last successful spawn seed (set by canSpawn when a spawn succeeds) */
+    private static long lastSuccessfulSeed = 0;
+    private static boolean hasSuccessfulSeed = false;
+
+    /** Get the last successful seed, or 0 if none */
+    public static long getLastSuccessfulSeed() { return lastSuccessfulSeed; }
+
+    /** Check if we have a recorded successful seed */
+    public static boolean hasSuccessfulSeed() { return hasSuccessfulSeed; }
+
+    /** Reset the successful seed tracking (call before starting a new analysis) */
+    public static void resetSuccessfulSeed() {
+        lastSuccessfulSeed = 0;
+        hasSuccessfulSeed = false;
+    }
+
     /**
      * Check if an entity can spawn at a position with retries for random spawn checks.
      * Returns true if spawning succeeds at least once within the configured retry limit.
+     * Records the first successful seed for later reuse.
      */
     public static boolean canSpawn(Class<? extends EntityLiving> entityClass,
                                    SpawnConditionAnalyzer.SimulatedWorld world,
@@ -103,14 +120,50 @@ public final class ConditionUtils {
         int maxRetries = ModConfig.clientSpawnCheckRetries;
 
         for (int attempt = 0; attempt < maxRetries; attempt++) {
-            EntityLiving entity = createEntity(entityClass, world);
+            long seed = System.nanoTime() ^ (attempt * 6364136223846793005L);
+            EntityLiving entity = createEntityWithSeed(entityClass, world, seed);
             if (entity == null) return false;
 
+            entity.setPosition(x, y, z);
+            if (entity.getCanSpawnHere()) {
+                if (!hasSuccessfulSeed) {   // Record the first successful seed, not subsequent ones
+                    lastSuccessfulSeed = seed;
+                    hasSuccessfulSeed = true;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if an entity can spawn at a position using a specific seed first.
+     * If the seed fails, falls back to standard retry behavior.
+     */
+    public static boolean canSpawnWithSeed(Class<? extends EntityLiving> entityClass,
+                                           SpawnConditionAnalyzer.SimulatedWorld world,
+                                           double x, int y, double z, long seed) {
+        // Try with the provided seed first
+        EntityLiving entity = createEntityWithSeed(entityClass, world, seed);
+        if (entity != null) {
             entity.setPosition(x, y, z);
             if (entity.getCanSpawnHere()) return true;
         }
 
-        return false;
+        // Fall back to standard behavior
+        return canSpawn(entityClass, world, x, y, z);
+    }
+
+    /**
+     * Create a new entity instance with a specific RNG seed.
+     */
+    private static EntityLiving createEntityWithSeed(Class<? extends EntityLiving> entityClass, World world, long seed) {
+        EntityLiving entity = createEntity(entityClass, world);
+        if (entity != null) entity.getRNG().setSeed(seed);
+
+        return entity;
     }
 
     /**

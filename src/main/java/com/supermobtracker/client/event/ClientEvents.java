@@ -90,7 +90,16 @@ public class ClientEvents {
         if (mc.world == null || mc.player == null) return;
 
         for (Entity entity : mc.world.loadedEntityList) {
-            if (SpawnTrackerManager.isTracked(entity) && mc.player.getDistanceSq(entity) <= ModConfig.clientDetectionRange * ModConfig.clientDetectionRange) {
+            boolean withinRange = mc.player.getDistanceSq(entity) <= ModConfig.clientDetectionRange * ModConfig.clientDetectionRange;
+            boolean tracked = SpawnTrackerManager.isTracked(entity);
+            boolean allowed = false;
+
+            if (tracked && withinRange) {
+                ResourceLocation entId = EntityList.getKey(entity);
+                allowed = entId != null && ModConfig.isEntityAllowed(entId.toString());
+            }
+
+            if (tracked && withinRange && allowed) {
                 if (!entity.isGlowing()) {
                     entity.setGlowing(true);
                     entity.getEntityData().setBoolean("smt_temp_glow", true);
@@ -124,7 +133,7 @@ public class ClientEvents {
         }
 
         // Starting position: top of the inventory GUI, right of the player preview
-        int startX = guiLeft + 78;
+        int startX = guiLeft + 77;
         int startY = guiTop + 8;
 
         // For creative inventory, the layout is different, put it right to the search box
@@ -177,10 +186,10 @@ public class ClientEvents {
                 if (!collidesWithAnyButton(x, y, btnW, btnH, buttons)) return new int[] { x, y };
 
                 // Move down
-                y += btnH + 3;
+                y += btnH + 5;
             }
 
-            x += btnW + 3;
+            x += btnW + 5; // Move right to next column
             y = startY;
         }
 
@@ -227,12 +236,16 @@ public class ClientEvents {
         // Build class -> id map for O(n) single pass counting. Exact class match assumed.
         Map<Class<?>, ResourceLocation> classToId = new HashMap<>();
         for (ResourceLocation id : SpawnTrackerManager.getTrackedIds()) {
+            if (!ModConfig.isEntityAllowed(id.toString())) continue;
             EntityEntry entry = ForgeRegistries.ENTITIES.getValue(id);
             if (entry != null) classToId.put(entry.getEntityClass(), id);
         }
 
         Map<ResourceLocation, Integer> counts = new LinkedHashMap<>();
-        for (ResourceLocation id : SpawnTrackerManager.getTrackedIds()) counts.put(id, 0);
+        for (ResourceLocation id : SpawnTrackerManager.getTrackedIds()) {
+            if (!ModConfig.isEntityAllowed(id.toString())) continue;
+            counts.put(id, 0);
+        }
 
         for (Entity e : mc.world.loadedEntityList) {
             if (mc.player.getDistanceSq(e) > rangeSq) continue;

@@ -168,11 +168,10 @@ public class SampleFinder {
                             List<Integer> yLevels) {
         if (candidateBiomes.isEmpty() || groundBlocks.isEmpty()) return null;
 
-        String biomeId = candidateBiomes.get(0);
-        world.biomeId = biomeId;
-        world.groundBlock = groundBlocks.get(0);
+        world.biomeId = candidateBiomes.get(0);     // native biomes should always be successful
+        world.groundBlock = groundBlocks.get(0);    // give a default block to start with
 
-        List<Integer> narrowedLight = refineLightLevels(lightProbe);
+        List<Integer> narrowedLight = refineLightLevels(lightProbe);    // cut options by half or more
 
         // Queue of condition combinations to try
         Deque<ConditionCombination> queue = new ArrayDeque<>();
@@ -188,7 +187,7 @@ public class SampleFinder {
             applyConditionCombination(combo);
 
             // Try to find a valid sample with this combination
-            ValidSample sample = findWithCurrentConfig(biomeId, narrowedLight, yLevels);
+            ValidSample sample = findWithCurrentConfig(narrowedLight, yLevels);
             if (sample != null) return sample;
 
             // Check which optional conditions were queried but not yet in the combination
@@ -197,10 +196,8 @@ public class SampleFinder {
                 for (OptionalCondition optCond : OPTIONAL_CONDITIONS) {
                     String condName = optCond.name;
 
-                    // Skip if this condition wasn't queried
+                    // Not queried or already in queue
                     if (!lastQueriedConditions.getOrDefault(condName, false)) continue;
-
-                    // Skip if we've already added all combinations for this condition
                     if (conditionsInQueue.contains(condName)) continue;
 
                     // Add all value combinations for this condition to the queue
@@ -210,8 +207,6 @@ public class SampleFinder {
                     // We need to expand all existing items in the queue with the new values
                     List<ConditionCombination> currentQueue = new ArrayList<>(queue);
                     queue.clear();
-
-                    // Also include the current failed combination
                     currentQueue.add(0, combo);
 
                     for (ConditionCombination existing : currentQueue) {
@@ -232,8 +227,6 @@ public class SampleFinder {
 
                     List<ConditionCombination> currentQueue = new ArrayList<>(queue);
                     queue.clear();
-
-                    // Include the current failed combination
                     currentQueue.add(0, combo);
 
                     for (ConditionCombination existing : currentQueue) {
@@ -263,63 +256,41 @@ public class SampleFinder {
         if (combo.has("groundBlock")) world.groundBlock = (String) combo.get("groundBlock");
     }
 
-    private ValidSample findWithCurrentConfig(String biomeId, List<Integer> lightLevels, List<Integer> yLevels) {
+    private ValidSample findWithCurrentConfig(List<Integer> lightLevels, List<Integer> yLevels) {
         Map<String, Boolean> aggregatedQueried = new HashMap<>();
 
-        // TODO: refactor the aggregated queried
         for (Integer y : yLevels) {
             for (Integer light : lightLevels) {
                 world.lightLevel = light;
 
-                // Always capture queried conditions, even on failure
-                Map<String, Boolean> preCheckQueried = world.getAndResetQueriedConditions();
-                if (preCheckQueried != null) {
-                    for (Map.Entry<String, Boolean> entry : preCheckQueried.entrySet()) {
-                        if (entry.getValue()) aggregatedQueried.put(entry.getKey(), true);
-                    }
-                }
-
                 if (canSpawn(entityClass, world, 0.5, y, 0.5)) {
-                    Map<String, Boolean> canSpawnQueried = world.getAndResetQueriedConditions();
-                    if (canSpawnQueried != null) {
-                        for (Map.Entry<String, Boolean> entry : canSpawnQueried.entrySet()) {
-                            if (entry.getValue()) aggregatedQueried.put(entry.getKey(), true);
-                        }
-                    }
-
-                    EntityLiving entity = createEntity(entityClass, world);
-                    if (entity == null) return null;
-
-                    entity.setPosition(0.5, y, 0.5);
-                    entity.getCanSpawnHere();
-                    Map<String, Boolean> spawnConditions = world.getAndResetQueriedConditions();
-
-                    // Merge conditions from both checks
-                    for (Map.Entry<String, Boolean> entry : spawnConditions.entrySet()) {
-                        if (entry.getValue()) aggregatedQueried.put(entry.getKey(), true);
-                    }
+                    mergeQueriedConditions(aggregatedQueried, world.getAndResetQueriedConditions());
 
                     String sampleTime = aggregatedQueried.getOrDefault("timeOfDay", false) ? world.timeOfDay : null;
                     String sampleWeather = aggregatedQueried.getOrDefault("weather", false) ? world.weather : null;
                     String ground = aggregatedQueried.getOrDefault("groundBlock", false) ? world.groundBlock : null;
 
-                    return new ValidSample(y, light, ground, biomeId, world.canSeeSky, world.moonPhase,
+                    return new ValidSample(y, light, ground, world.biomeId, world.canSeeSky, world.moonPhase,
                         world.isSlimeChunk, world.isNether, sampleTime, sampleWeather, aggregatedQueried);
-
-                } else {
-                    // Capture what was queried even on failure so we know what to try next
-                    Map<String, Boolean> failureQueried = world.getAndResetQueriedConditions();
-                    if (failureQueried != null) {
-                        for (Map.Entry<String, Boolean> entry : failureQueried.entrySet()) {
-                            if (entry.getValue()) aggregatedQueried.put(entry.getKey(), true);
-                        }
-                    }
-                    lastQueriedConditions = aggregatedQueried;
                 }
+
+                mergeQueriedConditions(aggregatedQueried, world.getAndResetQueriedConditions());
+                lastQueriedConditions = aggregatedQueried;
             }
         }
 
         return null;
+    }
+
+    /**
+     * Merge queried conditions from a spawn check into the aggregated map.
+     */
+    private void mergeQueriedConditions(Map<String, Boolean> aggregated, Map<String, Boolean> source) {
+        if (source == null) return;
+
+        for (Map.Entry<String, Boolean> entry : source.entrySet()) {
+            if (entry.getValue()) aggregated.put(entry.getKey(), true);
+        }
     }
 
     /**

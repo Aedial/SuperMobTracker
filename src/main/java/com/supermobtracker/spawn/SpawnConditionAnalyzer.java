@@ -10,6 +10,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
@@ -18,6 +19,7 @@ import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EnumCreatureType;
 import net.minecraft.entity.passive.EntityTameable;
+import net.minecraft.init.Blocks;
 import net.minecraft.profiler.Profiler;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
@@ -311,6 +313,12 @@ public class SpawnConditionAnalyzer {
         }
 
         @Override
+        public int getLight(BlockPos pos) {
+            queriedConditions.put("lightLevel", true);
+            return lightLevel;
+        }
+
+        @Override
         public int getLightFromNeighbors(BlockPos pos) {
             queriedConditions.put("lightLevel", true);
             return lightLevel;
@@ -411,8 +419,8 @@ public class SpawnConditionAnalyzer {
             }
 
             // Fall back to default state for other blocks
-            net.minecraft.block.Block block = ForgeRegistries.BLOCKS.getValue(blockId);
-            return block != null ? block.getDefaultState() : net.minecraft.init.Blocks.STONE.getDefaultState();
+            Block block = ForgeRegistries.BLOCKS.getValue(blockId);
+            return block != null ? block.getDefaultState() : Blocks.STONE.getDefaultState();
         }
 
         @Override
@@ -671,9 +679,10 @@ public class SpawnConditionAnalyzer {
      * @return SpawnConditions result, or null if analysis failed
      */
     public SpawnConditions analyze(ResourceLocation entityId) {
-        long startTime = System.nanoTime();
+        double startTime = (double) System.nanoTime();
         lastError = null;
         lastResult = null;
+        ConditionUtils.resetSuccessfulSeed();
 
         EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
         if (entry == null || !(EntityLiving.class.isAssignableFrom(entry.getEntityClass()))) return null;
@@ -745,8 +754,8 @@ public class SpawnConditionAnalyzer {
             lastResult = result;
 
             if (ConditionUtils.isProfilingEnabled()) {
-                double elapsed = (System.nanoTime() - startTime) / 1_000_000.0;
-                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " took " + Math.round(elapsed * 100) / 100 + "ms");
+                double elapsed = ((double) System.nanoTime() - startTime) / 1_000_000.0;
+                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " took " + Math.round(elapsed * 100) / 100.0 + "ms");
 
                 if (result.failed()) SuperMobTracker.LOGGER.info("  Spawn conditions could not be determined, as no valid samples were found.");
             }
@@ -757,7 +766,7 @@ public class SpawnConditionAnalyzer {
 
             if (ConditionUtils.isProfilingEnabled()) {
                 double elapsed = (System.nanoTime() - startTime) / 1_000_000.0;
-                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " crashed after " + Math.round(elapsed * 100) / 100 + "ms: " + t.getMessage());
+                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " crashed after " + Math.round(elapsed * 100) / 100.0 + "ms");
             }
 
             if (ConditionUtils.shouldShowCrashes()) {
@@ -877,11 +886,10 @@ public class SpawnConditionAnalyzer {
         if (candidateBiomes.isEmpty() || groundBlocksFinder.isEmpty() || groundBlocksExpander.isEmpty()) return null;
 
         SampleFinder sampleFinder = new SampleFinder(entityClass, world);
-        ConditionExpander expander = new ConditionExpander(entityClass, world);
-
         SampleFinder.ValidSample sample = sampleFinder.find(candidateBiomes, groundBlocksFinder, lightProbe, yLevels);
         if (sample == null) return sampleFinder.buildFailureResult(lightProbe);
 
+        ConditionExpander expander = new ConditionExpander(entityClass, world);
         ConditionExpander.ExpandedConditions expanded = expander.expandAll(sample, candidateBiomes, groundBlocksExpander);
         return expander.toSpawnConditions(expanded);
     }

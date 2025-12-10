@@ -4,12 +4,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import net.minecraft.entity.EntityLiving;
 
 import static com.supermobtracker.spawn.ConditionUtils.DEFAULT_TIMES;
 import static com.supermobtracker.spawn.ConditionUtils.DEFAULT_WEATHERS;
-import static com.supermobtracker.spawn.ConditionUtils.canSpawn;
+import static com.supermobtracker.spawn.ConditionUtils.canSpawnWithSeed;
+import static com.supermobtracker.spawn.ConditionUtils.getLastSuccessfulSeed;
 
 
 /**
@@ -19,18 +21,24 @@ public class ConditionExpander {
 
     private final Class<? extends EntityLiving> entityClass;
     private final SpawnConditionAnalyzer.SimulatedWorld world;
+    private final long seed;
 
     public ConditionExpander(Class<? extends EntityLiving> entityClass,
                              SpawnConditionAnalyzer.SimulatedWorld world) {
         this.entityClass = entityClass;
         this.world = world;
+        this.seed = getLastSuccessfulSeed();
     }
 
     public static class ExpandedConditions {
         public List<String> biomes = new ArrayList<>();
         public List<Integer> lightLevels = new ArrayList<>();
         public List<Integer> yLevels = new ArrayList<>();
+        public String dimension = null;
+        public int dimensionId = 0;
+
         public List<String> hints = new ArrayList<>();
+
         public List<String> groundBlocks = null;    // null = doesn't matter, else list of valid ground blocks
         public List<String> times = null;           // null = doesn't matter, else list of valid times
         public List<String> weathers = null;        // null = doesn't matter, else list of valid weathers
@@ -38,8 +46,6 @@ public class ConditionExpander {
         public List<Integer> moonPhases = null;     // null = doesn't matter, else list of valid moon phases (0-7)
         public Boolean requiresSlimeChunk = null;   // null = doesn't matter, true = requires slime chunk, false = excludes slime chunk
         public Boolean requiresNether = null;       // null = doesn't matter, true = requires nether-like, false = excludes nether-like
-        public String dimension = null;
-        public int dimensionId = 0;
     }
 
     /**
@@ -78,6 +84,65 @@ public class ConditionExpander {
     }
 
     /**
+     * Helper method to test if spawn succeeds with the saved seed.
+     */
+    private boolean testSpawn(int y) {
+        return canSpawnWithSeed(entityClass, world, 0.5, y, 0.5, seed);
+    }
+
+    /**
+     * Expand a boolean condition by testing both true and false.
+     * @param y The Y level to test at
+     * @param setter Function to set the condition value in the world
+     * @param sampleValue The value from the successful sample (to restore after testing)
+     * @return null if both work, true if only true works, false if only false works
+     */
+    private Boolean expandBooleanCondition(int y, Consumer<Boolean> setter, boolean sampleValue) {
+        boolean worksWithTrue = false;
+        boolean worksWithFalse = false;
+
+        setter.accept(true);            // Test true
+        if (testSpawn(y)) worksWithTrue = true;
+
+        setter.accept(false);           // Test false
+        if (testSpawn(y)) worksWithFalse = true;
+
+        setter.accept(sampleValue);     // Restore original value
+
+        if (worksWithTrue && worksWithFalse) return null;
+        if (worksWithTrue) return true;
+        if (worksWithFalse) return false;
+
+        return null;
+    }
+
+    /**
+     * Expand a list condition by testing all possible values.
+     * @param y The Y level to test at
+     * @param values All possible values to test
+     * @param setter Function to set the condition value in the world
+     * @param sampleValue The value from the successful sample (to restore after testing)
+     * @return null if all values work, else list of valid values
+     */
+    private <T> List<T> expandListCondition(int y, List<T> values, Consumer<T> setter, T sampleValue) {
+        List<T> validValues = new ArrayList<>();
+
+        for (T value : values) {
+            setter.accept(value);
+            if (testSpawn(y)) validValues.add(value);
+        }
+
+        setter.accept(sampleValue);
+
+        // Sometimes, mods query the condition, but do not actually use it (to centralize logic)
+        if (validValues.size() == values.size()) return null;
+        // Should not happen, but may be the case for high randomness and bad luck
+        if (validValues.isEmpty()) return Arrays.asList(sampleValue);
+
+        return validValues;
+    }
+
+    /**
      * Expand Y levels using probe points to identify valid ranges efficiently.
      * Only exhaustively tests ranges that contain at least one passing probe point.
      */
@@ -87,7 +152,7 @@ public class ConditionExpander {
         boolean[] probeResults = new boolean[probeYs.length];
         boolean allPass = true;
         for (int i = 0; i < probeYs.length; i++) {
-            probeResults[i] = canSpawn(entityClass, world, 0.5, probeYs[i], 0.5);
+            probeResults[i] = testSpawn(probeYs[i]);
             if (!probeResults[i]) allPass = false;
         }
 
@@ -102,9 +167,9 @@ public class ConditionExpander {
         for (int i = 0; i < probeYs.length - 1; i++) {
             if (probeResults[i] || probeResults[i + 1]) {
                 if (!rangesToTest.isEmpty() && rangesToTest.get(rangesToTest.size() - 1)[1] == probeYs[i]) {
-                    rangesToTest.get(rangesToTest.size() - 1)[1] = probeYs[i + 1];  // extend existing range
+                    rangesToTest.get(rangesToTest.size() - 1)[1] = probeYs[i + 1];
                 } else {
-                    rangesToTest.add(new int[]{probeYs[i], probeYs[i + 1]});        // new range
+                    rangesToTest.add(new int[]{probeYs[i], probeYs[i + 1]});
                 }
             }
         }
@@ -114,7 +179,7 @@ public class ConditionExpander {
         List<Integer> allValid = new ArrayList<>();
         for (int[] range : rangesToTest) {
             for (int y = range[0]; y <= range[1]; y++) {
-                if (canSpawn(entityClass, world, 0.5, y, 0.5)) allValid.add(y);
+                if (testSpawn(y)) allValid.add(y);
             }
         }
 
@@ -123,184 +188,75 @@ public class ConditionExpander {
         return allValid;
     }
 
-    // TODO: refactor similar methods into a common utility (e.g., expandBooleanCondition, expandListCondition, etc.)
     private List<Integer> expandLightLevels(SampleFinder.ValidSample sample) {
-        List<Integer> allValid = new ArrayList<>();
+        List<Integer> levels = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+        List<Integer> result = expandListCondition(
+            sample.y, levels,
+            v -> world.lightLevel = v,
+            sample.light
+        );
 
-        for (int light = 0; light <= 15; light++) {
-            world.lightLevel = light;
-
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(light);
-        }
-
-        world.lightLevel = sample.light;
-
-        if (allValid.isEmpty()) return Arrays.asList(sample.light);
-
-        return allValid;
+        return result != null ? result : levels;
     }
 
     private List<String> expandGroundBlocks(SampleFinder.ValidSample sample, List<String> candidateGroundBlocks) {
         world.groundBlock = "sky";
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) {
+        if (testSpawn(sample.y)) {
             world.groundBlock = sample.ground;
             return null;
         }
 
-        List<String> allValid = new ArrayList<>();
-
-        for (String ground : candidateGroundBlocks) {
-            world.groundBlock = ground;
-
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(ground);
-        }
-
-        world.groundBlock = sample.ground;
-
-        if (allValid.size() == candidateGroundBlocks.size() && !allValid.isEmpty()) return null;
-
-        return allValid.isEmpty() ? Arrays.asList(sample.ground) : allValid;
+        return expandListCondition(
+            sample.y, candidateGroundBlocks,
+            v -> world.groundBlock = v,
+            sample.ground
+        );
     }
 
     private List<String> expandTimes(SampleFinder.ValidSample sample) {
-        List<String> allValid = new ArrayList<>();
+        List<String> result = expandListCondition(
+            sample.y, DEFAULT_TIMES,
+            v -> world.timeOfDay = v,
+            sample.timeOfDay
+        );
 
-        for (String time : DEFAULT_TIMES) {
-            world.timeOfDay = time;
+        if (result != null && result.isEmpty()) return Arrays.asList("unknown");
 
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(time);
-        }
-
-        world.timeOfDay = sample.timeOfDay;
-
-        if (allValid.size() == DEFAULT_TIMES.size()) return null;
-
-        return allValid.isEmpty() ? Arrays.asList("unknown") : allValid;
+        return result;
     }
 
     private List<String> expandWeathers(SampleFinder.ValidSample sample) {
-        List<String> allValid = new ArrayList<>();
+        List<String> result = expandListCondition(
+            sample.y, DEFAULT_WEATHERS,
+            v -> world.weather = v,
+            sample.weather
+        );
 
-        for (String weather : DEFAULT_WEATHERS) {
-            world.weather = weather;
+        if (result != null && result.isEmpty()) return Arrays.asList("unknown");
 
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) allValid.add(weather);
-        }
-
-        world.weather = sample.weather;
-
-        if (allValid.size() == DEFAULT_WEATHERS.size()) return null;
-
-        return allValid.isEmpty() ? Arrays.asList("unknown") : allValid;
+        return result;
     }
 
-    /**
-     * Expand canSeeSky condition by testing both true and false.
-     * @return null if both work (doesn't matter), true if only sky works, false if only no-sky works
-     */
     private Boolean expandCanSeeSky(SampleFinder.ValidSample sample) {
-        boolean worksWithSky = false;
-        boolean worksWithoutSky = false;
-
-        world.canSeeSky = true;
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksWithSky = true;
-
-        world.canSeeSky = false;
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksWithoutSky = true;
-
-        // Restore to sample value
-        world.canSeeSky = sample.canSeeSky;
-
-        if (worksWithSky && worksWithoutSky) {
-            return null; // Doesn't matter
-        } else if (worksWithSky) {
-            return true; // Requires sky
-        } else if (worksWithoutSky) {
-            return false; // Requires no sky (underground)
-        }
-
-        // Neither worked - shouldn't happen since we found a valid sample
-        return null;
+        return expandBooleanCondition(sample.y, v -> world.canSeeSky = v, sample.canSeeSky);
     }
 
-    /**
-     * Expand moon phase condition by testing all 8 moon phases.
-     * @return null if all phases work (doesn't matter), else list of valid phases
-     */
     private List<Integer> expandMoonPhases(SampleFinder.ValidSample sample) {
-        List<Integer> validPhases = new ArrayList<>();
+        List<Integer> phases = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7);
 
-        for (int phase = 0; phase < 8; phase++) {
-            world.moonPhase = phase;
-            if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) validPhases.add(phase);
-        }
-
-        // Restore to sample value
-        world.moonPhase = sample.moonPhase;
-
-        // If all 8 phases work, it doesn't matter
-        if (validPhases.size() == 8) return null;
-
-        // If no phases work, return the sample phase (shouldn't happen since we found a valid sample)
-        if (validPhases.isEmpty()) return Arrays.asList(sample.moonPhase);
-
-        return validPhases;
+        return expandListCondition(
+            sample.y, phases,
+            v -> world.moonPhase = v,
+            sample.moonPhase
+        );
     }
 
-    /**
-     * Expand slime chunk condition by testing slime chunk vs non-slime chunk.
-     * @return null if both work (doesn't matter), true if requires slime chunk, false if excludes slime chunk
-     */
     private Boolean expandSlimeChunk(SampleFinder.ValidSample sample) {
-        boolean worksInSlimeChunk = false;
-        boolean worksOutsideSlimeChunk = false;
-
-        world.isSlimeChunk = true;
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksInSlimeChunk = true;
-
-        world.isSlimeChunk = false;
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksOutsideSlimeChunk = true;
-
-        // Restore to sample value
-        world.isSlimeChunk = sample.isSlimeChunk;
-
-        if (worksInSlimeChunk && worksOutsideSlimeChunk) {
-            return null; // Doesn't matter
-        } else if (worksInSlimeChunk) {
-            return true; // Requires slime chunk
-        } else if (worksOutsideSlimeChunk) {
-            return false; // Requires non-slime chunk
-        }
-
-        return null;
+        return expandBooleanCondition(sample.y, v -> world.isSlimeChunk = v, sample.isSlimeChunk);
     }
 
-    /**
-     * Expand isNether condition by testing nether-like vs overworld-like.
-     * @return null if both work (doesn't matter), true if requires nether-like, false if excludes nether-like
-     */
     private Boolean expandIsNether(SampleFinder.ValidSample sample) {
-        boolean worksInNether = false;
-        boolean worksOutsideNether = false;
-
-        world.isNether = true;
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksInNether = true;
-
-        world.isNether = false;
-        if (canSpawn(entityClass, world, 0.5, sample.y, 0.5)) worksOutsideNether = true;
-
-        // Restore to sample value
-        world.isNether = sample.isNether;
-
-        if (worksInNether && worksOutsideNether) {
-            return null; // Doesn't matter
-        } else if (worksInNether) {
-            return true; // Requires nether-like dimension (doesWaterVaporize)
-        } else if (worksOutsideNether) {
-            return false; // Requires non-nether-like dimension
-        }
-
-        return null;
+        return expandBooleanCondition(sample.y, v -> world.isNether = v, sample.isNether);
     }
 
     public SpawnConditionAnalyzer.SpawnConditions toSpawnConditions(ExpandedConditions expanded) {

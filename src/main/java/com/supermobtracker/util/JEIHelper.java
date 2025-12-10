@@ -102,6 +102,8 @@ public class JEIHelper {
         if (!JEIIntegration.isRuntimeAvailable()) return;
 
         try {
+            long startTime = System.currentTimeMillis();
+
             IJeiRuntime runtime = JEIIntegration.getRuntime();
             IRecipeRegistry recipeRegistry = runtime.getRecipeRegistry();
 
@@ -121,7 +123,8 @@ public class JEIHelper {
                 }
             }
 
-            SuperMobTracker.LOGGER.info("Built JER mob index cache with {} entries", mobIndexCache.size());
+            long elapsed = System.currentTimeMillis() - startTime;
+            SuperMobTracker.LOGGER.info("Built JER mob index cache with {} entries in {}ms", mobIndexCache.size(), elapsed);
         } catch (Exception e) {
             SuperMobTracker.LOGGER.warn("Failed to build JER mob index cache", e);
         }
