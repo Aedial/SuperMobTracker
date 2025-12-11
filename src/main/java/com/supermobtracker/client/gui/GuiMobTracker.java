@@ -676,6 +676,8 @@ public class GuiMobTracker extends GuiScreen {
         String attributeString = I18n.format("gui.mobtracker.attributes", String.join(sep, attributes));
         textY = drawWrappedString(fontRenderer, attributeString, textX, textY, 14, textW, color);
 
+        // TODO: add button to compute and show drops as a top window
+
         // JEI button (only if JEI is loaded and can show mob info)
         jeiButtonVisible = false;
         if (JEIHelper.canShowMobPage(selected)) {

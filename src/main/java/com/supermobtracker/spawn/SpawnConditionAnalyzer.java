@@ -125,6 +125,7 @@ public class SpawnConditionAnalyzer {
         public final List<String> groundBlocks;    // null = doesn't matter, else list of valid ground blocks
         public final List<Integer> lightLevels;
         public final List<Integer> yLevels;
+        // TODO: make time of day time ranges
         public final List<String> timeOfDay;       // null = doesn't matter, else list of valid times of day
         public final List<String> weather;         // null = doesn't matter, else list of valid weathers
         public final List<String> hints;
