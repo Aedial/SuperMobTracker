@@ -37,6 +37,7 @@ public class ModConfig {
     public static boolean clientHudEnabled = true; // whether to show the HUD overlay
     public static List<String> clientMobWhitelist = new ArrayList<>(); // entity ids allowed (takes precedence)
     public static List<String> clientMobBlacklist = new ArrayList<>(); // entity ids blocked when whitelist empty
+    public static int clientDropSimulationCount = 10000; // number of simulated kills for drop calculation
 
     private static final String enableTrackingDesc = I18n.translateToLocal("config.supermobtracker.client.enableTracking.desc");
     private static final String detectionRangeDesc = I18n.translateToLocal("config.supermobtracker.client.detectionRange.desc");
@@ -52,6 +53,7 @@ public class ModConfig {
     private static final String hudEnabledDesc = I18n.translateToLocal("config.supermobtracker.client.hudEnabled.desc");
     private static final String mobWhitelistDesc = I18n.translateToLocal("config.supermobtracker.client.mobWhitelist.desc");
     private static final String mobBlacklistDesc = I18n.translateToLocal("config.supermobtracker.client.mobBlacklist.desc");
+    private static final String dropSimulationCountDesc = I18n.translateToLocal("config.supermobtracker.client.dropSimulationCount.desc");
 
     private static final List<String> hiddenConfigs = Arrays.asList(
         "i18nNames",
@@ -138,6 +140,10 @@ public class ModConfig {
             }
         }
 
+        prop = config.get("client", "dropSimulationCount", clientDropSimulationCount, dropSimulationCountDesc, 100, 100000);
+        prop.setLanguageKey("config.supermobtracker.client.dropSimulationCount");
+        clientDropSimulationCount = prop.getInt();
+
         // Hidden configs (still set language keys for consistency)
         prop = config.get("client", "i18nNames", clientI18nNames, i18nNamesDesc);
         prop.setLanguageKey("config.supermobtracker.client.i18nNames");
@@ -219,6 +225,8 @@ public class ModConfig {
     }
 
     public static void setClientI18nNames(boolean value) {
+        if (clientI18nNames == value) return;
+
         clientI18nNames = value;
         if (config != null) {
             config.get("client", "i18nNames", clientI18nNames).set(value);
@@ -231,7 +239,10 @@ public class ModConfig {
     }
 
     public static void setClientMobWhitelist(Collection<String> ids) {
-        clientMobWhitelist = new ArrayList<>(ids);
+        List<String> newList = new ArrayList<>(ids);
+        if (clientMobWhitelist.equals(newList)) return;
+
+        clientMobWhitelist = newList;
         if (config != null) {
             config.get("client", "mobWhitelist", new String[0]).set(clientMobWhitelist.toArray(new String[0]));
             config.save();
@@ -243,7 +254,10 @@ public class ModConfig {
     }
 
     public static void setClientMobBlacklist(Collection<String> ids) {
-        clientMobBlacklist = new ArrayList<>(ids);
+        List<String> newList = new ArrayList<>(ids);
+        if (clientMobBlacklist.equals(newList)) return;
+
+        clientMobBlacklist = newList;
         if (config != null) {
             config.get("client", "mobBlacklist", new String[0]).set(clientMobBlacklist.toArray(new String[0]));
             config.save();
@@ -255,7 +269,10 @@ public class ModConfig {
     }
 
     public static void setClientTrackedIds(Collection<String> ids) {
-        clientTrackedEntityIds = new ArrayList<>(ids);
+        List<String> newList = new ArrayList<>(ids);
+        if (clientTrackedEntityIds.equals(newList)) return;
+
+        clientTrackedEntityIds = newList;
         if (config != null) {
             config.get("client", "trackedEntityIds", new String[0]).set(clientTrackedEntityIds.toArray(new String[0]));
             config.save();
@@ -267,7 +284,10 @@ public class ModConfig {
     }
 
     public static void setClientLastSelectedEntity(String entityId) {
-        clientLastSelectedEntity = entityId != null ? entityId : "";
+        String newValue = entityId != null ? entityId : "";
+        if (clientLastSelectedEntity.equals(newValue)) return;
+
+        clientLastSelectedEntity = newValue;
         if (config != null) {
             config.get("client", "lastSelectedEntity", "").set(clientLastSelectedEntity);
             config.save();
@@ -279,7 +299,10 @@ public class ModConfig {
     }
 
     public static void setClientFilterText(String text) {
-        clientFilterText = text != null ? text : "";
+        String newValue = text != null ? text : "";
+        if (clientFilterText.equals(newValue)) return;
+
+        clientFilterText = newValue;
         if (config != null) {
             config.get("client", "filterText", "").set(clientFilterText);
             config.save();
@@ -291,7 +314,10 @@ public class ModConfig {
     }
 
     public static void setClientHudPosition(HudPosition position) {
-        clientHudPosition = position != null ? position : HudPosition.TOP_LEFT;
+        HudPosition newValue = position != null ? position : HudPosition.TOP_LEFT;
+        if (clientHudPosition == newValue) return;
+
+        clientHudPosition = newValue;
         if (config != null) {
             config.get("client", "hudPosition", HudPosition.TOP_LEFT.name()).set(clientHudPosition.name());
             config.save();
