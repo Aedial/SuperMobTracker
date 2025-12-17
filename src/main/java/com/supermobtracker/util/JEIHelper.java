@@ -9,12 +9,14 @@ import java.util.Map;
 
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.EntityList;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Loader;
 
 import mezz.jei.api.IJeiRuntime;
 import mezz.jei.api.IRecipeRegistry;
 import mezz.jei.api.IRecipesGui;
+import mezz.jei.api.recipe.IFocus;
 import mezz.jei.api.recipe.IRecipeCategory;
 import mezz.jei.api.recipe.IRecipeWrapper;
 
@@ -182,6 +184,56 @@ public class JEIHelper {
             onStateChangeMethod.invoke(stateListener);
         } catch (Exception e) {
             SuperMobTracker.LOGGER.warn("Failed to set JEI recipe index to {}", index, e);
+        }
+    }
+
+    /**
+     * Shows JEI recipes that use the given item as an input (uses of the item).
+     * Returns true if successfully opened, false otherwise.
+     */
+    public static boolean showItemUses(ItemStack stack) {
+        if (!isJEILoaded() || stack.isEmpty()) return false;
+        if (!JEIIntegration.isRuntimeAvailable()) return false;
+
+        try {
+            IJeiRuntime runtime = JEIIntegration.getRuntime();
+            IRecipeRegistry recipeRegistry = runtime.getRecipeRegistry();
+            IRecipesGui recipesGui = runtime.getRecipesGui();
+
+            // Create focus with INPUT mode to show recipes that use this item
+            IFocus<ItemStack> focus = recipeRegistry.createFocus(IFocus.Mode.INPUT, stack);
+            recipesGui.show(focus);
+
+            return true;
+        } catch (Exception e) {
+            SuperMobTracker.LOGGER.warn("Failed to show JEI uses for {}", stack, e);
+
+            return false;
+        }
+    }
+
+    /**
+     * Shows JEI recipes that produce the given item as an output (how to craft the item).
+     * Returns true if successfully opened, false otherwise.
+     */
+    public static boolean showItemRecipes(ItemStack stack) {
+        if (!isJEILoaded() || stack.isEmpty()) return false;
+        if (!JEIIntegration.isRuntimeAvailable()) return false;
+
+        try {
+            IJeiRuntime runtime = JEIIntegration.getRuntime();
+            IRecipeRegistry recipeRegistry = runtime.getRecipeRegistry();
+            IRecipesGui recipesGui = runtime.getRecipesGui();
+
+            // Create focus with OUTPUT mode to show recipes that produce this item
+            IFocus<ItemStack> focus = recipeRegistry.createFocus(IFocus.Mode.OUTPUT, stack);
+            recipesGui.show(focus);
+
+            return true;
+        } catch (Exception e) {
+            SuperMobTracker.LOGGER.warn("Failed to show JEI recipes for {}", stack, e);
+
+            return false;
         }
     }
 }

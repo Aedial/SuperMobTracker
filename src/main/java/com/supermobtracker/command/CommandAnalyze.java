@@ -29,6 +29,8 @@ import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import com.supermobtracker.SuperMobTracker;
+import com.supermobtracker.drops.DropSimulator;
+import com.supermobtracker.drops.DropSimulator.ProfileResult;
 import com.supermobtracker.spawn.BiomeDimensionMapper;
 import com.supermobtracker.spawn.ConditionUtils;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
@@ -39,11 +41,12 @@ import com.supermobtracker.spawn.SpawnConditionAnalyzer;
  * Usage:
  *   /smtanalyze - Run all analyses with default parameters
  *   /smtanalyze mobs [samples] - Analyze all mobs with performance metrics
+ *   /smtanalyze loot [samples] [simulationCount] - Analyze loot drops for all mobs
  *   /smtanalyze dimension [samples] [extendedCount] [numGrids] - Benchmark dimension mapping
  */
 public class CommandAnalyze extends CommandBase implements IClientCommand {
-
     private static final int DEFAULT_SAMPLES = 10;
+    private static final int DEFAULT_LOOT_SIMULATION_COUNT = 10000;
     private static final String OUTPUT_DIR = "supermobtracker";
 
     @Override
@@ -58,7 +61,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
 
     @Override
     public String getUsage(ICommandSender sender) {
-        return "/smtanalyze [mobs|dimension] [samples] [extendedCount] [numGrids]";
+        return "/smtanalyze [mobs|loot|dimension] [samples] [simulationCount|extendedCount] [numGrids]";
     }
 
     @Override
@@ -68,7 +71,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
 
     @Override
     public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, BlockPos targetPos) {
-        if (args.length == 1) return getListOfStringsMatchingLastWord(args, "mobs", "dimension");
+        if (args.length == 1) return getListOfStringsMatchingLastWord(args, "mobs", "loot", "dimension");
 
         return Collections.emptyList();
     }
@@ -91,6 +94,12 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
                 new Thread(() -> runMobAnalysis(sender, samples), "SMT-MobAnalysis").start();
                 break;
 
+            case "loot":
+                int simulationCount = args.length > 2 ? parseInt(args[2], 1, 10000) : DEFAULT_LOOT_SIMULATION_COUNT;
+                sendMessage(sender, TextFormatting.YELLOW, "Analyzing loot drops (" + samples + " samples, " + simulationCount + " simulations)...");
+                new Thread(() -> runLootAnalysis(sender, samples, simulationCount), "SMT-LootAnalysis").start();
+                break;
+
             case "dimension":
                 int extendedCount = args.length > 2 ? parseInt(args[2], 100, 100000) : BiomeDimensionMapper.getDefaultExtendedCount();
                 int numGrids = args.length > 3 ? parseInt(args[3], 1, 64) : BiomeDimensionMapper.getDefaultNumGrids();
@@ -110,6 +119,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
         new Thread(() -> {
             runDimensionBenchmark(sender, samples, extendedCount, numGrids);
             runMobAnalysis(sender, samples);
+            runLootAnalysis(sender, samples, DEFAULT_LOOT_SIMULATION_COUNT);
 
             long totalElapsed = System.nanoTime() - totalStart;
             sendMessage(sender, TextFormatting.GREEN, "All analyses complete! Total time: " + formatDuration(totalElapsed));
@@ -424,6 +434,188 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
         sendMessage(sender, TextFormatting.AQUA, "Results saved to: " + outputFile.getAbsolutePath());
     }
 
+    /**
+     * Analyze loot drops for all mobs with performance metrics.
+     * Separates results into:
+     * - successful: has drops
+     * - noDrops: no drops (may not have a loot table or drops are conditional)
+     * - invalidEntity: entity is not a valid living entity
+     * - serverSideOnly: multiplayer or no loot table manager
+     * - entityConstructionFailed: entity couldn't be constructed
+     * - worldCreationFailed: simulation world couldn't be created
+     * - crashed: threw an exception during simulation
+     */
+    private void runLootAnalysis(ICommandSender sender, int samples, int simulationCount) {
+        long startTime = System.nanoTime();
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+
+        List<LootPerformanceEntry> successfulMobs = new ArrayList<>();
+        List<LootPerformanceEntry> noDropsMobs = new ArrayList<>();
+        List<LootPerformanceEntry> invalidEntityMobs = new ArrayList<>();
+        List<LootPerformanceEntry> serverSideOnlyMobs = new ArrayList<>();
+        List<LootPerformanceEntry> entityConstructionFailedMobs = new ArrayList<>();
+        List<LootPerformanceEntry> worldCreationFailedMobs = new ArrayList<>();
+        List<LootPerformanceEntry> crashedMobs = new ArrayList<>();
+
+        List<ResourceLocation> entityIds = new ArrayList<>();
+
+        // Collect all living entities
+        for (EntityEntry entry : ForgeRegistries.ENTITIES.getValuesCollection()) {
+            if (EntityLiving.class.isAssignableFrom(entry.getEntityClass())) entityIds.add(entry.getRegistryName());
+        }
+
+        int total = entityIds.size();
+        int current = 0;
+
+        for (ResourceLocation entityId : entityIds) {
+            current++;
+            if (current % 50 == 0) sendProgress(sender, "Loot progress: " + current + "/" + total + " mobs analyzed...");
+
+            List<Long> timings = new ArrayList<>();
+            ProfileResult lastResult = null;
+
+            long entityStart = System.nanoTime();
+            for (int i = 0; i < samples; i++) {
+                ProfileResult result = DropSimulator.profileEntity(entityId, simulationCount);
+                timings.add(result.durationNanos);
+                lastResult = result;
+            }
+            long entityTimeMs = (System.nanoTime() - entityStart) / 1_000_000;
+
+            // Log slow entities (> 50 seconds for all samples) to help diagnose performance issues
+            if (entityTimeMs > 50_000) {
+                SuperMobTracker.LOGGER.warn("Slow entity #{}: {} took {}ms", current, entityId, entityTimeMs);
+            }
+
+            if (lastResult == null) continue;
+
+            int dropCount = (lastResult.result != null && lastResult.result.drops != null) ? lastResult.result.drops.size() : 0;
+            LootPerformanceEntry entry = new LootPerformanceEntry(entityId.toString(), timings, lastResult.status, dropCount, lastResult.error);
+
+            switch (lastResult.status) {
+                case SUCCESS:
+                    successfulMobs.add(entry);
+                    break;
+                case NO_DROPS:
+                    noDropsMobs.add(entry);
+                    break;
+                case INVALID_ENTITY:
+                    invalidEntityMobs.add(entry);
+                    break;
+                case SERVER_SIDE_ONLY:
+                    serverSideOnlyMobs.add(entry);
+                    break;
+                case ENTITY_CONSTRUCTION_FAILED:
+                    entityConstructionFailedMobs.add(entry);
+                    break;
+                case WORLD_CREATION_FAILED:
+                    worldCreationFailedMobs.add(entry);
+                    break;
+                case CRASHED:
+                    crashedMobs.add(entry);
+                    break;
+            }
+        }
+
+        // Sort each list by average time (slowest first)
+        Comparator<LootPerformanceEntry> byAverageTime = (a, b) -> Double.compare(b.getAverageTime(), a.getAverageTime());
+        successfulMobs.sort(byAverageTime);
+        noDropsMobs.sort(byAverageTime);
+        crashedMobs.sort(byAverageTime);
+
+        // Write successful mobs to file
+        File successFile = writePerformanceReport(
+            "loot_performance_" + samples + "samples_" + simulationCount + "sims_" + timestamp + ".txt",
+            "Successful Loot Analysis Performance Report",
+            null,
+            successfulMobs,
+            samples,
+            "Format: [Entity ID] - Avg: Xms, Worst: Xms, Best: Xms | Drop types: X",
+            (writer, entry) -> writer.printf("%s - Avg: %.2fms, Worst: %.2fms, Best: %.2fms | Drop types: %d%n",
+                entry.entityId,
+                entry.getAverageTime() / 1_000_000.0,
+                entry.getWorstTime() / 1_000_000.0,
+                entry.getBestTime() / 1_000_000.0,
+                entry.dropCount),
+            sender
+        );
+        if (successFile == null) return;
+
+        // Write no drops mobs to file
+        if (!noDropsMobs.isEmpty()) {
+            noDropsMobs.sort((a, b) -> a.entityId.compareTo(b.entityId));
+            writePerformanceReport(
+                "loot_no_drops_" + samples + "samples_" + simulationCount + "sims_" + timestamp + ".txt",
+                "No Drops - Loot Analysis Report",
+                "These mobs have no loot drops (may not have a loot table or drops are conditional).",
+                noDropsMobs,
+                samples,
+                null,
+                (writer, entry) -> writer.println(entry.entityId),
+                sender
+            );
+        }
+
+        // Write invalid entity mobs to file
+        if (!invalidEntityMobs.isEmpty()) {
+            invalidEntityMobs.sort((a, b) -> a.entityId.compareTo(b.entityId));
+            writePerformanceReport(
+                "loot_invalid_entity_" + samples + "samples_" + simulationCount + "sims_" + timestamp + ".txt",
+                "Invalid Entity - Loot Analysis Report",
+                "These entities are not valid living entities.",
+                invalidEntityMobs,
+                samples,
+                null,
+                (writer, entry) -> writer.println(entry.entityId),
+                sender
+            );
+        }
+
+        // Write entity construction failed mobs to file
+        if (!entityConstructionFailedMobs.isEmpty()) {
+            writePerformanceReport(
+                "loot_entity_construction_failed_" + samples + "samples_" + simulationCount + "sims_" + timestamp + ".txt",
+                "Entity Construction Failed - Loot Analysis Report",
+                "These entities couldn't be constructed for loot simulation.",
+                entityConstructionFailedMobs,
+                samples,
+                "Format: [Entity ID] | Error: X",
+                (writer, entry) -> writer.printf("%s | Error: %s%n", entry.entityId, entry.error != null ? entry.error : "Unknown"),
+                sender
+            );
+        }
+
+        // Write crashed mobs to file
+        if (!crashedMobs.isEmpty()) {
+            writePerformanceReport(
+                "loot_crashed_" + samples + "samples_" + simulationCount + "sims_" + timestamp + ".txt",
+                "Crashed - Loot Analysis Report",
+                "These mobs caused exceptions during loot simulation.",
+                crashedMobs,
+                samples,
+                "Format: [Entity ID] - Avg: Xms, Worst: Xms, Best: Xms | Error: X",
+                (writer, entry) -> writer.printf("%s - Avg: %.2fms, Worst: %.2fms, Best: %.2fms | Error: %s%n",
+                    entry.entityId,
+                    entry.getAverageTime() / 1_000_000.0,
+                    entry.getWorstTime() / 1_000_000.0,
+                    entry.getBestTime() / 1_000_000.0,
+                    entry.error != null ? entry.error : "Unknown"),
+                sender
+            );
+        }
+
+        long elapsed = System.nanoTime() - startTime;
+
+        // Clear cached profiling resources to free memory
+        DropSimulator.clearProfileCache();
+
+        sendMessage(sender, TextFormatting.GREEN, "Loot analysis complete! Time: " + formatDuration(elapsed));
+        sendMessage(sender, TextFormatting.AQUA, "Successful: " + successfulMobs.size() + ", No drops: " + noDropsMobs.size() + 
+            ", Invalid: " + invalidEntityMobs.size() + ", Construction failed: " + entityConstructionFailedMobs.size() + 
+            ", Crashed: " + crashedMobs.size());
+        sendMessage(sender, TextFormatting.AQUA, "Results saved to: " + successFile.getParent());
+    }
+
     // --- Helper classes ---
 
     private static class MobPerformanceEntry {
@@ -459,6 +651,26 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
             this.dimName = dimName;
             this.biomeCount = biomeCount;
             this.timings = timings;
+        }
+
+        long getWorstTime() { return Collections.max(timings); }
+        long getBestTime() { return Collections.min(timings); }
+        double getAverageTime() { return timings.stream().mapToLong(Long::longValue).average().orElse(0); }
+    }
+
+    private static class LootPerformanceEntry {
+        final String entityId;
+        final List<Long> timings;
+        final ProfileResult.Status status;
+        final int dropCount;
+        final String error;
+
+        LootPerformanceEntry(String entityId, List<Long> timings, ProfileResult.Status status, int dropCount, String error) {
+            this.entityId = entityId;
+            this.timings = timings;
+            this.status = status;
+            this.dropCount = dropCount;
+            this.error = error;
         }
 
         long getWorstTime() { return Collections.max(timings); }

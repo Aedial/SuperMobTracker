@@ -41,6 +41,7 @@ import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.client.ClientSettings;
 import com.supermobtracker.client.util.EntityRenderHelper;
 import com.supermobtracker.config.ModConfig;
+import com.supermobtracker.drops.DropSimulator;
 import com.supermobtracker.spawn.BiomeDimensionMapper;
 import com.supermobtracker.spawn.ConditionUtils;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
@@ -68,6 +69,13 @@ public class GuiMobTracker extends GuiScreen {
     // JEI button bounds (updated during draw)
     private int jeiButtonX, jeiButtonY, jeiButtonW, jeiButtonH;
     private boolean jeiButtonVisible = false;
+
+    // Drops button bounds (updated during draw)
+    private int dropsButtonX, dropsButtonY, dropsButtonW, dropsButtonH;
+    private boolean dropsButtonVisible = false;
+
+    // Drops window modal
+    private GuiDropsWindow dropsWindow = null;
 
     // Panel bounds for text clipping
     private int panelMaxY = Integer.MAX_VALUE;
@@ -120,10 +128,17 @@ public class GuiMobTracker extends GuiScreen {
                     this.spawnConditions = analyzer.analyze(lastId);
                     cachedEntityId = lastId;
                     cachedSpawnConditions = this.spawnConditions;
+
+                    if (lastId != null) DropSimulator.getOrStartSimulation(lastId);
                 }
 
                 listWidget.ensureVisible(lastId);
             }
+        }
+
+        // Restore drops window if it was hidden for JEI navigation
+        if (dropsWindow != null) {
+            dropsWindow.restoreIfHiddenForJEI();
         }
     }
 
@@ -133,6 +148,9 @@ public class GuiMobTracker extends GuiScreen {
         cachedEntityId = id;
         cachedSpawnConditions = this.spawnConditions;
         ModConfig.setClientLastSelectedEntity(id != null ? id.toString() : "");
+
+       // Start drop simulation in background so it may be ready when the player opens the drops window
+        if (id != null) DropSimulator.getOrStartSimulation(id);
     }
 
     public ResourceLocation getSelectedEntity() {
@@ -159,6 +177,11 @@ public class GuiMobTracker extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        // Handle drops window first if visible
+        if (dropsWindow != null && dropsWindow.isVisible()) {
+            if (dropsWindow.handleKey(keyCode)) return;
+        }
+
         if (filterField.textboxKeyTyped(typedChar, keyCode)) return;
         if (listWidget.handleKey(keyCode)) return;
 
@@ -167,6 +190,11 @@ public class GuiMobTracker extends GuiScreen {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+        // Handle drops window first if visible
+        if (dropsWindow != null && dropsWindow.isVisible()) {
+            if (dropsWindow.handleClick(mouseX, mouseY, mouseButton)) return;
+        }
+
         // Right-click on filter field clears it
         if (mouseButton == 1 &&
             mouseX >= filterField.x && mouseX <= filterField.x + filterField.width &&
@@ -187,6 +215,17 @@ public class GuiMobTracker extends GuiScreen {
                 String entityName = formatEntityName(selected, true);
                 String msg = I18n.format("gui.mobtracker.biomesCopied", entityName);
                 mc.player.sendMessage(new TextComponentString(msg));
+
+                return;
+            }
+
+            // Handle drops button click
+            if (dropsButtonVisible && selected != null &&
+                mouseX >= dropsButtonX && mouseX <= dropsButtonX + dropsButtonW &&
+                mouseY >= dropsButtonY && mouseY <= dropsButtonY + dropsButtonH) {
+                String entityName = formatEntityName(selected, true);
+                dropsWindow = new GuiDropsWindow(this, selected, entityName);
+                dropsWindow.show();
 
                 return;
             }
@@ -237,6 +276,14 @@ public class GuiMobTracker extends GuiScreen {
     @Override
     public void handleMouseInput() throws IOException {
         super.handleMouseInput();
+
+        // Don't scroll the list if drops window is visible and mouse is over it
+        if (dropsWindow != null && dropsWindow.isVisible()) {
+            int mouseX = Mouse.getEventX() * this.width / this.mc.displayWidth;
+            int mouseY = this.height - Mouse.getEventY() * this.height / this.mc.displayHeight - 1;
+            if (dropsWindow.isMouseOver(mouseX, mouseY)) return;
+        }
+
         int wheel = Mouse.getDWheel();
         if (wheel != 0) listWidget.scroll(wheel < 0 ? 1 : -1);
     }
@@ -245,15 +292,29 @@ public class GuiMobTracker extends GuiScreen {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
 
+        // Determine if drops window should block hover events
+        boolean dropsWindowBlocking = dropsWindow != null && dropsWindow.isVisible() && dropsWindow.isMouseOver(mouseX, mouseY);
+        int effectiveMouseX = dropsWindowBlocking ? -1 : mouseX;
+        int effectiveMouseY = dropsWindowBlocking ? -1 : mouseY;
+
         filterField.drawTextBox();
-        listWidget.draw(mouseX, mouseY);
-        drawRightPanel(mouseX, mouseY, partialTicks);
+        listWidget.draw(effectiveMouseX, effectiveMouseY);
+        drawRightPanel(effectiveMouseX, effectiveMouseY, partialTicks);
 
         super.drawScreen(mouseX, mouseY, partialTicks);
 
-        drawBiomeTooltip(mouseX, mouseY);
-        drawDimensionTooltip(mouseX, mouseY);
-        listWidget.drawTooltips(mouseX, mouseY);
+        // Draw tooltips only if drops window is not blocking
+        if (!dropsWindowBlocking) {
+            drawBiomeTooltip(mouseX, mouseY);
+            drawDimensionTooltip(mouseX, mouseY);
+            listWidget.drawTooltips(mouseX, mouseY);
+        }
+
+        // Draw drops window on top of everything
+        if (dropsWindow != null && dropsWindow.isVisible()) {
+            dropsWindow.draw(mouseX, mouseY, partialTicks);
+            dropsWindow.drawTooltips(mouseX, mouseY);
+        }
     }
 
     private int drawElidedString(FontRenderer renderer, String text, int x, int y, int lineHeight, int maxWidth, int color) {
@@ -676,7 +737,24 @@ public class GuiMobTracker extends GuiScreen {
         String attributeString = I18n.format("gui.mobtracker.attributes", String.join(sep, attributes));
         textY = drawWrappedString(fontRenderer, attributeString, textX, textY, 14, textW, color);
 
-        // TODO: add button to compute and show drops as a top window
+        // Drops button (always visible for selected entity)
+        dropsButtonVisible = false;
+        String dropsText = I18n.format("gui.mobtracker.dropsButton");
+        dropsButtonW = fontRenderer.getStringWidth(dropsText) + 8;
+        dropsButtonH = 12;
+        dropsButtonX = textX;
+        dropsButtonY = textY;
+        dropsButtonVisible = true;
+
+        boolean dropsHovered = mouseX >= dropsButtonX && mouseX <= dropsButtonX + dropsButtonW &&
+                            mouseY >= dropsButtonY && mouseY <= dropsButtonY + dropsButtonH;
+        int dropsBtnBg = dropsHovered ? 0x60FFFFFF : 0x40FFFFFF;
+        int dropsBtnColor = dropsHovered ? 0xFFFFAA : 0xCCCCCC;
+
+        drawRect(dropsButtonX, dropsButtonY, dropsButtonX + dropsButtonW, dropsButtonY + dropsButtonH, dropsBtnBg);
+        fontRenderer.drawString(dropsText, dropsButtonX + 4, dropsButtonY + 2, dropsBtnColor);
+
+        int nextButtonX = dropsButtonX + dropsButtonW + 4;
 
         // JEI button (only if JEI is loaded and can show mob info)
         jeiButtonVisible = false;
@@ -684,7 +762,7 @@ public class GuiMobTracker extends GuiScreen {
             String jeiText = I18n.format("gui.mobtracker.jeiButton");
             jeiButtonW = fontRenderer.getStringWidth(jeiText) + 8;
             jeiButtonH = 12;
-            jeiButtonX = textX;
+            jeiButtonX = nextButtonX;
             jeiButtonY = textY;
             jeiButtonVisible = true;
 
@@ -695,8 +773,9 @@ public class GuiMobTracker extends GuiScreen {
 
             drawRect(jeiButtonX, jeiButtonY, jeiButtonX + jeiButtonW, jeiButtonY + jeiButtonH, btnBg);
             fontRenderer.drawString(jeiText, jeiButtonX + 4, jeiButtonY + 2, btnColor);
-            textY += jeiButtonH + 4;
         }
+
+        textY += dropsButtonH + 4;
 
         // Check if analysis failed (crashed) vs entity cannot spawn naturally
         List<String> errorHints = analyzer.getErrorHints();
@@ -870,8 +949,15 @@ public class GuiMobTracker extends GuiScreen {
                 return translateBiomeName(a).compareToIgnoreCase(translateBiomeName(b));
             });
 
+            // Remove REID warning biome if present
+            sortedBiomes = sortedBiomes.stream().filter(b -> !b.contains("jeid:error_biome")).collect(Collectors.toList());
+
             // Translate biome names for display
             tooltipBiomes = sortedBiomes.stream().map(this::translateBiomeName).collect(Collectors.toList());
+
+            // Deduplicate biomes for tooltip
+            tooltipBiomes = new ArrayList<>(new LinkedHashSet<>(tooltipBiomes));
+
             tooltipBiomesLabelX = condsX;
             tooltipBiomesLabelY = biomesLabelY;
             tooltipBiomesLabelW = fontRenderer.getStringWidth(biomesLabel);

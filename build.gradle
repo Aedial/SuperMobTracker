@@ -14,12 +14,19 @@ buildscript {
 
 apply plugin: 'net.minecraftforge.gradle.forge'
 
-version = "1.1.0"
+version = "1.2.0"
 group = "com.supermobtracker"
 archivesBaseName = "supermobtracker"
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+
+// Suppress warnings about sun.reflect.ReflectionFactory (internal API used for bypassing constructors)
+tasks.withType(JavaCompile) {
+    options.compilerArgs << '-XDignore.symbol.file'
+    options.fork = true
+    options.forkOptions.executable = 'javac'
+}
 
 minecraft {
     version = "1.12.2-14.23.5.2847"
