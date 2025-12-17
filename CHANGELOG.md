@@ -7,6 +7,22 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Keep a Changelog: https://keepachangelog.com/en/1.1.0/
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
+## [1.2.0] - 2025-12-15
+### Fixed
+- Fix config being rewritten every frame.
+
+### Added
+- Add a modal for mob drops, based on simulated kills:
+  - Opens with a button next to the JEI button in the mob details panel.
+  - Simulates killing the mob 10k times (configurable) and aggregates the drops.
+  - Has JEI integration for uses/recipes (U/R or Left/Right click).
+  - Shows average drops per kill.
+  - Works on pretty much all mobs, except those that initialize their loot tables in special ways (e.g., via summoning event).
+- Add a retry button to re-analyze the spawn conditions for the selected mob, if the initial analysis failed.
+
+### Changed
+- Change time of day spawn condition representation to time ranges (e.g., "Day" becomes "06:00-18:00").
+
 
 ## [1.1.0] - 2025-12-08
 ### Added

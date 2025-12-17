@@ -125,8 +125,7 @@ public class SpawnConditionAnalyzer {
         public final List<String> groundBlocks;    // null = doesn't matter, else list of valid ground blocks
         public final List<Integer> lightLevels;
         public final List<Integer> yLevels;
-        // TODO: make time of day time ranges
-        public final List<String> timeOfDay;       // null = doesn't matter, else list of valid times of day
+        public final List<int[]> timeOfDay;        // null = doesn't matter, else list of valid time ranges [start, end] in ticks
         public final List<String> weather;         // null = doesn't matter, else list of valid weathers
         public final List<String> hints;
         public final Boolean requiresSky;          // null = doesn't matter, true = requires sky, false = requires no sky
@@ -140,7 +139,7 @@ public class SpawnConditionAnalyzer {
                                List<String> groundBlocks,
                                List<Integer> lightLevels,
                                List<Integer> yLevels,
-                               List<String> timeOfDay,
+                               List<int[]> timeOfDay,
                                List<String> weather,
                                List<String> hints,
                                Boolean requiresSky,
@@ -154,7 +153,7 @@ public class SpawnConditionAnalyzer {
                                List<String> groundBlocks,
                                List<Integer> lightLevels,
                                List<Integer> yLevels,
-                               List<String> timeOfDay,
+                               List<int[]> timeOfDay,
                                List<String> weather,
                                List<String> hints,
                                Boolean requiresSky,
@@ -184,8 +183,8 @@ public class SpawnConditionAnalyzer {
         public boolean failed() {
             boolean hasLightLevels = !lightLevels.isEmpty();
             boolean hasYLevels = !yLevels.isEmpty();
-            boolean hasGroundBlocks =  groundBlocks != null && !groundBlocks.isEmpty() && !groundBlocks.get(0).equals("unknown");
-            boolean hasTimeOfDay =  timeOfDay != null && !timeOfDay.isEmpty() && !timeOfDay.get(0).equals("unknown");
+            boolean hasGroundBlocks = groundBlocks != null && !groundBlocks.isEmpty() && !groundBlocks.get(0).equals("unknown");
+            boolean hasTimeOfDay = timeOfDay != null && !timeOfDay.isEmpty();
             boolean hasWeather = weather != null && !weather.isEmpty() && !weather.get(0).equals("unknown");
 
             return !(hasLightLevels || hasYLevels || hasGroundBlocks || hasTimeOfDay || hasWeather);
@@ -209,7 +208,7 @@ public class SpawnConditionAnalyzer {
         public String groundBlock = "minecraft:grass";
         public String biomeId = "minecraft:plains";
         public String dimension = "overworld";
-        public String timeOfDay = "day";
+        public long worldTime = 1000;     // Time in ticks (0-24000), default to day
         public String weather = "clear";
         public boolean canSeeSky = true;
         public int moonPhase = 0;             // Moon phase 0-7 (0 = full moon, 4 = new moon)
@@ -277,7 +276,7 @@ public class SpawnConditionAnalyzer {
             this.groundBlock = "minecraft:grass";
             this.biomeId = "minecraft:plains";
             this.dimension = "overworld";
-            this.timeOfDay = "day";
+            this.worldTime = 1000;
             this.weather = "clear";
             this.canSeeSky = true;
             this.moonPhase = 0;
@@ -342,24 +341,15 @@ public class SpawnConditionAnalyzer {
         @Override
         public long getWorldTime() {
             queriedConditions.put("timeOfDay", true);
-            switch (timeOfDay) {
-                case "day":
-                    return 1000;
-                case "night":
-                    return 13000;
-                case "dawn":
-                    return 23000;
-                case "dusk":
-                    return 12000;
-                default:
-                    return 0;
-            }
+            return worldTime;
         }
 
         @Override
         public boolean isDaytime() {
             queriedConditions.put("timeOfDay", true);
-            return timeOfDay.equals("day") || timeOfDay.equals("dawn") || timeOfDay.equals("dusk");
+            // Daytime is 0-12000 (6:00-18:00), nighttime is 12000-24000
+            long normalizedTime = worldTime % 24000;
+            return normalizedTime >= 0 && normalizedTime <= 12500;
         }
 
         @Override
@@ -741,7 +731,10 @@ public class SpawnConditionAnalyzer {
             SpawnConditions result = computeSpawnConditions(entity, nativeBiomes, groundBlocks, biomeGroundBlocks, PROBE_LIGHT_LEVELS);
             if (result == null) {
                 List<Integer> yLevels = Arrays.asList(PROBE_Y_LEVELS.get(0), PROBE_Y_LEVELS.get(PROBE_Y_LEVELS.size() - 1));
-                List<String> timeOfDay = isHostile(entityId) ? Arrays.asList("night") : Arrays.asList("day");
+                // Use tick-based time ranges: day = 0-12000, night = 12000-24000
+                List<int[]> timeOfDay = isHostile(entityId)
+                    ? Arrays.asList(new int[]{12000, 23999})
+                    : Arrays.asList(new int[]{0, 11999});
                 List<String> weather = Arrays.asList("clear");
 
                 // Fall back to current dimension
@@ -868,7 +861,7 @@ public class SpawnConditionAnalyzer {
         List<String> groundBlocks = Arrays.asList("unknown");
         List<Integer> narrowedLight = new ArrayList<>();
         List<Integer> yLevels = new ArrayList<>();
-        List<String> timeOfDay = Arrays.asList("unknown");
+        List<int[]> timeOfDay = null;  // null indicates unknown/not determined
         List<String> weather = Arrays.asList("unknown");
 
         return new SpawnConditions(biomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null, null, dimensionName, targetDimId);

@@ -50,8 +50,10 @@ gui.mobtracker.cannotSpawnNaturally=This entity cannot spawn naturally.
 gui.mobtracker.cannotSpawnNaturallyHint=It may only be obtained via spawners, commands, or special game mechanics (like boss summoning).
 gui.mobtracker.analysisCrashed=Spawn analysis failed.
 gui.mobtracker.analysisCrashedHint=An error occurred while analyzing spawn conditions for this entity.
-gui.mobtracker.noSpawnConditions=Could not determine spawn; conditions might not be handled yet or the spawn chance very unlikely.
+gui.mobtracker.noSpawnConditions=Could not determine spawn conditions. This may be due to unhandled spawn requirements or randomness in the spawn check. Try clicking Retry.
+gui.mobtracker.retryButton=[Retry]
 
+# Entity Info
 gui.mobtracker.entityName=Name: %s
 gui.mobtracker.entityId=ID: %s
 gui.mobtracker.entitySize=Size: %s x %s x %s
@@ -75,6 +77,7 @@ gui.mobtracker.drops.simulationFailed=Simulation failed unexpectedly
 gui.mobtracker.drops.simulationCountTooltipDisclaimer=Due to the random nature of drops, results may be slightly off from actual in-game rates or be incomplete for very rare drops.
 gui.mobtracker.drops.serverSideOnly=Multiplayer: Drop simulation requires single-player
 
+# Spawn Conditions
 gui.mobtracker.spawnConditions=Spawn Conditions:
 gui.mobtracker.lightLevels=Light: %s
 gui.mobtracker.yPos=Y Level: %s
@@ -113,20 +116,22 @@ gui.mobtracker.nether.required=World Type: Nether-like only
 gui.mobtracker.nether.excluded=World Type: Non-nether only
 
 gui.mobtracker.dimension=Dimension: %s
-gui.mobtracker.dimension.unknown.tooltip.scanning=Could not determine dimension: the entity's native biome has not been found so far in scans. May appear later, once scans finish.
-gui.mobtracker.dimension.unknown.tooltip.complete=Could not determine dimension: the entity's native biome was not found in any dimension scans.
+gui.mobtracker.dimension.unknown.tooltip.scanning=Could not determine dimension: the entity's native biomes have not been found so far in scans. May appear later, once scans finish.
+gui.mobtracker.dimension.unknown.tooltip.complete=Could not determine dimension: the entity's native biomes were not found in any dimension scans.
 
 # Vanilla Dimensions
 dimension.overworld=Overworld
 dimension.the_nether=The Nether
 dimension.the_end=The End
 
+# Biomes
 gui.mobtracker.biomes=Biomes: %s
 gui.mobtracker.biomes.none=Biomes: None
 gui.mobtracker.biomes.unknown=Biomes: Unknown
 gui.mobtracker.biomes.any=Biomes: Any
 gui.mobtracker.biomesCopied=Biomes for %s copied to clipboard.
 
+# Misc
 gui.mobtracker.hintsHeader=Notes:
 gui.mobtracker.any=Any
 gui.mobtracker.unknown=Unknown

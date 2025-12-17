@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.lwjgl.input.Mouse;
@@ -76,6 +77,10 @@ public class GuiMobTracker extends GuiScreen {
 
     // Drops window modal
     private GuiDropsWindow dropsWindow = null;
+
+    // Retry button bounds (updated during draw)
+    private int retryButtonX, retryButtonY, retryButtonW, retryButtonH;
+    private boolean retryButtonVisible = false;
 
     // Panel bounds for text clipping
     private int panelMaxY = Integer.MAX_VALUE;
@@ -235,6 +240,18 @@ public class GuiMobTracker extends GuiScreen {
                 mouseX >= jeiButtonX && mouseX <= jeiButtonX + jeiButtonW &&
                 mouseY >= jeiButtonY && mouseY <= jeiButtonY + jeiButtonH) {
                 JEIHelper.showMobPage(selected);
+
+                return;
+            }
+
+            // Handle retry button click
+            if (retryButtonVisible && selected != null &&
+                mouseX >= retryButtonX && mouseX <= retryButtonX + retryButtonW &&
+                mouseY >= retryButtonY && mouseY <= retryButtonY + retryButtonH) {
+                // Clear cache and re-analyze
+                cachedEntityId = null;
+                cachedSpawnConditions = null;
+                selectEntity(selected);
 
                 return;
             }
@@ -690,6 +707,13 @@ public class GuiMobTracker extends GuiScreen {
         int panelH = height - 40;
         panelMaxY = panelY + panelH - 6;
 
+        // Reset button visibility
+        retryButtonVisible = false;
+
+        // Clear tooltip data
+        tooltipBiomes = null;
+        showDimensionUnknownTooltip = false;
+
         String sep = I18n.format("gui.mobtracker.separator");
 
         drawRect(panelX, panelY, panelX + panelW, panelY + panelH, 0x80000000);
@@ -815,23 +839,20 @@ public class GuiMobTracker extends GuiScreen {
             if (spawnConditions.groundBlocks != null) {
                 // Limit displayed ground blocks to avoid excessively long lines
                 int maxGroundBlocksToShow = 20;
-                List<String> groundBlocksList = spawnConditions.groundBlocks;
-                List<String> groundBlocksLimited = groundBlocksList;
+                List<String> translatedGroundBlocksList = spawnConditions.groundBlocks.stream().map(this::translateBlockName).collect(Collectors.toList());
+                List<String> groundBlocksList = new ArrayList<>(new LinkedHashSet<>(translatedGroundBlocksList));  // Deduplicate
                 if (groundBlocksList.size() > maxGroundBlocksToShow) {
-                    groundBlocksLimited = groundBlocksList.subList(0, maxGroundBlocksToShow);
-                    groundBlocksLimited.add("…");
+                    groundBlocksList = groundBlocksList.subList(0, maxGroundBlocksToShow);
+                    groundBlocksList.add("…");
                 }
 
-                String groundBlocksTranslated = groundBlocksLimited.stream()
-                    .map(this::translateBlockName)
-                    .collect(Collectors.joining(sep));
-                String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", groundBlocksTranslated);
+                String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", groundBlocksList.stream().collect(Collectors.joining(sep)));
                 textY = drawWrappedString(fontRenderer, groundBlocks, condsX, textY, 12, textW, groundColor);
             }
 
             // Show time of day only if queried (list is non-null)
-            if (spawnConditions.timeOfDay != null) {
-                String timeOfDayTL = String.join(sep, ConditionUtils.translateList(spawnConditions.timeOfDay, "gui.mobtracker.timeOfDay"));
+            if (spawnConditions.timeOfDay != null && !spawnConditions.timeOfDay.isEmpty()) {
+                String timeOfDayTL = Utils.formatTimeRanges(spawnConditions.timeOfDay, sep);
                 String timeOfDay = I18n.format("gui.mobtracker.timeOfDay", timeOfDayTL);
                 textY = drawWrappedString(fontRenderer, timeOfDay, condsX, textY, 12, textW, timeOfDayColor);
             }
@@ -875,6 +896,24 @@ public class GuiMobTracker extends GuiScreen {
         } else {
             String noConditions = I18n.format("gui.mobtracker.noSpawnConditions");
             textY = drawWrappedString(fontRenderer, noConditions, condsX, textY, 12, textW, 0xFFAAAA);
+
+            // Draw retry button
+            String retryText = I18n.format("gui.mobtracker.retryButton");
+            retryButtonW = fontRenderer.getStringWidth(retryText) + 8;
+            retryButtonH = 12;
+            retryButtonX = condsX;
+            retryButtonY = textY + 2;
+            retryButtonVisible = true;
+
+            boolean retryHovered = mouseX >= retryButtonX && mouseX <= retryButtonX + retryButtonW &&
+                                   mouseY >= retryButtonY && mouseY <= retryButtonY + retryButtonH;
+            int retryBtnBg = retryHovered ? 0x60FFFFFF : 0x40FFFFFF;
+            int retryBtnColor = retryHovered ? 0xFFFFAA : 0xCCCCCC;
+
+            drawRect(retryButtonX, retryButtonY, retryButtonX + retryButtonW, retryButtonY + retryButtonH, retryBtnBg);
+            fontRenderer.drawString(retryText, retryButtonX + 4, retryButtonY + 2, retryBtnColor);
+
+            textY = retryButtonY + retryButtonH + 4;
         }
 
         // Format dimension as "ID (name)" where name is the translated dimension name
@@ -937,7 +976,6 @@ public class GuiMobTracker extends GuiScreen {
         }
 
         // Store biome tooltip data for later rendering (after buttons are drawn)
-        tooltipBiomes = null;
         if (uniqueBiomesCount > 1) {
             // Sort biomes: minecraft: first, then alphabetically by localized name
             List<String> sortedBiomes = new ArrayList<>(uniqueBiomes);
