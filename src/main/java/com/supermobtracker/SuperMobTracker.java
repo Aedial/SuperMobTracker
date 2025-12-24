@@ -18,7 +18,7 @@ import com.supermobtracker.config.ModConfig;
 public class SuperMobTracker {
     public static final String MODID = "supermobtracker";
     public static final String NAME = "Super Mob Tracker";
-    public static final String VERSION = "1.2.0";
+    public static final String VERSION = "1.2.1";
 
     public static final Logger LOGGER = LogManager.getLogger(MODID);
 

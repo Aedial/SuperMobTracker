@@ -19,6 +19,7 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraftforge.fml.common.Loader;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -36,8 +37,6 @@ import net.minecraftforge.event.entity.living.LivingDropsEvent;
 import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import com.mojang.authlib.GameProfile;
-
-import electroblob.wizardry.item.ItemSpellBook;
 
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.config.ModConfig;
@@ -70,6 +69,11 @@ public class DropSimulator {
     // Reflection cache for attackingPlayer field (needed for killed_by_player loot condition)
     private static Field attackingPlayerField = null;
     private static boolean attackingPlayerFieldSearched = false;
+
+    // Reflection cache for SpellBook check
+    private static boolean isWizardryLoaded = false;
+    private static boolean isSpellBookChecked = false;
+    private static Class <?> spellBookClass = null;
 
     // Cached fake player for simulations
     private static EntityPlayer fakePlayer = null;
@@ -147,9 +151,8 @@ public class DropSimulator {
      * Clear all cached results.
      */
     public static synchronized void clearAllCaches() {
-        if (activeTask != null) {
-            activeTask.cancel();
-        }
+        if (activeTask != null) activeTask.cancel();
+
         activeTask = null;
         activeEntityId = null;
         lastResult = null;
@@ -358,7 +361,6 @@ public class DropSimulator {
                 );
                 // Set creative mode to bypass mod skill checks (e.g., AoA Hunter levels)
                 fakePlayer.capabilities.isCreativeMode = true;
-                SuperMobTracker.LOGGER.info("Creating fake player UUID " + fakePlayer.getUniqueID() + " for drop simulation");
             }
             DamageSource playerDamage = DamageSource.causePlayerDamage(fakePlayer);
 
@@ -480,6 +482,26 @@ public class DropSimulator {
         }
     }
 
+    private static boolean isSpellBook(Item item) {
+        isWizardryLoaded = Loader.isModLoaded("ebwizardry");
+        if (!isWizardryLoaded) return false;
+
+        if (!isSpellBookChecked) {
+            try {
+                spellBookClass = Class.forName("electroblob.wizardry.item.ItemSpellBook");
+                isSpellBookChecked = true;
+            } catch (ClassNotFoundException e) {
+                isSpellBookChecked = true;
+                SuperMobTracker.LOGGER.warn("Wizardry mod detected but ItemSpellBook class not found", e);
+                return false;
+            }
+        }
+
+        if (spellBookClass == null) return false;
+
+        return spellBookClass.isInstance(item);
+    }
+
     /**
      * Key for grouping drops - ignores durability but respects NBT otherwise.
      */
@@ -492,7 +514,7 @@ public class DropSimulator {
             this.itemId = Item.getIdFromItem(stack.getItem());
             // For items with durability or spell books, use 0 as metadata to group all
             Item item = stack.getItem();
-            this.metadata = item.isDamageable() || item instanceof ItemSpellBook ? 0 : stack.getMetadata();
+            this.metadata = item.isDamageable() || isSpellBook(item) ? 0 : stack.getMetadata();
 
             // Copy NBT but remove durability and enchantment tags for grouping
             if (stack.hasTagCompound()) {
@@ -548,7 +570,7 @@ public class DropSimulator {
             this.representativeStack.setCount(1);
 
             Item item = this.representativeStack.getItem();
-            if (item.isDamageable() || item instanceof ItemSpellBook) this.representativeStack.setItemDamage(0);
+            if (item.isDamageable() || isSpellBook(item)) this.representativeStack.setItemDamage(0);
 
             // Strip enchantments and repair cost from representative stack
             if (this.representativeStack.hasTagCompound()) {

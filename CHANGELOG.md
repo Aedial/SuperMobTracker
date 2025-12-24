@@ -7,6 +7,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Keep a Changelog: https://keepachangelog.com/en/1.1.0/
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
+## [1.2.1] - 2025-12-23
+### Fixed
+- Fix crash on "Auto" GUI scale setting.
+- Fix Wizardry Spell Book detection sometimes causing crashes when the mod is present, due to the duck-typing.
+
 ## [1.2.0] - 2025-12-15
 ### Fixed
 - Fix config being rewritten every frame.

@@ -147,13 +147,9 @@ public class GuiDropsWindow {
      */
     private void calculateLayout() {
         Minecraft mc = Minecraft.getMinecraft();
-        int screenW = mc.displayWidth / mc.gameSettings.guiScale;
-        int screenH = mc.displayHeight / mc.gameSettings.guiScale;
-
-        // Use scaled resolution for proper GUI coordinates
         ScaledResolution sr = new ScaledResolution(mc);
-        screenW = sr.getScaledWidth();
-        screenH = sr.getScaledHeight();
+        int screenW = sr.getScaledWidth();
+        int screenH = sr.getScaledHeight();
 
         float screenRatio = (float) screenW / screenH;
 
