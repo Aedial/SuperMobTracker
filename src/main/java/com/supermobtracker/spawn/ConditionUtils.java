@@ -18,7 +18,6 @@ import com.supermobtracker.config.ModConfig;
  */
 public final class ConditionUtils {
 
-    public static final List<String> DEFAULT_TIMES = Arrays.asList("day", "night", "dusk", "dawn");
     public static final List<String> DEFAULT_WEATHERS = Arrays.asList("clear", "rain", "thunder");
 
     /** Localization key for "any" value */

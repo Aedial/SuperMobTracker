@@ -46,13 +46,14 @@ public class SampleFinder {
     /**
      * All optional conditions with their possible values.
      * Order matters: conditions earlier in the list are tried first.
+     * Time values are in ticks: day=1000, dusk=12000, night=13000, dawn=23000
      */
     private static final List<OptionalCondition> OPTIONAL_CONDITIONS = Arrays.asList(
         new OptionalCondition("canSeeSky", true, false),
         new OptionalCondition("moonPhase", 0, 1, 2, 3, 4, 5, 6, 7),  // All 8 moon phases (0=full, 4=new)
         new OptionalCondition("isSlimeChunk", true, false),
         new OptionalCondition("isNether", false, true),  // Try non-nether first (most common)
-        new OptionalCondition("timeOfDay", "day", "night", "dusk", "dawn"),
+        new OptionalCondition("timeOfDay", 1000L, 13000L, 12000L, 23000L),  // day, night, dusk, dawn in ticks
         new OptionalCondition("weather", "clear", "rain", "thunder")
         // Add more optional conditions here as needed
     );
@@ -109,13 +110,13 @@ public class SampleFinder {
         public final int moonPhase;
         public final boolean isSlimeChunk;
         public final boolean isNether;
-        public final String timeOfDay;
+        public final long worldTime;     // Time in ticks (0-24000)
         public final String weather;
         public final Map<String, Boolean> queriedConditions;
 
         public ValidSample(int y, int light, String ground, String biome, boolean canSeeSky,
                            int moonPhase, boolean isSlimeChunk, boolean isNether,
-                           String timeOfDay, String weather,
+                           long worldTime, String weather,
                            Map<String, Boolean> queriedConditions) {
             this.y = y;
             this.light = light;
@@ -125,7 +126,7 @@ public class SampleFinder {
             this.moonPhase = moonPhase;
             this.isSlimeChunk = isSlimeChunk;
             this.isNether = isNether;
-            this.timeOfDay = timeOfDay;
+            this.worldTime = worldTime;
             this.weather = weather;
             this.queriedConditions = queriedConditions;
         }
@@ -251,7 +252,7 @@ public class SampleFinder {
         if (combo.has("moonPhase")) world.moonPhase = (Integer) combo.get("moonPhase");
         if (combo.has("isSlimeChunk")) world.isSlimeChunk = (Boolean) combo.get("isSlimeChunk");
         if (combo.has("isNether")) world.isNether = (Boolean) combo.get("isNether");
-        if (combo.has("timeOfDay")) world.timeOfDay = (String) combo.get("timeOfDay");
+        if (combo.has("timeOfDay")) world.worldTime = (Long) combo.get("timeOfDay");
         if (combo.has("weather")) world.weather = (String) combo.get("weather");
         if (combo.has("groundBlock")) world.groundBlock = (String) combo.get("groundBlock");
     }
@@ -266,7 +267,7 @@ public class SampleFinder {
                 if (canSpawn(entityClass, world, 0.5, y, 0.5)) {
                     mergeQueriedConditions(aggregatedQueried, world.getAndResetQueriedConditions());
 
-                    String sampleTime = aggregatedQueried.getOrDefault("timeOfDay", false) ? world.timeOfDay : null;
+                    long sampleTime = aggregatedQueried.getOrDefault("timeOfDay", false) ? world.worldTime : -1L;
                     String sampleWeather = aggregatedQueried.getOrDefault("weather", false) ? world.weather : null;
                     String ground = aggregatedQueried.getOrDefault("groundBlock", false) ? world.groundBlock : null;
 
@@ -301,7 +302,7 @@ public class SampleFinder {
         List<String> failGround = Arrays.asList("unknown");
         List<Integer> narrowedLight = new ArrayList<>();
         List<Integer> emptyY = new ArrayList<>();
-        List<String> time = Arrays.asList("unknown");
+        List<int[]> time = null;  // null indicates unknown/not determined
         List<String> weather = Arrays.asList("unknown");
         List<String> hints = new ArrayList<>();
 

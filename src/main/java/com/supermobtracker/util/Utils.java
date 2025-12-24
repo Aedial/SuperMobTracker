@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.stream.Collectors;
 
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.resources.I18n;
 
 
 public class Utils {
@@ -140,5 +141,83 @@ public class Utils {
         }
 
         return lines;
+    }
+
+    /**
+     * Converts Minecraft ticks to a formatted time string (MM:SS format).
+     * A full Minecraft day is 20 real-time minutes (24000 ticks).
+     * isDaytime (ticks 0-11999) = 10 minutes of day (00:00-09:59)
+     *
+     * @param ticks Time in Minecraft ticks (0-24000)
+     * @return Formatted time string (e.g., "00:00", "10:30")
+     */
+    public static String ticksToTimeString(int ticks) {
+        // Normalize ticks to 0-24000 range
+        ticks = ((ticks % 24000) + 24000) % 24000;
+
+        // Convert ticks to real-time minutes and seconds
+        // 24000 ticks = 20 minutes = 1200 seconds
+        double totalSeconds = (double) ticks * 1200.0 / 24000.0;
+        int minutes = (int) (totalSeconds / 60);
+        int seconds = (int) (totalSeconds % 60);
+
+        return String.format("%02d:%02d", minutes, seconds);
+    }
+
+    /**
+     * Formats a list of time ranges into a human-readable string.
+     * Each range is [start, end] in ticks. Handles wrap-around (end > 24000).
+     *
+     * @param ranges    List of time ranges [start, end] in ticks
+     * @param separator Separator between ranges (e.g., ", ")
+     * @return Formatted time string (e.g., "10:00 - 00:00", "05:00 - 07:30")
+     */
+    public static String formatTimeRanges(List<int[]> ranges, String separator) {
+        if (ranges == null || ranges.isEmpty()) return "";
+        if (separator == null) separator = I18n.format("gui.mobtracker.separator");
+
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < ranges.size(); i++) {
+            int[] range = ranges.get(i);
+            int start = range[0];
+            int end = range[1];
+
+            // Handle wrap-around (end > 24000 means it continues past midnight)
+            String startStr = ticksToTimeString(start);
+            String endStr = ticksToTimeString(end >= 24000 ? end - 24000 : end);
+
+            sb.append(startStr);
+            if (start != end) sb.append(" - ").append(endStr);
+            if (i < ranges.size() - 1) sb.append(separator);
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Checks if a list of time ranges covers the full day (0-24000 ticks).
+     *
+     * @param ranges List of time ranges [start, end] in ticks
+     * @return true if the ranges cover the full 24-hour day
+     */
+    public static boolean isFullDayRange(List<int[]> ranges) {
+        if (ranges == null || ranges.isEmpty()) return false;
+
+        // Calculate total coverage
+        int totalCoverage = 0;
+        for (int[] range : ranges) {
+            int start = range[0];
+            int end = range[1];
+
+            if (end >= 24000) {
+                // Wrap-around range
+                totalCoverage += (end - start);
+            } else {
+                totalCoverage += (end - start + 1);
+            }
+        }
+
+        // Full day is 24000 ticks
+        return totalCoverage >= 24000;
     }
 }

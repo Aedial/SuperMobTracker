@@ -7,20 +7,37 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Keep a Changelog: https://keepachangelog.com/en/1.1.0/
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
+## [1.2.0] - 2025-12-15
+### Fixed
+- Fix config being rewritten every frame.
+
+### Added
+- Add a modal for mob drops, based on simulated kills:
+  - Opens with a button next to the JEI button in the mob details panel.
+  - Simulates killing the mob 10k times (configurable) and aggregates the drops.
+  - Has JEI integration for uses/recipes (U/R or Left/Right click).
+  - Shows average drops per kill.
+  - Works on pretty much all mobs, except those that initialize their loot tables in special ways (e.g., via summoning event).
+- Add a retry button to re-analyze the spawn conditions for the selected mob, if the initial analysis failed.
+
+### Changed
+- Change time of day spawn condition representation to time ranges (e.g., "Day" becomes "06:00-18:00").
+
 
 ## [1.1.0] - 2025-12-08
 ### Added
 - Add whitelist/blacklist config options to prevent tracking of specific mobs (see README).
 
 ### Fixed
-- (Almost entirely) fix incomplete spawn condition analysis for mobs with very random spawning logic (e.g., Aether mobs). Analysis should now be stable at default retry count for almost all mobs.
+- (Almost entirely) fix incomplete spawn condition analysis for mobs with very random spawning logic (e.g. Aether mobs). Analysis should now be stable at default retry count for almost all mobs.
 
 ### Changed
 - Streamline spawn condition expansion logic.
 
 ### Technical
 - To eliminate most sources of randomness in spawn condition analysis, we cache the random seed used for the first valid spawn attempt. This ensures that all conditions succeed at the first attempt, as long as they are not covariant on the randomness itself (of course, considering the condition should succeed in that case).
-- The usual retries at random seeds are still performed as a fallback for to catch any remaining randomness.
+- The usual retries at random seeds are still performed as a fallback to catch any remaining randomness.
+- The fixed seed step only uses a single attempt (as it should always succeed if not covariant), compared to the 100 retries (default config) at random seeds.
 
 
 ## [1.0.0] - 2025-12-07

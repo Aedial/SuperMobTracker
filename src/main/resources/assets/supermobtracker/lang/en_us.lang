@@ -18,6 +18,8 @@ config.supermobtracker.client.hudLineSpacing.desc=Spacing between lines in the t
 config.supermobtracker.client.hudEnabled.desc=Whether to show the tracking overlay on screen.
 config.supermobtracker.client.mobWhitelist.desc=List of entity IDs that are whitelisted for tracking (takes precedence over blacklist).
 config.supermobtracker.client.mobBlacklist.desc=List of entity IDs that are blacklisted from tracking.
+config.supermobtracker.client.dropSimulationCount.desc=Number of simulated kills for calculating drop rates.
+config.supermobtracker.client.unstableSimulationEntities.desc=Entity IDs that corrupt global state during drop simulation and should be excluded from simulation. They can be identified by severe performance degradation for every entity after simulating their drops.
 
 # Config names (displayed in config GUI)
 config.supermobtracker.client.enableTracking=Enable Tracking
@@ -34,6 +36,8 @@ config.supermobtracker.client.hudLineSpacing=HUD Line Spacing
 config.supermobtracker.client.hudEnabled=HUD Enabled
 config.supermobtracker.client.mobWhitelist=Mob Whitelist
 config.supermobtracker.client.mobBlacklist=Mob Blacklist
+config.supermobtracker.client.dropSimulationCount=Drop Simulation Count
+config.supermobtracker.client.unstableSimulationEntities=Unstable Simulation Entities
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=IDs: Localized
@@ -46,16 +50,34 @@ gui.mobtracker.cannotSpawnNaturally=This entity cannot spawn naturally.
 gui.mobtracker.cannotSpawnNaturallyHint=It may only be obtained via spawners, commands, or special game mechanics (like boss summoning).
 gui.mobtracker.analysisCrashed=Spawn analysis failed.
 gui.mobtracker.analysisCrashedHint=An error occurred while analyzing spawn conditions for this entity.
-gui.mobtracker.noSpawnConditions=Could not determine spawn; conditions might not be handled yet or the spawn chance very unlikely.
+gui.mobtracker.noSpawnConditions=Could not determine spawn conditions. This may be due to unhandled spawn requirements or randomness in the spawn check. Try clicking Retry.
+gui.mobtracker.retryButton=[Retry]
 
+# Entity Info
 gui.mobtracker.entityName=Name: %s
 gui.mobtracker.entityId=ID: %s
 gui.mobtracker.entitySize=Size: %s x %s x %s
 gui.mobtracker.attributes=Attributes: %s
+gui.mobtracker.dropsButton=[View Drops]
 gui.mobtracker.jeiButton=[View in JEI]
 gui.mobtracker.blacklisted=This entity is blacklisted
 gui.mobtracker.whitelisted=This entity is not whitelisted
 
+# Drops Window
+gui.mobtracker.drops.title=Drops: %s
+gui.mobtracker.drops.noSimulation=No simulation available
+gui.mobtracker.drops.simulating=Simulating kills... (%d/%d)
+gui.mobtracker.drops.noDrops=No drops found. May not have any or require special initialization.
+gui.mobtracker.drops.simulationCount=Based on %d simulated kills
+gui.mobtracker.drops.rateTooltip=%s item(s) per kill, on average
+gui.mobtracker.drops.entityNotLiving=Entity is not a living entity
+gui.mobtracker.drops.entityConstructionFailed=Entity construction failed
+gui.mobtracker.drops.unstableSimulation=This entity corrupts global state and shouldn't be simulated
+gui.mobtracker.drops.simulationFailed=Simulation failed unexpectedly
+gui.mobtracker.drops.simulationCountTooltipDisclaimer=Due to the random nature of drops, results may be slightly off from actual in-game rates or be incomplete for very rare drops.
+gui.mobtracker.drops.serverSideOnly=Multiplayer: Drop simulation requires single-player
+
+# Spawn Conditions
 gui.mobtracker.spawnConditions=Spawn Conditions:
 gui.mobtracker.lightLevels=Light: %s
 gui.mobtracker.yPos=Y Level: %s
@@ -94,20 +116,22 @@ gui.mobtracker.nether.required=World Type: Nether-like only
 gui.mobtracker.nether.excluded=World Type: Non-nether only
 
 gui.mobtracker.dimension=Dimension: %s
-gui.mobtracker.dimension.unknown.tooltip.scanning=Could not determine dimension: the entity's native biome has not been found so far in scans. May appear later, once scans finish.
-gui.mobtracker.dimension.unknown.tooltip.complete=Could not determine dimension: the entity's native biome was not found in any dimension scans.
+gui.mobtracker.dimension.unknown.tooltip.scanning=Could not determine dimension: the entity's native biomes have not been found so far in scans. May appear later, once scans finish.
+gui.mobtracker.dimension.unknown.tooltip.complete=Could not determine dimension: the entity's native biomes were not found in any dimension scans.
 
 # Vanilla Dimensions
 dimension.overworld=Overworld
 dimension.the_nether=The Nether
 dimension.the_end=The End
 
+# Biomes
 gui.mobtracker.biomes=Biomes: %s
 gui.mobtracker.biomes.none=Biomes: None
 gui.mobtracker.biomes.unknown=Biomes: Unknown
 gui.mobtracker.biomes.any=Biomes: Any
 gui.mobtracker.biomesCopied=Biomes for %s copied to clipboard.
 
+# Misc
 gui.mobtracker.hintsHeader=Notes:
 gui.mobtracker.any=Any
 gui.mobtracker.unknown=Unknown

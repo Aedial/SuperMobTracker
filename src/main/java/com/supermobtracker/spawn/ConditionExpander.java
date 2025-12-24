@@ -8,7 +8,6 @@ import java.util.function.Consumer;
 
 import net.minecraft.entity.EntityLiving;
 
-import static com.supermobtracker.spawn.ConditionUtils.DEFAULT_TIMES;
 import static com.supermobtracker.spawn.ConditionUtils.DEFAULT_WEATHERS;
 import static com.supermobtracker.spawn.ConditionUtils.canSpawnWithSeed;
 import static com.supermobtracker.spawn.ConditionUtils.getLastSuccessfulSeed;
@@ -40,7 +39,7 @@ public class ConditionExpander {
         public List<String> hints = new ArrayList<>();
 
         public List<String> groundBlocks = null;    // null = doesn't matter, else list of valid ground blocks
-        public List<String> times = null;           // null = doesn't matter, else list of valid times
+        public List<int[]> timeRanges = null;       // null = doesn't matter, else list of valid time ranges [start, end] in ticks
         public List<String> weathers = null;        // null = doesn't matter, else list of valid weathers
         public Boolean requiresSky = null;          // null = doesn't matter, true = requires sky, false = requires no sky
         public List<Integer> moonPhases = null;     // null = doesn't matter, else list of valid moon phases (0-7)
@@ -66,6 +65,7 @@ public class ConditionExpander {
         world.moonPhase = sample.moonPhase;
         world.isSlimeChunk = sample.isSlimeChunk;
         world.isNether = sample.isNether;
+        world.worldTime = sample.worldTime;
 
         result.yLevels = expandYLevels(sample.y);
         result.lightLevels = expandLightLevels(sample);
@@ -73,7 +73,7 @@ public class ConditionExpander {
 
         // Only expand these conditions if they were queried during spawn checks
         if (queried != null && queried.getOrDefault("groundBlock", false)) result.groundBlocks = expandGroundBlocks(sample, candidateGroundBlocks);
-        if (queried != null && queried.getOrDefault("timeOfDay", false)) result.times = expandTimes(sample);
+        if (queried != null && queried.getOrDefault("timeOfDay", false)) result.timeRanges = expandTimeRanges(sample);
         if (queried != null && queried.getOrDefault("weather", false)) result.weathers = expandWeathers(sample);
         if (queried != null && queried.getOrDefault("canSeeSky", false)) result.requiresSky = expandCanSeeSky(sample);
         if (queried != null && queried.getOrDefault("moonPhase", false)) result.moonPhases = expandMoonPhases(sample);
@@ -213,16 +213,77 @@ public class ConditionExpander {
         );
     }
 
-    private List<String> expandTimes(SampleFinder.ValidSample sample) {
-        List<String> result = expandListCondition(
-            sample.y, DEFAULT_TIMES,
-            v -> world.timeOfDay = v,
-            sample.timeOfDay
-        );
+    /**
+     * Expand time ranges by testing every 600 ticks (30 seconds in game time).
+     * Returns null if all times work, else a list of valid time ranges.
+     * Each range is [start, end] in ticks (0-24000).
+     */
+    private List<int[]> expandTimeRanges(SampleFinder.ValidSample sample) {
+        // Test all 40 time points (every 600 ticks = 30 seconds)
+        // 24000 ticks / 600 = 40 samples
+        List<Long> validTimes = new ArrayList<>();
+        long originalTime = sample.worldTime >= 0 ? sample.worldTime : 1000L;
 
-        if (result != null && result.isEmpty()) return Arrays.asList("unknown");
+        for (int i = 0; i < 40; i++) {
+            long testTime = i * 600L;
+            world.worldTime = testTime;
 
-        return result;
+            if (testSpawn(sample.y)) validTimes.add(testTime);
+        }
+
+        world.worldTime = originalTime;
+
+        // If all times are valid, return null (doesn't matter)
+        if (validTimes.size() == 40) return null;
+        // If no times work, return the sample time as a single-tick range
+        if (validTimes.isEmpty()) return Arrays.asList(new int[]{(int) originalTime, (int) originalTime});
+
+        // Convert list of valid times into consecutive ranges
+        return buildTimeRanges(validTimes);
+    }
+
+    /**
+     * Build consecutive time ranges from a list of valid tick values.
+     * Groups consecutive times (within 600-tick steps) into ranges.
+     */
+    private List<int[]> buildTimeRanges(List<Long> validTimes) {
+        if (validTimes.isEmpty()) return new ArrayList<>();
+
+        List<int[]> ranges = new ArrayList<>();
+        int rangeStart = validTimes.get(0).intValue();
+        int rangeEnd = rangeStart + 599;  // Each sample covers 600 ticks
+
+        for (int i = 1; i < validTimes.size(); i++) {
+            int currentTime = validTimes.get(i).intValue();
+
+            // If this time is consecutive (within 600 ticks of the end), extend the range
+            if (currentTime <= rangeEnd + 1) {
+                rangeEnd = currentTime + 599;
+            } else {
+                // Save the current range and start a new one
+                ranges.add(new int[]{rangeStart, Math.min(rangeEnd, 23999)});
+                rangeStart = currentTime;
+                rangeEnd = currentTime + 599;
+            }
+        }
+
+        // Add the last range
+        ranges.add(new int[]{rangeStart, Math.min(rangeEnd, 23999)});
+
+        // Handle wrap-around: if first range starts at 0 and last range ends at 23999,
+        // they might be part of the same continuous range
+        if (ranges.size() > 1) {
+            int[] firstRange = ranges.get(0);
+            int[] lastRange = ranges.get(ranges.size() - 1);
+
+            if (firstRange[0] == 0 && lastRange[1] >= 23400) {
+                // Merge first and last ranges into one wrap-around range
+                ranges.remove(ranges.size() - 1);
+                ranges.set(0, new int[]{lastRange[0], firstRange[1] + 24000});
+            }
+        }
+
+        return ranges;
     }
 
     private List<String> expandWeathers(SampleFinder.ValidSample sample) {
@@ -265,7 +326,7 @@ public class ConditionExpander {
             expanded.groundBlocks,
             expanded.lightLevels,
             expanded.yLevels,
-            expanded.times,
+            expanded.timeRanges,
             expanded.weathers,
             expanded.hints,
             expanded.requiresSky,
