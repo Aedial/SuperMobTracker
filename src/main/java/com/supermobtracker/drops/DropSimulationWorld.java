@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
 import javax.annotation.Nullable;
 
@@ -19,14 +20,11 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.scoreboard.Scoreboard;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.world.chunk.EmptyChunk;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.end.DragonFightManager;
-import net.minecraft.world.WorldProviderEnd;
 import net.minecraft.world.storage.loot.LootTableManager;
 
 import sun.reflect.ReflectionFactory;
@@ -46,10 +44,6 @@ public class DropSimulationWorld extends WorldServer {
     private Scoreboard scoreboard;
     private Chunk fakeChunk;
 
-    // Cached reflection objects for DragonFightManager nullification
-    private static Field dragonFightField = null;
-    private static boolean dragonFightFieldSearched = false;
-
     /**
      * Private constructor - use createInstance() instead.
      */
@@ -57,35 +51,6 @@ public class DropSimulationWorld extends WorldServer {
         // This constructor is never actually called - we use ReflectionFactory
         // to create an instance without invoking any constructor
         super(null, null, null, 0, null);
-    }
-
-    /**
-     * Get the dragonFightManager field from WorldProviderEnd via reflection.
-     */
-    private static Field getDragonFightField() {
-        if (dragonFightFieldSearched) return dragonFightField;
-
-        dragonFightFieldSearched = true;
-
-        try {
-            // field_186064_g = dragonFightManager
-            dragonFightField = WorldProviderEnd.class.getDeclaredField("field_186064_g");
-            dragonFightField.setAccessible(true);
-
-            return dragonFightField;
-        } catch (NoSuchFieldException e) {
-            // Try MCP name
-            try {
-                dragonFightField = WorldProviderEnd.class.getDeclaredField("dragonFightManager");
-                dragonFightField.setAccessible(true);
-
-                return dragonFightField;
-            } catch (NoSuchFieldException e2) {
-                SuperMobTracker.LOGGER.warn("Could not find dragonFightManager field - dragon simulation may cause respawn issues");
-
-                return null;
-            }
-        }
     }
 
     /**
@@ -115,12 +80,16 @@ public class DropSimulationWorld extends WorldServer {
             // Set the rand field (used for loot randomization)
             Field randField = World.class.getDeclaredField("field_73012_v"); // rand
             randField.setAccessible(true);
-            randField.set(instance, new java.util.Random());
+            randField.set(instance, new Random());
 
-            // Set the provider field (Entity constructor accesses world.provider.getDimension())
+            // Set the provider field using a wrapper to isolate from real world state.
+            // This prevents issues like simulated Ender Dragons registering with the
+            // real DragonFightManager during an actual dragon fight.
             Field providerField = World.class.getDeclaredField("field_73011_w"); // provider
             providerField.setAccessible(true);
-            providerField.set(instance, realWorld.provider);
+            SimulationProviderWrapper providerWrapper = new SimulationProviderWrapper(realWorld.provider);
+            providerField.set(instance, providerWrapper);
+            providerWrapper.attachToWorld(instance);
 
             // Set profiler (may be accessed during entity construction)
             Field profilerField = World.class.getDeclaredField("field_72984_F"); // profiler
@@ -142,7 +111,8 @@ public class DropSimulationWorld extends WorldServer {
 
             // Create a fake empty chunk to return from getChunk() methods
             // Some mods call World.getEntitiesWithinAABB which uses getChunk internally
-            instance.fakeChunk = new EmptyChunk(instance, 0, 0);
+            // Use our SimulationChunk instead of EmptyChunk (which is client-only)
+            instance.fakeChunk = new SimulationChunk(instance, 0, 0);
 
             return instance;
         } catch (Exception e) {
@@ -314,49 +284,5 @@ public class DropSimulationWorld extends WorldServer {
     @Override
     public void setEntityState(Entity entityIn, byte state) {
         // Ignore entity state changes - prevents particles and sounds in fake world
-    }
-
-    // === DragonFightManager protection for End dimension ===
-
-    // Store the original DragonFightManager when nullified
-    private DragonFightManager savedDragonFightManager = null;
-    private boolean dragonFightManagerNulled = false;
-
-    /**
-     * Temporarily nullify the DragonFightManager on the world provider to prevent
-     * the Ender Dragon from interacting with the real fight manager during simulation.
-     * Call restoreDragonFightManager() when done.
-     */
-    public void nullifyDragonFightManager() {
-        if (dragonFightManagerNulled || !(this.provider instanceof WorldProviderEnd)) return;
-
-        Field field = getDragonFightField();
-        if (field == null) return;
-
-        try {
-            savedDragonFightManager = (DragonFightManager) field.get(this.provider);
-            field.set(this.provider, null);
-            dragonFightManagerNulled = true;
-        } catch (IllegalAccessException e) {
-            SuperMobTracker.LOGGER.warn("Failed to nullify dragonFightManager", e);
-        }
-    }
-
-    /**
-     * Restore the previously nullified DragonFightManager.
-     */
-    public void restoreDragonFightManager() {
-        if (!dragonFightManagerNulled || !(this.provider instanceof WorldProviderEnd)) return;
-
-        Field field = getDragonFightField();
-        if (field == null) return;
-
-        try {
-            field.set(this.provider, savedDragonFightManager);
-            savedDragonFightManager = null;
-            dragonFightManagerNulled = false;
-        } catch (IllegalAccessException e) {
-            SuperMobTracker.LOGGER.warn("Failed to restore dragonFightManager", e);
-        }
     }
 }

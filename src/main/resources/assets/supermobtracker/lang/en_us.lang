@@ -76,6 +76,11 @@ gui.mobtracker.drops.unstableSimulation=This entity corrupts global state and sh
 gui.mobtracker.drops.simulationFailed=Simulation failed unexpectedly
 gui.mobtracker.drops.simulationCountTooltipDisclaimer=Due to the random nature of drops, results may be slightly off from actual in-game rates or be incomplete for very rare drops.
 gui.mobtracker.drops.serverSideOnly=Multiplayer: Drop simulation requires single-player
+gui.mobtracker.drops.serverModNotInstalled=Server doesn't have Super Mob Tracker installed
+gui.mobtracker.drops.dropLootAccessFailed=Could not access loot method
+gui.mobtracker.drops.worldAccessFailed=Could not access world
+gui.mobtracker.drops.worldCreationFailed=Failed to create simulation world
+gui.mobtracker.drops.invalidEntity=Invalid entity
 
 # Spawn Conditions
 gui.mobtracker.spawnConditions=Spawn Conditions:
@@ -135,6 +140,8 @@ gui.mobtracker.biomesCopied=Biomes for %s copied to clipboard.
 gui.mobtracker.hintsHeader=Notes:
 gui.mobtracker.any=Any
 gui.mobtracker.unknown=Unknown
+gui.mobtracker.clickToEnlarge=Click to enlarge
+gui.mobtracker.closeModal=Click outside or press Escape to close
 
 # Attributes
 gui.mobtracker.attribute.boss=Boss

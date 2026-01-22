@@ -12,6 +12,7 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 
 import com.supermobtracker.IProxy;
 import com.supermobtracker.config.ModConfig;
+import com.supermobtracker.network.NetworkHandler;
 
 
 @Mod(
@@ -24,7 +25,7 @@ import com.supermobtracker.config.ModConfig;
 public class SuperMobTracker {
     public static final String MODID = "supermobtracker";
     public static final String NAME = "Super Mob Tracker";
-    public static final String VERSION = "1.2.2";
+    public static final String VERSION = "1.2.3";
 
     public static final Logger LOGGER = LogManager.getLogger(MODID);
 
@@ -37,6 +38,7 @@ public class SuperMobTracker {
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         ModConfig.loadConfigs(event.getSuggestedConfigurationFile());
+        NetworkHandler.registerPackets();
         proxy.preInit();
     }
 

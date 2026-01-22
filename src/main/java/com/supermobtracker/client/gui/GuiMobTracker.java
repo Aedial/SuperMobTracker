@@ -13,6 +13,7 @@ import java.util.function.BiConsumer;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
@@ -40,7 +41,7 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.client.ClientSettings;
-import com.supermobtracker.client.util.EntityRenderHelper;
+import com.supermobtracker.client.util.GuiDrawingUtils;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.drops.DropSimulator;
 import com.supermobtracker.spawn.BiomeDimensionMapper;
@@ -48,6 +49,7 @@ import com.supermobtracker.spawn.ConditionUtils;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
 import com.supermobtracker.tracking.SpawnTrackerManager;
 import com.supermobtracker.util.JEIHelper;
+import com.supermobtracker.util.TranslationUtils;
 import com.supermobtracker.util.Utils;
 
 
@@ -59,9 +61,6 @@ public class GuiMobTracker extends GuiScreen {
     private SpawnConditionAnalyzer.SpawnConditions spawnConditions;
     private long lastClickTime = 0L;
     private ResourceLocation lastClickId = null;
-
-    // Track entities that have already had render errors reported
-    private static final Set<ResourceLocation> entitiesWithRenderErrors = new HashSet<>();
 
     // Cache for spawn conditions to avoid regenerating on window resize
     private static ResourceLocation cachedEntityId = null;
@@ -78,6 +77,12 @@ public class GuiMobTracker extends GuiScreen {
     // Drops window modal
     private GuiDropsWindow dropsWindow = null;
 
+    // Entity preview modal
+    private GuiEntityPreviewModal previewModal = null;
+
+    // Preview bounds (updated during draw)
+    private int previewX, previewY, previewSize;
+
     // Retry button bounds (updated during draw)
     private int retryButtonX, retryButtonY, retryButtonW, retryButtonH;
     private boolean retryButtonVisible = false;
@@ -85,9 +90,8 @@ public class GuiMobTracker extends GuiScreen {
     // Panel bounds for text clipping
     private int panelMaxY = Integer.MAX_VALUE;
 
-    // Biome tooltip data (set during drawRightPanel, rendered in drawBiomeTooltip)
-    private List<String> tooltipBiomes = null;
-    private int tooltipBiomesLabelX, tooltipBiomesLabelY, tooltipBiomesLabelW;
+    // Biome tooltip widget
+    private MultiColumnTooltipWidget biomeTooltipWidget = new MultiColumnTooltipWidget(null);
 
     // Unknown dimension tooltip data (set during drawRightPanel, rendered in drawDimensionTooltip)
     private boolean showDimensionUnknownTooltip = false;
@@ -118,6 +122,10 @@ public class GuiMobTracker extends GuiScreen {
         this.buttonList.clear();
 
         this.buttonList.add(new GuiButton(1, 10, height - 30, leftWidth - 20, 20, getI18nButtonString()));
+
+        // Initialize biome tooltip widget
+        biomeTooltipWidget = new MultiColumnTooltipWidget(fontRenderer);
+        biomeTooltipWidget.updateScreenSize(width, height);
 
         // Restore last selected entity and its cached spawn conditions
         String lastEntity = ModConfig.getClientLastSelectedEntity();
@@ -182,6 +190,11 @@ public class GuiMobTracker extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        // Handle preview modal first if visible
+        if (previewModal != null && previewModal.isVisible()) {
+            if (previewModal.handleKey(keyCode)) return;
+        }
+
         // Handle drops window first if visible
         if (dropsWindow != null && dropsWindow.isVisible()) {
             if (dropsWindow.handleKey(keyCode)) return;
@@ -195,6 +208,11 @@ public class GuiMobTracker extends GuiScreen {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+        // Handle preview modal first if visible
+        if (previewModal != null && previewModal.isVisible()) {
+            if (previewModal.handleClick(mouseX, mouseY, mouseButton)) return;
+        }
+
         // Handle drops window first if visible
         if (dropsWindow != null && dropsWindow.isVisible()) {
             if (dropsWindow.handleClick(mouseX, mouseY, mouseButton)) return;
@@ -210,11 +228,24 @@ public class GuiMobTracker extends GuiScreen {
         filterField.mouseClicked(mouseX, mouseY, mouseButton);
 
         if (mouseButton == 0) {
+            // Handle entity preview click - open modal
+            if (selected != null && previewSize > 0 &&
+                mouseX >= previewX && mouseX <= previewX + previewSize &&
+                mouseY >= previewY && mouseY <= previewY + previewSize) {
+                Entity entity = analyzer.getEntityInstance(selected);
+                if (entity != null) {
+                    String entityName = formatEntityName(selected, true);
+                    previewModal = new GuiEntityPreviewModal(this, selected, entity, entityName);
+                    previewModal.show(width, height);
+
+                    return;
+                }
+            }
+
             // Handle biomes label click - copy to clipboard
-            if (tooltipBiomes != null && !tooltipBiomes.isEmpty() &&
-                mouseX >= tooltipBiomesLabelX && mouseX <= tooltipBiomesLabelX + tooltipBiomesLabelW &&
-                mouseY >= tooltipBiomesLabelY && mouseY <= tooltipBiomesLabelY + 12) {
-                String biomeList = String.join("\n", tooltipBiomes);
+            List<String> biomes = biomeTooltipWidget.getLines();
+            if (biomes != null && !biomes.isEmpty() && biomeTooltipWidget.isHovered(mouseX, mouseY)) {
+                String biomeList = String.join("\n", biomes);
                 GuiScreen.setClipboardString(biomeList);
 
                 String entityName = formatEntityName(selected, true);
@@ -309,10 +340,12 @@ public class GuiMobTracker extends GuiScreen {
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.drawDefaultBackground();
 
-        // Determine if drops window should block hover events
+        // Determine if any modal should block hover events
+        boolean previewModalBlocking = previewModal != null && previewModal.isVisible();
         boolean dropsWindowBlocking = dropsWindow != null && dropsWindow.isVisible() && dropsWindow.isMouseOver(mouseX, mouseY);
-        int effectiveMouseX = dropsWindowBlocking ? -1 : mouseX;
-        int effectiveMouseY = dropsWindowBlocking ? -1 : mouseY;
+        boolean modalBlocking = previewModalBlocking || dropsWindowBlocking;
+        int effectiveMouseX = modalBlocking ? -1 : mouseX;
+        int effectiveMouseY = modalBlocking ? -1 : mouseY;
 
         filterField.drawTextBox();
         listWidget.draw(effectiveMouseX, effectiveMouseY);
@@ -320,10 +353,11 @@ public class GuiMobTracker extends GuiScreen {
 
         super.drawScreen(mouseX, mouseY, partialTicks);
 
-        // Draw tooltips only if drops window is not blocking
-        if (!dropsWindowBlocking) {
-            drawBiomeTooltip(mouseX, mouseY);
+        // Draw tooltips only if no modal is blocking
+        if (!modalBlocking) {
+            biomeTooltipWidget.draw(mouseX, mouseY);
             drawDimensionTooltip(mouseX, mouseY);
+            drawPreviewTooltip(mouseX, mouseY);
             listWidget.drawTooltips(mouseX, mouseY);
         }
 
@@ -331,6 +365,11 @@ public class GuiMobTracker extends GuiScreen {
         if (dropsWindow != null && dropsWindow.isVisible()) {
             dropsWindow.draw(mouseX, mouseY, partialTicks);
             dropsWindow.drawTooltips(mouseX, mouseY);
+        }
+
+        // Draw preview modal on top of everything
+        if (previewModal != null && previewModal.isVisible()) {
+            previewModal.draw(mouseX, mouseY, partialTicks, fontRenderer);
         }
     }
 
@@ -370,333 +409,11 @@ public class GuiMobTracker extends GuiScreen {
         return y + lineHeight;
     }
 
-    /**
-     * Draws a 5-pointed star using the Tessellator for proper GUI rendering.
-     * The star is drawn as 5 triangles, each connecting the center to two adjacent points
-     * (alternating between outer tips and inner valleys).
-     *
-     * @param centerX center X coordinate
-     * @param centerY center Y coordinate
-     * @param outerRadius distance from center to outer points (tips)
-     * @param color ARGB color (e.g., 0xFFFFD700 for gold)
-     */
-    private void drawStar(float centerX, float centerY, float outerRadius, int color) {
-        // Extract color components
-        float a = ((color >> 24) & 0xFF) / 255.0f;
-        float r = ((color >> 16) & 0xFF) / 255.0f;
-        float g = ((color >> 8) & 0xFF) / 255.0f;
-        float b = (color & 0xFF) / 255.0f;
-
-        // Inner radius is typically ~38% of outer radius for a classic 5-pointed star
-        float innerRadius = outerRadius * 0.38f;
-
-        // Calculate 10 points: alternating outer (tips) and inner (valleys)
-        // Starting from top point, going clockwise (36 degrees apart)
-        float[] pointsX = new float[10];
-        float[] pointsY = new float[10];
-        for (int i = 0; i < 10; i++) {
-            double angle = Math.toRadians(-90 + i * 36);
-            float radius = (i % 2 == 0) ? outerRadius : innerRadius;
-            pointsX[i] = centerX + (float) (radius * Math.cos(angle));
-            pointsY[i] = centerY + (float) (radius * Math.sin(angle));
-        }
-
-        GlStateManager.pushMatrix();
-        GlStateManager.disableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.disableAlpha();
-        GlStateManager.disableDepth();
-        GlStateManager.disableCull();
-        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.shadeModel(GL11.GL_SMOOTH);
-        GlStateManager.color(r, g, b, a);
-
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.getBuffer();
-
-        buffer.begin(GL11.GL_TRIANGLE_FAN,DefaultVertexFormats.POSITION);
-
-        // Center point
-        buffer.pos(centerX, centerY, 0.0).endVertex();
-
-        // Add all 10 points around the star, plus close the loop
-        for (int i = 0; i <= 10; i++) buffer.pos(pointsX[i % 10], pointsY[i % 10], 0.0).endVertex();
-
-        tessellator.draw();
-
-        GlStateManager.shadeModel(GL11.GL_FLAT);
-        GlStateManager.enableCull();
-        GlStateManager.enableDepth();
-        GlStateManager.disableBlend();
-        GlStateManager.enableAlpha();
-        GlStateManager.enableTexture2D();
-        GlStateManager.popMatrix();
-    }
-
-    /**
-     * Draws a simple red stop-sign-like octagon.
-     */
-    private void drawStopSign(float centerX, float centerY, float radius, int color) {
-        float a = ((color >> 24) & 0xFF) / 255.0f;
-        float r = ((color >> 16) & 0xFF) / 255.0f;
-        float g = ((color >> 8) & 0xFF) / 255.0f;
-        float b = (color & 0xFF) / 255.0f;
-
-        float innerRadius = radius * 0.75f;
-
-        // Octagon points, flat top
-        float[] px = new float[8];
-        float[] py = new float[8];
-        float[] pxInner = new float[8];
-        float[] pyInner = new float[8];
-        // Start at -22.5 degrees to flatten top/bottom edges
-        for (int i = 0; i < 8; i++) {
-            double angle = Math.toRadians(-22.5 + i * 45.0);
-            px[i] = centerX + (float) (radius * Math.cos(angle));
-            py[i] = centerY + (float) (radius * Math.sin(angle));
-
-            pxInner[i] = centerX + (float) (innerRadius * Math.cos(angle));
-            pyInner[i] = centerY + (float) (innerRadius * Math.sin(angle));
-        }
-
-        GlStateManager.pushMatrix();
-        GlStateManager.disableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.disableAlpha();
-        GlStateManager.disableDepth();
-        GlStateManager.disableCull();
-        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.shadeModel(GL11.GL_SMOOTH);
-
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.getBuffer();
-
-        // Outer octagon
-        GlStateManager.color(r, g, b, a);
-
-        buffer.begin(GL11.GL_TRIANGLE_FAN, DefaultVertexFormats.POSITION);
-        buffer.pos(centerX, centerY, 0.0).endVertex();
-        for (int i = 0; i <= 8; i++) buffer.pos(px[i % 8], py[i % 8], 0.0).endVertex();
-        tessellator.draw();
-
-        // Inner octagon (cutout)
-        GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
-
-        buffer.begin(GL11.GL_TRIANGLE_FAN, DefaultVertexFormats.POSITION);
-        buffer.pos(centerX, centerY, 0.0).endVertex();
-        for (int i = 0; i <= 8; i++) buffer.pos(pxInner[i % 8], pyInner[i % 8], 0.0).endVertex();
-        tessellator.draw();
-
-        // Diagonal bar
-        GlStateManager.color(r, g, b, a);
-
-        GL11.glLineWidth(4.0f);
-        GL11.glBegin(GL11.GL_LINES);
-        GL11.glVertex3f((px[7] + px[0]) / 2, (py[7] + py[0]) / 2, 0f);
-        GL11.glVertex3f((px[3] + px[4]) / 2, (py[3] + py[4]) / 2, 0f);
-        GL11.glEnd();
-
-        GlStateManager.shadeModel(GL11.GL_FLAT);
-        GlStateManager.enableCull();
-        GlStateManager.enableDepth();
-        GlStateManager.disableBlend();
-        GlStateManager.enableAlpha();
-        GlStateManager.enableTexture2D();
-        GlStateManager.popMatrix();
-    }
-
-    /**
-     * Draws a red X between two corners with configurable thickness.
-     */
-    private void drawRedX(float x1, float y1, float x2, float y2, float thickness, int color) {
-        float a = ((color >> 24) & 0xFF) / 255.0f;
-        float r = ((color >> 16) & 0xFF) / 255.0f;
-        float g = ((color >> 8) & 0xFF) / 255.0f;
-        float b = (color & 0xFF) / 255.0f;
-
-        GlStateManager.pushMatrix();
-        GlStateManager.disableTexture2D();
-        GlStateManager.enableBlend();
-        GlStateManager.disableAlpha();
-        GlStateManager.disableDepth();
-        GlStateManager.disableCull();
-        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
-        GlStateManager.color(r, g, b, a);
-
-        GL11.glLineWidth(thickness);
-
-        // First diagonal
-        GL11.glBegin(GL11.GL_LINES);
-        GL11.glVertex3f(x1, y1, 0f);
-        GL11.glVertex3f(x2, y2, 0f);
-        GL11.glEnd();
-
-        // Second diagonal
-        GL11.glBegin(GL11.GL_LINES);
-        GL11.glVertex3f(x1, y2, 0f);
-        GL11.glVertex3f(x2, y1, 0f);
-        GL11.glEnd();
-
-        GlStateManager.enableDepth();
-        GlStateManager.enableTexture2D();
-        GlStateManager.enableAlpha();
-        GlStateManager.disableBlend();
-        GlStateManager.popMatrix();
-    }
-
     private String format(double d) {
         String s = String.format("%.1f", d);
         if (s.endsWith(".0")) s = s.substring(0, s.length() - 2);
 
         return s;
-    }
-
-    private String translateBlockName(String blockName) {
-        if (blockName == null || blockName.isEmpty()) return "";
-
-        // Try resolving the Block instance to leverage its translation key or localized name
-        Block blk = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockName));
-        if (blk != null) {
-            // In 1.12, many mods set a custom translation key based on a display-name-like identifier
-            String transKey = blk.getTranslationKey();
-            if (transKey != null && !transKey.isEmpty()) {
-                String k1 = transKey.endsWith(".name") ? transKey : (transKey + ".name");
-                if (I18n.hasKey(k1)) return I18n.format(k1);
-
-                // Some resource packs/mods provide direct key without .name
-                if (I18n.hasKey(transKey)) return I18n.format(transKey);
-            }
-
-            // If the block has a localized name available already, use it directly
-            // getLocalizedName() triggers I18n lookup using the block's unlocalized key
-            try {
-                String localized = blk.getLocalizedName();
-                if (localized != null && !localized.isEmpty()) return localized;
-            } catch (Throwable ignored) {
-                // Some blocks may throw during early GUI contexts; ignore and continue with fallbacks
-            }
-        }
-
-        // Parse namespace and path from registry name strings like "minecraft:grass"
-        String namespace = "minecraft";
-        String path = blockName;
-        int colonIdx = blockName.indexOf(":");
-        if (colonIdx >= 0) {
-            namespace = blockName.substring(0, colonIdx);
-            path = blockName.substring(colonIdx + 1);
-        }
-
-        // Common 1.12 language key patterns used by vanilla and many mods
-        // 1) tile.<namespace>.<path>.name (typical modded style)
-        String key1 = "tile." + namespace + "." + path + ".name";
-        if (I18n.hasKey(key1)) return I18n.format(key1);
-
-        // 2) tile.<path>.name (older vanilla style)
-        String key2 = "tile." + path + ".name";
-        if (I18n.hasKey(key2)) return I18n.format(key2);
-
-        // 3) tile.<namespace>:<path>.name (some mods use a colon in keys)
-        String key3 = "tile." + namespace + ":" + path + ".name";
-        if (I18n.hasKey(key3)) return I18n.format(key3);
-
-        // 4) block.<namespace>.<path> (newer style seen in resource packs)
-        String key4 = "block." + namespace + "." + path;
-        if (I18n.hasKey(key4)) return I18n.format(key4);
-
-        // 5) block.<path> (fallback variant)
-        String key5 = "block." + path;
-        if (I18n.hasKey(key5)) return I18n.format(key5);
-
-        // 6) Direct registry string when mods register explicit keys
-        if (I18n.hasKey(blockName)) return I18n.format(blockName);
-
-        // Fallback: give up and return the raw registry name
-        return blockName;
-    }
-
-    /**
-     * Translates a biome registry name to its localized display name.
-     * @param biomeRegistryName The biome registry name (e.g., "minecraft:plains")
-     * @return The localized biome name, or the registry name if not found
-     */
-    private String translateBiomeName(String biomeRegistryName) {
-        Biome biome = ForgeRegistries.BIOMES.getValue(new ResourceLocation(biomeRegistryName));
-        if (biome == null) return biomeRegistryName;
-
-        // Parse namespace and path from registry name string for translation lookup
-        String namespace = "minecraft";
-        String path = biomeRegistryName;
-        int colonIdx = biomeRegistryName.indexOf(':');
-        if (colonIdx >= 0) {
-            namespace = biomeRegistryName.substring(0, colonIdx);
-            path = biomeRegistryName.substring(colonIdx + 1);
-        }
-
-        // Try common translation key patterns used by mods
-        // Pattern 1: biome.<namespace>.<path> (common modded pattern)
-        String key1 = "biome." + namespace + "." + path;
-        String translated1 = I18n.format(key1);
-        if (!translated1.equals(key1)) return translated1;
-
-        // Pattern 2: biome.<namespace>:<path> (alternate pattern)
-        String key2 = "biome." + biomeRegistryName;
-        String translated2 = I18n.format(key2);
-        if (!translated2.equals(key2)) return translated2;
-
-        // Pattern 3: biome.<path>.name (some mods use this)
-        String key3 = "biome." + path + ".name";
-        String translated3 = I18n.format(key3);
-        if (!translated3.equals(key3)) return translated3;
-
-        // Try the biome's internal name - works for most mods which set display names directly in BiomeProperties
-        // It will, however, not be "localized"
-        String biomeName = biome.getBiomeName();
-        if (biomeName != null && !biomeName.isEmpty() && !biomeName.equals(biomeRegistryName) && !biomeName.contains(":") && !biomeName.contains("_")) {
-            return biomeName;
-        }
-
-        return biomeRegistryName;
-    }
-
-    /**
-     * Translates a dimension name to a localized display string.
-     * Tries various translation key patterns used by Minecraft and mods.
-     */
-    private String translateDimensionName(String dimName) {
-        if (dimName == null || dimName.isEmpty()) return "?";
-
-        // Parse namespace and path
-        String namespace = "minecraft";
-        String path = dimName;
-        int colonIdx = dimName.indexOf(':');
-        if (colonIdx >= 0) {
-            namespace = dimName.substring(0, colonIdx);
-            path = dimName.substring(colonIdx + 1);
-        }
-
-        // Try common translation key patterns
-        // Pattern 1: dimension.<namespace>.<path> (modded pattern)
-        String key1 = "dimension." + namespace + "." + path;
-        String translated1 = I18n.format(key1);
-        if (!translated1.equals(key1)) return translated1;
-
-        // Pattern 2: dimension.<path> (vanilla-style)
-        String key2 = "dimension." + path;
-        String translated2 = I18n.format(key2);
-        if (!translated2.equals(key2)) return translated2;
-
-        // Pattern 3: <namespace>.dimension.<path> (alternate modded)
-        String key3 = namespace + ".dimension." + path;
-        String translated3 = I18n.format(key3);
-        if (!translated3.equals(key3)) return translated3;
-
-        // Pattern 4: dimension.<namespace>:<path>
-        String key4 = "dimension." + dimName;
-        String translated4 = I18n.format(key4);
-        if (!translated4.equals(key4)) return translated4;
-
-        // No translation found - return raw name so user knows what key to add
-        return dimName;
     }
 
     private void drawRightPanel(int mouseX, int mouseY, float partialTicks) {
@@ -711,7 +428,6 @@ public class GuiMobTracker extends GuiScreen {
         retryButtonVisible = false;
 
         // Clear tooltip data
-        tooltipBiomes = null;
         showDimensionUnknownTooltip = false;
 
         String sep = I18n.format("gui.mobtracker.separator");
@@ -729,12 +445,16 @@ public class GuiMobTracker extends GuiScreen {
 
         // preview: up to a quarter of panel height, slowly rotating (full rotation every 10s)
         int previewSizeLocal = Math.min(textW, panelH / 4);
-        int previewX = textX + (textW - previewSizeLocal) / 2;
-        int previewY = textY;
-        int previewSize = previewSizeLocal;
+        this.previewX = textX + (textW - previewSizeLocal) / 2;
+        this.previewY = textY;
+        this.previewSize = previewSizeLocal;
         float previewRotationY = (System.currentTimeMillis() % 10000L) / 10000.0f * 360.0f;
 
-        drawMobPreview(selected, previewX, previewY, previewSize, previewRotationY);
+        Entity entity = analyzer.getEntityInstance(selected);
+        if (previewModal == null || !previewModal.isVisible()) {
+            // If preview modal is open, do not draw preview in panel to avoid overlap
+            GuiDrawingUtils.drawMobPreview(selected, entity, previewX, previewY, previewSize, previewRotationY);
+        }
 
         textY += previewSize + 16;
 
@@ -810,13 +530,11 @@ public class GuiMobTracker extends GuiScreen {
         if (spawnConditions == null) {
             textY += 10;
 
-            if (analysisCrashed) {
-                textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.analysisCrashed"), textX, textY, 12, textW, 0xFFAAAA);
-                textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.analysisCrashedHint"), textX, textY, 12, textW, 0xAAAAAA);
-            } else {
-                textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.cannotSpawnNaturally"), textX, textY, 12, textW, 0xFFAAAA);
-                textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.cannotSpawnNaturallyHint"), textX, textY, 12, textW, 0xAAAAAA);
-            }
+            String line1 = analysisCrashed ? "gui.mobtracker.analysisCrashed" : "gui.mobtracker.cannotSpawnNaturally";
+            String line2 = analysisCrashed ? "gui.mobtracker.analysisCrashedHint" : "gui.mobtracker.cannotSpawnNaturallyHint";
+
+            textY = drawWrappedString(fontRenderer, I18n.format(line1), textX, textY, 12, textW, 0xFFAAAA);
+            textY = drawWrappedString(fontRenderer, I18n.format(line2), textX, textY, 12, textW, 0xAAAAAA);
 
             return;
         }
@@ -839,7 +557,7 @@ public class GuiMobTracker extends GuiScreen {
             if (spawnConditions.groundBlocks != null) {
                 // Limit displayed ground blocks to avoid excessively long lines
                 int maxGroundBlocksToShow = 20;
-                List<String> translatedGroundBlocksList = spawnConditions.groundBlocks.stream().map(this::translateBlockName).collect(Collectors.toList());
+                List<String> translatedGroundBlocksList = spawnConditions.groundBlocks.stream().map(TranslationUtils::translateBlockName).collect(Collectors.toList());
                 List<String> groundBlocksList = new ArrayList<>(new LinkedHashSet<>(translatedGroundBlocksList));  // Deduplicate
                 if (groundBlocksList.size() > maxGroundBlocksToShow) {
                     groundBlocksList = groundBlocksList.subList(0, maxGroundBlocksToShow);
@@ -920,7 +638,7 @@ public class GuiMobTracker extends GuiScreen {
         String dimDisplay;
         boolean isDimensionUnknown = false;
         if (spawnConditions.dimension != null) {
-            String translatedName = translateDimensionName(spawnConditions.dimension);
+            String translatedName = TranslationUtils.translateDimensionName(spawnConditions.dimension);
             if (spawnConditions.dimensionId != Integer.MIN_VALUE) {
                 dimDisplay = spawnConditions.dimensionId + " (" + translatedName + ")";
             } else {
@@ -959,7 +677,7 @@ public class GuiMobTracker extends GuiScreen {
         } else if (isAnyBiome) {
             biomesLabel = I18n.format("gui.mobtracker.biomes.any");
         } else if (uniqueBiomesCount == 1) {
-            biomesLabel = I18n.format("gui.mobtracker.biomes", translateBiomeName(uniqueBiomes.get(0)));
+            biomesLabel = I18n.format("gui.mobtracker.biomes", TranslationUtils.translateBiomeName(uniqueBiomes.get(0)));
         } else {
             biomesLabel = I18n.format("gui.mobtracker.biomes", uniqueBiomesCount);
         }
@@ -976,6 +694,7 @@ public class GuiMobTracker extends GuiScreen {
         }
 
         // Store biome tooltip data for later rendering (after buttons are drawn)
+        biomeTooltipWidget.clear();
         if (uniqueBiomesCount > 1) {
             // Sort biomes: minecraft: first, then alphabetically by localized name
             List<String> sortedBiomes = new ArrayList<>(uniqueBiomes);
@@ -984,102 +703,32 @@ public class GuiMobTracker extends GuiScreen {
                 boolean bMinecraft = b.startsWith("minecraft:");
                 if (aMinecraft != bMinecraft) return aMinecraft ? -1 : 1;
 
-                return translateBiomeName(a).compareToIgnoreCase(translateBiomeName(b));
+                return TranslationUtils.translateBiomeName(a).compareToIgnoreCase(TranslationUtils.translateBiomeName(b));
             });
 
             // Remove REID warning biome if present
             sortedBiomes = sortedBiomes.stream().filter(b -> !b.contains("jeid:error_biome")).collect(Collectors.toList());
 
             // Translate biome names for display
-            tooltipBiomes = sortedBiomes.stream().map(this::translateBiomeName).collect(Collectors.toList());
+            List<String> translatedBiomes = sortedBiomes.stream().map(TranslationUtils::translateBiomeName).collect(Collectors.toList());
 
             // Deduplicate biomes for tooltip
-            tooltipBiomes = new ArrayList<>(new LinkedHashSet<>(tooltipBiomes));
+            translatedBiomes = new ArrayList<>(new LinkedHashSet<>(translatedBiomes));
 
-            tooltipBiomesLabelX = condsX;
-            tooltipBiomesLabelY = biomesLabelY;
-            tooltipBiomesLabelW = fontRenderer.getStringWidth(biomesLabel);
+            biomeTooltipWidget.setData(translatedBiomes, condsX, biomesLabelY, fontRenderer.getStringWidth(biomesLabel));
+            biomeTooltipWidget.updateScreenSize(width, height);
         }
     }
 
-    private void drawBiomeTooltip(int mouseX, int mouseY) {
-        if (tooltipBiomes == null || tooltipBiomes.isEmpty()) return;
+    private void drawPreviewTooltip(int mouseX, int mouseY) {
+        if (selected == null || previewSize <= 0) return;
+        if (previewModal != null && previewModal.isVisible()) return;
 
-        boolean showTooltip = mouseX >= tooltipBiomesLabelX && mouseX <= tooltipBiomesLabelX + tooltipBiomesLabelW &&
-            mouseY >= tooltipBiomesLabelY && mouseY <= tooltipBiomesLabelY + 12;
+        boolean showTooltip = mouseX >= previewX && mouseX <= previewX + previewSize &&
+            mouseY >= previewY && mouseY <= previewY + previewSize;
         if (!showTooltip) return;
 
-        int leftWidth = Math.min(width / 2, 250);
-        int panelH = height - 40;
-
-        // Screen edge padding (5% of height)
-        int edgePadding = panelH / 20;
-
-        // Calculate multi-column layout to show all biomes
-        int lineHeight = 10;
-        int columnPadding = 8;
-        int availableHeight = height - edgePadding * 2;
-        int maxLinesPerColumn = Math.max(1, availableHeight / lineHeight);
-
-        // Calculate how many columns we need
-        int totalBiomes = tooltipBiomes.size();
-        int numColumns = (int) Math.ceil((double) totalBiomes / maxLinesPerColumn);
-
-        // Calculate column widths based on content
-        List<Integer> columnWidths = new ArrayList<>();
-        for (int col = 0; col < numColumns; col++) {
-            int startIdx = col * maxLinesPerColumn;
-            int endIdx = Math.min(startIdx + maxLinesPerColumn, totalBiomes);
-            int maxWidth = 0;
-            for (int i = startIdx; i < endIdx; i++) {
-                int w = fontRenderer.getStringWidth(tooltipBiomes.get(i));
-                if (w > maxWidth) maxWidth = w;
-            }
-            columnWidths.add(maxWidth);
-        }
-
-        // Calculate total tooltip dimensions
-        int tooltipW = columnWidths.stream().mapToInt(Integer::intValue).sum() + columnPadding * (numColumns + 1);
-        int linesInTooltip = Math.min(totalBiomes, maxLinesPerColumn);
-        int tooltipH = linesInTooltip * lineHeight + 6;
-
-        // Clamp tooltip width to screen width
-        int maxTooltipW = width - 8;
-        if (tooltipW > maxTooltipW) tooltipW = maxTooltipW;
-
-        // Position tooltip: prefer top-left of cursor, then try other positions if it overflows
-        int boxX = mouseX - tooltipW - 12;
-        if (boxX < edgePadding) {
-            boxX = mouseX + 12;
-            if (boxX + tooltipW > width - edgePadding) boxX = edgePadding;
-        }
-
-        // Position vertically: prefer above cursor, then below if it overflows
-        int boxY = mouseY - tooltipH - 12;
-        if (boxY < edgePadding) {
-            boxY = mouseY + 12;
-            if (boxY + tooltipH > height - edgePadding) boxY = edgePadding;
-        }
-
-        GlStateManager.pushMatrix();
-        GlStateManager.translate(0.0F, 0.0F, 400.0F); // ensure tooltip is on top
-
-        // Draw border and background
-        drawRect(boxX - 1, boxY - 1, boxX + tooltipW + 1, boxY + tooltipH + 1, 0xFF505050);
-        drawRect(boxX, boxY, boxX + tooltipW, boxY + tooltipH, 0xF0100010);
-
-        // Draw biomes in columns
-        int xOffset = boxX + columnPadding;
-        for (int col = 0; col < numColumns; col++) {
-            int startIdx = col * maxLinesPerColumn;
-            int endIdx = Math.min(startIdx + maxLinesPerColumn, totalBiomes);
-            for (int i = startIdx; i < endIdx; i++) {
-                int row = i - startIdx;
-                fontRenderer.drawString(tooltipBiomes.get(i), xOffset, boxY + 3 + row * lineHeight, 0xDDDDDD);
-            }
-            if (col < columnWidths.size()) xOffset += columnWidths.get(col) + columnPadding;
-        }
-        GlStateManager.popMatrix();
+        drawHoveringText(Collections.singletonList(I18n.format("gui.mobtracker.clickToEnlarge")), mouseX, mouseY);
     }
 
     private void drawDimensionTooltip(int mouseX, int mouseY) {
@@ -1096,73 +745,6 @@ public class GuiMobTracker extends GuiScreen {
         drawHoveringText(Collections.singletonList(tooltipText), mouseX, mouseY);
     }
 
-    private void drawMobPreview(ResourceLocation id, int x, int y, int size, float rotationY) {
-        Entity entity = analyzer.getEntityInstance(id);
-        if (entity == null || size <= 0) return;
-
-        // Draw background with border
-        drawRect(x - 1, y - 1, x + size + 1, y + size + 1, entityBorderColor);
-        drawRect(x, y, x + size, y + size, entityBgColor);
-
-        // Calculate scale based on entity's visual model size (via shadow size or collision box)
-        // FIXME: both render scale methods have issues with certain entities, find a middle ground?
-        // float scale = EntityRenderHelper.getVisualRenderScale(entity, (float) size);  // issues with tall/big entities
-        // float scale = EntityRenderHelper.getShadowBasedRenderScale(entity, (float) size);    // issues with wide entities
-        float maxDimension = Math.max(1.0f, Math.max(entity.height, entity.width));
-        float scale = size / maxDimension / 1.5f;
-
-        // Center position of the preview box
-        int centerX = x + size / 2;
-        int centerY = y + size / 2;
-
-        GlStateManager.pushMatrix();
-        GlStateManager.color(1f, 1f, 1f);
-        GlStateManager.enableRescaleNormal();
-        GlStateManager.enableColorMaterial();
-        GlStateManager.pushMatrix();
-        GlStateManager.translate(centerX, centerY, 50F);
-        GlStateManager.scale(-scale, scale, scale);
-        GlStateManager.rotate(180F, 0.0F, 0.0F, 1.0F);
-        GlStateManager.rotate(135F, 0.0F, 1.0F, 0.0F);
-        RenderHelper.enableStandardItemLighting();
-        GlStateManager.rotate(-135F, 0.0F, 1.0F, 0.0F);
-        GlStateManager.rotate(20F, 1.0F, 0.0F, 0.0F); // isometric tilt
-        GlStateManager.rotate(rotationY, 0.0F, 1.0F, 0.0F);
-
-        // Translate entity so its bounding box center aligns with the preview center
-        // Entity origin (0,0,0) is at their feet, so we shift up by half their height
-        float verticalOffset = entity.height / 2.0f;
-        // Also apply entity's intrinsic Y offset (e.g., for hanging entities)
-        verticalOffset += (float) entity.getYOffset();
-        GlStateManager.translate(0.0F, -verticalOffset, 0.0F);
-        Minecraft.getMinecraft().getRenderManager().playerViewY = 180F;
-
-        try {
-            // FIXME: Gaia 3 seems to throw FML errors, which are logged deepder. It doesn't throw, so we cannot catch them here.
-            if (!entitiesWithRenderErrors.contains(id)) {
-                Minecraft.getMinecraft().getRenderManager().renderEntity(entity, 0.0D, 0.0D, 0.0D, 0.0F, 1.0F, false);
-            }
-        } catch (Throwable t) {
-            if (!entitiesWithRenderErrors.contains(id)) {
-                entitiesWithRenderErrors.add(id);
-                SuperMobTracker.LOGGER.warn("Failed to render entity preview for " + id + ": " + t.getMessage());
-            }
-        }
-
-        GlStateManager.popMatrix();
-        RenderHelper.disableStandardItemLighting();
-
-        GlStateManager.disableRescaleNormal();
-        GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
-        GlStateManager.disableLighting();
-        GlStateManager.popMatrix();
-        GlStateManager.enableDepth();
-        GlStateManager.disableColorMaterial();
-        GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
-        GlStateManager.disableTexture2D();
-        GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit);
-    }
-
     /**
      * Formats the entity name based on settings.
      * @param id Entity ResourceLocation
@@ -1170,20 +752,7 @@ public class GuiMobTracker extends GuiScreen {
      * @return Formatted entity name
      */
     private String formatEntityName(ResourceLocation id, boolean applyI18n) {
-        if (id == null) return "";
-        if (!applyI18n) return id.toString();
-
-        Entity entity = analyzer.getEntityInstance(id);
-        if (entity != null) return entity.getDisplayName().getUnformattedText();
-
-        // Fallback for modded entities missing translation mapping
-        String[] parts = id.toString().split(":" , 2);
-        String domain = parts.length > 0 ? parts[0] : "minecraft";
-        String path = parts.length > 1 ? parts[1] : parts[0];
-        String altKey = "entity." + domain + "." + path + ".name";
-        if (I18n.hasKey(altKey)) return I18n.format(altKey);
-
-        return id.toString();
+        return TranslationUtils.formatEntityName(id, analyzer.getEntityInstance(id), applyI18n);
     }
 
     class MobListWidget {
@@ -1377,10 +946,10 @@ public class GuiMobTracker extends GuiScreen {
 
         public boolean handleKey(int keyCode) {
             int direction = 0;
-            if (keyCode == 200) direction = -1; // up
-            else if (keyCode == 208) direction = 1; // down
-            else if (keyCode == 201) direction = -10; // page up
-            else if (keyCode == 209) direction = 10; // page down
+            if (keyCode == Keyboard.KEY_UP) direction = -1; // up
+            else if (keyCode == Keyboard.KEY_DOWN) direction = 1; // down
+            else if (keyCode == Keyboard.KEY_PRIOR) direction = -10; // page up
+            else if (keyCode == Keyboard.KEY_NEXT) direction = 10; // page down
             else return false;
             ensureI18nSync();
 
@@ -1437,17 +1006,17 @@ public class GuiMobTracker extends GuiScreen {
                 ModConfig.FilterReason reason = ModConfig.getFilterReason(entry.id.toString());
 
                 if (tracked) {
-                    drawStar(iconCenterX, iconCenterY, iconRadius, 0xFFFFD700);
+                    GuiDrawingUtils.drawStar(iconCenterX, iconCenterY, iconRadius, 0xFFFFD700);
 
                     if (reason != ModConfig.FilterReason.NONE) {        // Draw red X over the star
                         float bx1 = iconCenterX - iconRadius * 0.7f;
                         float by1 = iconCenterY - iconRadius * 0.7f;
                         float bx2 = iconCenterX + iconRadius * 0.7f;
                         float by2 = iconCenterY + iconRadius * 0.7f;
-                        drawRedX(bx1, by1, bx2, by2, 3.0f, 0xFFFF4444);
+                        GuiDrawingUtils.drawRedX(bx1, by1, bx2, by2, 3.0f, 0xFFFF4444);
                     }
                 } else if (reason != ModConfig.FilterReason.NONE) {     // Draw stop sign for filtered entities
-                    drawStopSign(iconCenterX, iconCenterY, iconRadius + 0.5f, 0xE0FF4444);
+                    GuiDrawingUtils.drawStopSign(iconCenterX, iconCenterY, iconRadius + 0.5f, 0xE0FF4444);
                 }
 
                 // Tooltip for stop sign or red X if hovered
@@ -1460,7 +1029,7 @@ public class GuiMobTracker extends GuiScreen {
                     if (mouseX >= iconLeft && mouseX <= iconRight && mouseY >= iconTop && mouseY <= iconBottom) {
                         String tip = reason == ModConfig.FilterReason.BLACKLISTED
                             ? I18n.format("gui.mobtracker.blacklisted")
-                            : I18n.format("gui.mobtracker.filtered");
+                            : I18n.format("gui.mobtracker.whitelisted");
                         blacklistTooltipX = mouseX;
                         blacklistTooltipY = mouseY;
                         blacklistTooltipText = tip;

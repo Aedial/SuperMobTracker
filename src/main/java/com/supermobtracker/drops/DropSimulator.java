@@ -19,6 +19,7 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.fml.common.FMLCommonHandler;
@@ -27,7 +28,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.loot.LootContext;
 import net.minecraft.world.storage.loot.LootTable;
@@ -41,6 +41,10 @@ import com.mojang.authlib.GameProfile;
 
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.config.ModConfig;
+import com.supermobtracker.network.NetworkHandler;
+import com.supermobtracker.network.PacketDropSimulationProgress;
+import com.supermobtracker.network.PacketDropSimulationResult;
+import com.supermobtracker.network.PacketRequestDropSimulation;
 import com.supermobtracker.util.LogMuter;
 
 
@@ -59,6 +63,15 @@ public class DropSimulator {
     private static ResourceLocation activeEntityId = null;
     private static DropSimulationResult lastResult = null;
 
+    // Track if we're waiting for a server-side simulation result
+    private static boolean waitingForServerResult = false;
+    private static ResourceLocation serverRequestEntityId = null;
+    private static long serverRequestStartTime = 0;
+
+    // Timeout for server requests (10 seconds - if server doesn't respond, mod is likely not installed)
+    // 4s => 80s for 20 progress updates
+    private static final long SERVER_REQUEST_TIMEOUT_MS = 4000;
+
     // Reflection cache for dropLoot method
     private static Method dropLootMethod = null;
     private static boolean dropLootMethodSearched = false;
@@ -72,7 +85,6 @@ public class DropSimulator {
     private static boolean attackingPlayerFieldSearched = false;
 
     // Reflection cache for SpellBook check
-    private static boolean isWizardryLoaded = false;
     private static boolean isSpellBookChecked = false;
     private static Class <?> spellBookClass = null;
 
@@ -80,8 +92,16 @@ public class DropSimulator {
     private static EntityPlayer fakePlayer = null;
 
     /**
+     * Check if we're in a multiplayer environment (no local server available).
+     */
+    public static boolean isMultiplayer() {
+        return FMLCommonHandler.instance().getMinecraftServerInstance() == null;
+    }
+
+    /**
      * Start or get an existing simulation for the given entity.
      * Only one simulation/result is kept at a time to minimize memory usage.
+     * In multiplayer, sends a request to the server to run the simulation.
      * @param entityId The entity to simulate kills for
      * @return The simulation task (may be in progress or completed)
      */
@@ -109,6 +129,19 @@ public class DropSimulator {
         SimulationTask task = new SimulationTask(entityId);
         activeTask = task;
 
+        // In multiplayer, send request to server instead of running locally
+        if (isMultiplayer()) {
+            waitingForServerResult = true;
+            serverRequestEntityId = entityId;
+            serverRequestStartTime = System.currentTimeMillis();
+            NetworkHandler.INSTANCE.sendToServer(
+                new PacketRequestDropSimulation(entityId, ModConfig.clientDropSimulationCount)
+            );
+
+            return task;
+        }
+
+        // Single-player: run simulation locally in background thread
         Thread simulationThread = new Thread(() -> {
             try {
                 task.run();
@@ -127,9 +160,27 @@ public class DropSimulator {
 
     /**
      * Check if a simulation is in progress for the given entity.
+     * Also checks for server request timeout in multiplayer.
      */
     public static synchronized boolean isSimulationInProgress(ResourceLocation entityId) {
-        return activeTask != null && entityId.equals(activeEntityId) && !activeTask.completed;
+        if (activeTask == null || !entityId.equals(activeEntityId) || activeTask.completed) return false;
+
+        // Check for server request timeout in multiplayer
+        if (waitingForServerResult && serverRequestEntityId != null && serverRequestEntityId.equals(entityId)) {
+            long elapsed = System.currentTimeMillis() - serverRequestStartTime;
+
+            if (elapsed > SERVER_REQUEST_TIMEOUT_MS) {
+                // Timeout - server likely doesn't have the mod installed
+                activeTask.errorMessage = "gui.mobtracker.drops.serverModNotInstalled";
+                activeTask.completed = true;
+                waitingForServerResult = false;
+                serverRequestEntityId = null;
+
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -157,6 +208,260 @@ public class DropSimulator {
         activeTask = null;
         activeEntityId = null;
         lastResult = null;
+        waitingForServerResult = false;
+        serverRequestEntityId = null;
+        serverRequestStartTime = 0;
+    }
+
+    // ==================== Server-Side Simulation Support ====================
+
+    /**
+     * Handle a progress update received from the server.
+     * Called on the client when PacketDropSimulationProgress is received.
+     */
+    public static synchronized void handleServerProgress(PacketDropSimulationProgress packet) {
+        ResourceLocation entityId = packet.getEntityId();
+
+        // Ignore progress for entities we're no longer interested in
+        if (!entityId.equals(activeEntityId) || !entityId.equals(serverRequestEntityId)) return;
+
+        // Update the active task's progress
+        if (activeTask != null && !activeTask.completed) {
+            activeTask.progress.set(packet.getProgress());
+            activeTask.total = packet.getTotal();
+        }
+    }
+
+    /**
+     * Handle a simulation result received from the server.
+     * Called on the client when PacketDropSimulationResult is received.
+     */
+    public static synchronized void handleServerResult(PacketDropSimulationResult packet) {
+        ResourceLocation entityId = packet.getEntityId();
+
+        // Ignore results for entities we're no longer interested in
+        if (!entityId.equals(activeEntityId) || !entityId.equals(serverRequestEntityId)) return;
+
+        waitingForServerResult = false;
+        serverRequestEntityId = null;
+
+        if (packet.hasError()) {
+            // Handle error from server
+            if (activeTask != null) {
+                activeTask.errorMessage = packet.getErrorMessage();
+                activeTask.completed = true;
+            }
+
+            return;
+        }
+
+        // Convert packet to result and store it
+        DropSimulationResult result = packet.toResult();
+        if (result != null) {
+            lastResult = result;
+
+            if (activeTask != null) {
+                activeTask.result = result;
+                activeTask.completed = true;
+                activeTask.progress.set(result.simulationCount);
+            }
+        }
+    }
+
+    /**
+     * Run a simulation on the server side for a specific player.
+     * Called when the server receives PacketRequestDropSimulation.
+     * Returns a task that will send results back to the player when complete.
+     */
+    public static ServerSimulationTask runServerSimulation(ResourceLocation entityId, int simulationCount, EntityPlayerMP player) {
+        ServerSimulationTask task = new ServerSimulationTask(entityId, simulationCount, player);
+
+        // Run in a separate thread to avoid blocking the server tick
+        Thread simulationThread = new Thread(() -> {
+            task.run();
+        }, "DropSimulator-Server-" + entityId + "-" + player.getName());
+        simulationThread.setDaemon(true);
+        simulationThread.start();
+
+        return task;
+    }
+
+    /**
+     * Represents a server-side simulation task for a specific player.
+     */
+    public static class ServerSimulationTask {
+        public final ResourceLocation entityId;
+        public final int simulationCount;
+        public final EntityPlayerMP player;
+
+        ServerSimulationTask(ResourceLocation entityId, int simulationCount, EntityPlayerMP player) {
+            this.entityId = entityId;
+            this.simulationCount = simulationCount;
+            this.player = player;
+        }
+
+        void run() {
+            LogMuter.muteLoggers();
+            try {
+                runSimulation();
+            } finally {
+                LogMuter.restoreLoggers();
+            }
+        }
+
+        private void runSimulation() {
+            Method dropLoot = getDropLootMethod();
+            if (dropLoot == null) {
+                sendError("gui.mobtracker.drops.dropLootAccessFailed");
+
+                return;
+            }
+
+            WorldServer realWorld = player.getServerWorld();
+            if (realWorld == null || realWorld.getLootTableManager() == null) {
+                sendError("gui.mobtracker.drops.worldAccessFailed");
+
+                return;
+            }
+
+            EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
+            if (entry == null || !EntityLiving.class.isAssignableFrom(entry.getEntityClass())) {
+                sendError("gui.mobtracker.drops.invalidEntity");
+
+                return;
+            }
+
+            // Check if entity is unstable for simulation
+            if (ModConfig.isUnstableSimulationEntity(entityId.toString())) {
+                sendError("gui.mobtracker.drops.unstableSimulation");
+
+                return;
+            }
+
+            // Create fake world for simulation
+            DropSimulationWorld simWorld;
+            try {
+                simWorld = DropSimulationWorld.createInstance(realWorld);
+            } catch (Exception e) {
+                SuperMobTracker.LOGGER.error("Failed to create simulation world for " + entityId, e);
+                sendError("gui.mobtracker.drops.worldCreationFailed");
+
+                return;
+            }
+
+            // Create fake player for loot conditions
+            EntityPlayer fakePlayer = FakePlayerFactory.get(
+                simWorld,
+                new GameProfile(FAKE_PLAYER_UUID, "[SuperMobTracker]")
+            );
+            fakePlayer.capabilities.isCreativeMode = true;
+            DamageSource playerDamage = DamageSource.causePlayerDamage(fakePlayer);
+
+            Map<DropKey, DropAccumulator> dropMap = new HashMap<>();
+
+            // Pre-test entity creation
+            try {
+                Entity testEntity = EntityList.createEntityByIDFromName(entry.getRegistryName(), simWorld);
+                if (!(testEntity instanceof EntityLiving)) {
+                    sendError("gui.mobtracker.drops.entityNotLiving");
+
+                    return;
+                }
+            } catch (Exception e) {
+                SuperMobTracker.LOGGER.warn("Cannot simulate drops for " + entityId + " - entity construction failed", e);
+                sendError("gui.mobtracker.drops.entityConstructionFailed");
+
+                return;
+            }
+
+            try {
+                // Send progress back to client roughly every 5% of completion
+                int progressInterval = Math.max(1, simulationCount / 20);
+
+                for (int i = 0; i < simulationCount; i++) {
+                    // Send progress update periodically
+                    if (i % progressInterval == 0) {
+                        NetworkHandler.INSTANCE.sendTo(
+                            new PacketDropSimulationProgress(entityId, i, simulationCount),
+                            player
+                        );
+                    }
+
+                    Entity rawEntity = EntityList.createEntityByIDFromName(entry.getRegistryName(), simWorld);
+                    if (!(rawEntity instanceof EntityLiving)) continue;
+
+                    EntityLiving entity = (EntityLiving) rawEntity;
+
+                    // Set attackingPlayer field
+                    Field attackingPlayerField = getAttackingPlayerField();
+                    if (attackingPlayerField != null) {
+                        try {
+                            attackingPlayerField.set(entity, fakePlayer);
+                        } catch (IllegalAccessException e) {
+                            // Ignore
+                        }
+                    }
+
+                    simWorld.clearDrops();
+                    dropLoot.invoke(entity, true, 0, playerDamage);
+
+                    List<ItemStack> baseDrops = simWorld.collectAndClearDrops();
+
+                    List<EntityItem> entityItems = new ArrayList<>();
+                    for (ItemStack stack : baseDrops) {
+                        if (!stack.isEmpty()) {
+                            EntityItem entityItem = new EntityItem(simWorld, 0, 0, 0, stack.copy());
+                            entityItems.add(entityItem);
+                        }
+                    }
+
+                    LivingDropsEvent event = new LivingDropsEvent(entity, playerDamage, entityItems, 0, true);
+                    MinecraftForge.EVENT_BUS.post(event);
+
+                    List<ItemStack> spawnedDuringEvent = simWorld.collectAndClearDrops();
+
+                    if (!event.isCanceled()) {
+                        List<EntityItem> eventDrops = new ArrayList<>(event.getDrops());
+                        for (EntityItem entityItem : eventDrops) {
+                            ItemStack stack = entityItem.getItem();
+                            if (!stack.isEmpty()) {
+                                DropKey key = new DropKey(stack);
+                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack)).addDrop(stack.getCount());
+                            }
+                        }
+
+                        for (ItemStack stack : spawnedDuringEvent) {
+                            if (!stack.isEmpty()) {
+                                DropKey key = new DropKey(stack);
+                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack)).addDrop(stack.getCount());
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                SuperMobTracker.LOGGER.warn("Error during server drop simulation for " + entityId, e);
+                sendError("gui.mobtracker.drops.simulationFailed");
+
+                return;
+            }
+
+            // Build result
+            List<DropEntry> entries = new ArrayList<>();
+            for (DropAccumulator acc : dropMap.values()) {
+                entries.add(new DropEntry(acc.representativeStack, acc.totalCount, simulationCount));
+            }
+
+            entries.sort((a, b) -> Double.compare(b.dropsPerKill, a.dropsPerKill));
+
+            DropSimulationResult result = new DropSimulationResult(entityId, entries, simulationCount);
+
+            // Send result back to player
+            NetworkHandler.INSTANCE.sendTo(new PacketDropSimulationResult(result), player);
+        }
+
+        private void sendError(String message) {
+            NetworkHandler.INSTANCE.sendTo(new PacketDropSimulationResult(entityId, message), player);
+        }
     }
 
     /**
@@ -299,7 +604,7 @@ public class DropSimulator {
         private void runSimulation() {
             Method dropLoot = getDropLootMethod();
             if (dropLoot == null) {
-                errorMessage = "Could not access dropLoot method";
+                errorMessage = "gui.mobtracker.drops.dropLootAccessFailed";
                 completed = true;
 
                 return;
@@ -327,7 +632,7 @@ public class DropSimulator {
 
             EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
             if (entry == null || !EntityLiving.class.isAssignableFrom(entry.getEntityClass())) {
-                errorMessage = "Invalid entity";
+                errorMessage = "gui.mobtracker.drops.invalidEntity";
                 completed = true;
 
                 return;
@@ -335,7 +640,7 @@ public class DropSimulator {
 
             // Check if entity is unstable for simulation (corrupts global state)
             if (ModConfig.isUnstableSimulationEntity(entityId.toString())) {
-                errorMessage = I18n.translateToLocal("gui.mobtracker.drops.unstableSimulation");
+                errorMessage = "gui.mobtracker.drops.unstableSimulation";
                 completed = true;
 
                 return;
@@ -347,22 +652,13 @@ public class DropSimulator {
                 simWorld = DropSimulationWorld.createInstance(realWorld);
             } catch (Exception e) {
                 SuperMobTracker.LOGGER.error("Failed to create simulation world for " + entityId, e);
-                errorMessage = "Failed to create simulation world";
+                errorMessage = "gui.mobtracker.drops.worldCreationFailed";
                 completed = true;
 
                 return;
             }
 
-            // Nullify DragonFightManager to prevent Ender Dragon from registering with
-            // the real fight manager. This prevents dragon respawn issues.
-            simWorld.nullifyDragonFightManager();
-
-            try {
-                runSimulationLoop(simWorld, realWorld, entry, dropLoot);
-            } finally {
-                // Always restore the DragonFightManager
-                simWorld.restoreDragonFightManager();
-            }
+            runSimulationLoop(simWorld, realWorld, entry, dropLoot);
         }
 
         /**
@@ -389,14 +685,14 @@ public class DropSimulator {
             try {
                 testEntity = EntityList.createEntityByIDFromName(entry.getRegistryName(), simWorld);
                 if (!(testEntity instanceof EntityLiving)) {
-                    errorMessage = I18n.translateToLocal("gui.mobtracker.drops.entityNotLiving");
+                    errorMessage = "gui.mobtracker.drops.entityNotLiving";
                     completed = true;
 
                     return;
                 }
             } catch (Exception e) {
                 SuperMobTracker.LOGGER.warn("Cannot simulate drops for " + entityId + " - entity construction failed", e);
-                errorMessage = I18n.translateToLocal("gui.mobtracker.drops.entityConstructionFailed");
+                errorMessage = "gui.mobtracker.drops.entityConstructionFailed";
                 completed = true;
 
                 return;
@@ -476,7 +772,7 @@ public class DropSimulator {
                     // If we get here after the pre-test passed, something else is wrong
                     // Log once and abort
                     SuperMobTracker.LOGGER.warn("Error during drop simulation for " + entityId, e);
-                    errorMessage = I18n.translateToLocal("gui.mobtracker.drops.simulationFailed");
+                    errorMessage = "gui.mobtracker.drops.simulationFailed";
                     completed = true;
 
                     return;
@@ -500,18 +796,24 @@ public class DropSimulator {
     }
 
     private static boolean isSpellBook(Item item) {
-        isWizardryLoaded = Loader.isModLoaded("ebwizardry");
-        if (!isWizardryLoaded) return false;
+        if (isSpellBookChecked) {
+            if (spellBookClass == null) return false;
 
-        if (!isSpellBookChecked) {
-            try {
-                spellBookClass = Class.forName("electroblob.wizardry.item.ItemSpellBook");
-                isSpellBookChecked = true;
-            } catch (ClassNotFoundException e) {
-                isSpellBookChecked = true;
-                SuperMobTracker.LOGGER.warn("Wizardry mod detected but ItemSpellBook class not found", e);
-                return false;
-            }
+            return spellBookClass.isInstance(item);
+        }
+
+        if (!Loader.isModLoaded("ebwizardry")) {
+            isSpellBookChecked = true;
+            return false;
+        }
+
+        try {
+            spellBookClass = Class.forName("electroblob.wizardry.item.ItemSpellBook");
+            isSpellBookChecked = true;
+        } catch (ClassNotFoundException e) {
+            isSpellBookChecked = true;
+            SuperMobTracker.LOGGER.warn("Wizardry mod detected but ItemSpellBook class not found", e);
+            return false;
         }
 
         if (spellBookClass == null) return false;
@@ -614,7 +916,7 @@ public class DropSimulator {
         public final int simulationCount;
         public final double dropsPerKill;
 
-        DropEntry(ItemStack stack, int totalCount, int simulationCount) {
+        public DropEntry(ItemStack stack, int totalCount, int simulationCount) {
             this.stack = stack;
             this.totalCount = totalCount;
             this.simulationCount = simulationCount;
@@ -665,7 +967,7 @@ public class DropSimulator {
         public final List<DropEntry> drops;
         public final int simulationCount;
 
-        DropSimulationResult(ResourceLocation entityId, List<DropEntry> drops, int simulationCount) {
+        public DropSimulationResult(ResourceLocation entityId, List<DropEntry> drops, int simulationCount) {
             this.entityId = entityId;
             this.drops = drops;
             this.simulationCount = simulationCount;
@@ -758,9 +1060,6 @@ public class DropSimulator {
      * Should be called after a batch of profileEntity calls is complete.
      */
     public static void clearProfileCache() {
-        // Restore DragonFightManager before clearing cache
-        if (cachedProfileWorld != null) cachedProfileWorld.restoreDragonFightManager();
-
         cachedProfileWorld = null;
         cachedProfilePlayer = null;
         cachedProfileDamage = null;
@@ -812,9 +1111,6 @@ public class DropSimulator {
             try {
                 cachedProfileWorld = DropSimulationWorld.createInstance(realWorld);
                 cachedProfileDimension = dimension;
-
-                // Nullify DragonFightManager to prevent Ender Dragon from registering
-                cachedProfileWorld.nullifyDragonFightManager();
             } catch (Exception e) {
                 SuperMobTracker.LOGGER.error("Failed to create simulation world for " + entityId, e);
                 return new ProfileResult(entityId, ProfileResult.Status.WORLD_CREATION_FAILED,

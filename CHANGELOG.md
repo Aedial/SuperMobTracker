@@ -8,7 +8,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
-## [1.2.2] - 2025-12-24
+## [1.2.3] - 2025-12-23
+### Added
+- Add enlarged entity preview modal when clicking the entity preview in the mob tracker GUI.
+
+## Fixed
+- Prevent the Ender Dragon corruption fix from interfering with real dragon fights (which, in turn, reverted the fix... oh well).
+- Properly fix the drop simulation not working in multiplayer.
+
+
+## [1.2.2] - 2026-01-22
 ### Fixed
 - Fix mod still being marked as client-side only, causing drop simulation to not work on dedicated servers.
 - Fix the world not being retrieved correctly on dedicated servers, causing drop simulation to fail.
@@ -22,9 +31,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 
 ## [1.2.0] - 2025-12-15
-### Fixed
-- Fix config being rewritten every frame.
-
 ### Added
 - Add a modal for mob drops, based on simulated kills:
   - Opens with a button next to the JEI button in the mob details panel.
@@ -33,6 +39,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
   - Shows average drops per kill.
   - Works on pretty much all mobs, except those that initialize their loot tables in special ways (e.g., via summoning event).
 - Add a retry button to re-analyze the spawn conditions for the selected mob, if the initial analysis failed.
+
+### Fixed
+- Fix config being rewritten every frame.
 
 ### Changed
 - Change time of day spawn condition representation to time ranges (e.g., "Day" becomes "06:00-18:00").
