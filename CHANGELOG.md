@@ -7,10 +7,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Keep a Changelog: https://keepachangelog.com/en/1.1.0/
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
+
+## [1.2.2] - 2025-12-24
+### Fixed
+- Fix mod still being marked as client-side only, causing drop simulation to not work on dedicated servers.
+- Fix the world not being retrieved correctly on dedicated servers, causing drop simulation to fail.
+- Try to mitigate Ender Dragon related corruption.
+
+
 ## [1.2.1] - 2025-12-23
 ### Fixed
 - Fix crash on "Auto" GUI scale setting.
 - Fix Wizardry Spell Book detection sometimes causing crashes when the mod is present, due to the duck-typing.
+
 
 ## [1.2.0] - 2025-12-15
 ### Fixed

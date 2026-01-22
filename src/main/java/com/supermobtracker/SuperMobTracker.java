@@ -14,11 +14,17 @@ import com.supermobtracker.IProxy;
 import com.supermobtracker.config.ModConfig;
 
 
-@Mod(modid = SuperMobTracker.MODID, name = SuperMobTracker.NAME, version = SuperMobTracker.VERSION, acceptedMinecraftVersions = "[1.12,1.12.2]", guiFactory = "com.supermobtracker.config.ConfigGuiFactory", clientSideOnly = true)
+@Mod(
+    modid = SuperMobTracker.MODID,
+    name = SuperMobTracker.NAME,
+    version = SuperMobTracker.VERSION,
+    acceptedMinecraftVersions = "[1.12,1.12.2]",
+    guiFactory = "com.supermobtracker.config.ConfigGuiFactory"
+)
 public class SuperMobTracker {
     public static final String MODID = "supermobtracker";
     public static final String NAME = "Super Mob Tracker";
-    public static final String VERSION = "1.2.1";
+    public static final String VERSION = "1.2.2";
 
     public static final Logger LOGGER = LogManager.getLogger(MODID);
 

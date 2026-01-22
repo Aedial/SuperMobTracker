@@ -301,7 +301,7 @@ public class GuiDropsWindow {
         // Draw header
         String title = I18n.format("gui.mobtracker.drops.title", entityName);
         String elidedTitle = font.trimStringToWidth(title, windowW - 16);
-        if (!elidedTitle.equals(title)) elidedTitle += "…";
+        if (!elidedTitle.equals(title)) elidedTitle += "...";
         font.drawString(elidedTitle, windowX + 6, windowY + 6, 0xFFFFFF);
 
         // Draw footer

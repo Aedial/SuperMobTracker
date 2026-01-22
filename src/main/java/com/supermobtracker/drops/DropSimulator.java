@@ -19,11 +19,12 @@ import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraftforge.fml.common.Loader;
 import net.minecraft.item.Item;
+import net.minecraft.server.MinecraftServer;
+import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.fml.common.Loader;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.server.integrated.IntegratedServer;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.translation.I18n;
@@ -305,9 +306,9 @@ public class DropSimulator {
             }
 
             Minecraft mc = Minecraft.getMinecraft();
-            IntegratedServer integratedServer = mc.getIntegratedServer();
-            if (integratedServer == null) {
-                // Multiplayer - can't simulate drops (no access to loot tables)
+            MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
+            if (server == null) {
+                // No server available - can't simulate drops
                 errorMessage = "gui.mobtracker.drops.serverSideOnly";
                 completed = true;
 
@@ -316,7 +317,7 @@ public class DropSimulator {
 
             // Get the real server world to extract loot table manager
             int dimension = mc.world != null ? mc.world.provider.getDimension() : 0;
-            WorldServer realWorld = integratedServer.getWorld(dimension);
+            WorldServer realWorld = server.getWorld(dimension);
             if (realWorld == null || realWorld.getLootTableManager() == null) {
                 errorMessage = "gui.mobtracker.drops.serverSideOnly";
                 completed = true;
@@ -352,6 +353,22 @@ public class DropSimulator {
                 return;
             }
 
+            // Nullify DragonFightManager to prevent Ender Dragon from registering with
+            // the real fight manager. This prevents dragon respawn issues.
+            simWorld.nullifyDragonFightManager();
+
+            try {
+                runSimulationLoop(simWorld, realWorld, entry, dropLoot);
+            } finally {
+                // Always restore the DragonFightManager
+                simWorld.restoreDragonFightManager();
+            }
+        }
+
+        /**
+         * The main simulation loop, extracted to allow proper try-finally cleanup.
+         */
+        private void runSimulationLoop(DropSimulationWorld simWorld, WorldServer realWorld, EntityEntry entry, Method dropLoot) {
             // Create a fake player for "killed_by_player" loot conditions
             // This makes loot tables with killed_by_player condition work properly
             if (fakePlayer == null) {
@@ -741,6 +758,9 @@ public class DropSimulator {
      * Should be called after a batch of profileEntity calls is complete.
      */
     public static void clearProfileCache() {
+        // Restore DragonFightManager before clearing cache
+        if (cachedProfileWorld != null) cachedProfileWorld.restoreDragonFightManager();
+
         cachedProfileWorld = null;
         cachedProfilePlayer = null;
         cachedProfileDamage = null;
@@ -761,14 +781,14 @@ public class DropSimulator {
         }
 
         Minecraft mc = Minecraft.getMinecraft();
-        IntegratedServer integratedServer = mc.getIntegratedServer();
-        if (integratedServer == null) {
+        MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
+        if (server == null) {
             return new ProfileResult(entityId, ProfileResult.Status.SERVER_SIDE_ONLY,
                 null, "gui.mobtracker.drops.serverSideOnly", System.nanoTime() - startTime);
         }
 
         int dimension = mc.world != null ? mc.world.provider.getDimension() : 0;
-        WorldServer realWorld = integratedServer.getWorld(dimension);
+        WorldServer realWorld = server.getWorld(dimension);
         if (realWorld == null || realWorld.getLootTableManager() == null) {
             return new ProfileResult(entityId, ProfileResult.Status.SERVER_SIDE_ONLY,
                 null, "gui.mobtracker.drops.serverSideOnly", System.nanoTime() - startTime);
@@ -792,6 +812,9 @@ public class DropSimulator {
             try {
                 cachedProfileWorld = DropSimulationWorld.createInstance(realWorld);
                 cachedProfileDimension = dimension;
+
+                // Nullify DragonFightManager to prevent Ender Dragon from registering
+                cachedProfileWorld.nullifyDragonFightManager();
             } catch (Exception e) {
                 SuperMobTracker.LOGGER.error("Failed to create simulation world for " + entityId, e);
                 return new ProfileResult(entityId, ProfileResult.Status.WORLD_CREATION_FAILED,

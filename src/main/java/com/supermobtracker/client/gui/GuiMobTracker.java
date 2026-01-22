@@ -337,8 +337,8 @@ public class GuiMobTracker extends GuiScreen {
     private int drawElidedString(FontRenderer renderer, String text, int x, int y, int lineHeight, int maxWidth, int color) {
         if (y + lineHeight > panelMaxY) return y;
 
-        String elided = renderer.trimStringToWidth(text, maxWidth - renderer.getStringWidth("…"));
-        if (!elided.equals(text)) elided += "…";
+        String elided = renderer.trimStringToWidth(text, maxWidth - renderer.getStringWidth("..."));
+        if (!elided.equals(text)) elided += "...";
 
         renderer.drawString(elided, x, y, color);
 
@@ -843,7 +843,7 @@ public class GuiMobTracker extends GuiScreen {
                 List<String> groundBlocksList = new ArrayList<>(new LinkedHashSet<>(translatedGroundBlocksList));  // Deduplicate
                 if (groundBlocksList.size() > maxGroundBlocksToShow) {
                     groundBlocksList = groundBlocksList.subList(0, maxGroundBlocksToShow);
-                    groundBlocksList.add("…");
+                    groundBlocksList.add("...");
                 }
 
                 String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", groundBlocksList.stream().collect(Collectors.joining(sep)));
@@ -1077,9 +1077,7 @@ public class GuiMobTracker extends GuiScreen {
                 int row = i - startIdx;
                 fontRenderer.drawString(tooltipBiomes.get(i), xOffset, boxY + 3 + row * lineHeight, 0xDDDDDD);
             }
-            if (col < columnWidths.size()) {
-                xOffset += columnWidths.get(col) + columnPadding;
-            }
+            if (col < columnWidths.size()) xOffset += columnWidths.get(col) + columnPadding;
         }
         GlStateManager.popMatrix();
     }
@@ -1427,8 +1425,8 @@ public class GuiMobTracker extends GuiScreen {
                 MobEntry entry = displayList.get(listIndex);
                 String text = entry.displayName;
                 int maxWidth = w - 10;
-                String elided = fontRenderer.trimStringToWidth(text, maxWidth - fontRenderer.getStringWidth("…"));
-                if (!elided.equals(text)) elided += "…";
+                String elided = fontRenderer.trimStringToWidth(text, maxWidth - fontRenderer.getStringWidth("..."));
+                if (!elided.equals(text)) elided += "...";
                 fontRenderer.drawString(elided, x + 4, drawY + 2, isSel ? 0xFFFFA0 : 0xFFFFFF);
 
                 float iconCenterX = x + w - 16;

@@ -25,7 +25,7 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 ## Environment
-- Super Mob Tracer version:
+- Super Mob Tracker version:
 - Minecraft: 1.12.2
 - Forge:
 - Java: 8u__

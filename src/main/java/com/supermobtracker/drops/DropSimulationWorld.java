@@ -25,9 +25,13 @@ import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.end.DragonFightManager;
+import net.minecraft.world.WorldProviderEnd;
 import net.minecraft.world.storage.loot.LootTableManager;
 
 import sun.reflect.ReflectionFactory;
+
+import com.supermobtracker.SuperMobTracker;
 
 
 /**
@@ -42,6 +46,10 @@ public class DropSimulationWorld extends WorldServer {
     private Scoreboard scoreboard;
     private Chunk fakeChunk;
 
+    // Cached reflection objects for DragonFightManager nullification
+    private static Field dragonFightField = null;
+    private static boolean dragonFightFieldSearched = false;
+
     /**
      * Private constructor - use createInstance() instead.
      */
@@ -49,6 +57,35 @@ public class DropSimulationWorld extends WorldServer {
         // This constructor is never actually called - we use ReflectionFactory
         // to create an instance without invoking any constructor
         super(null, null, null, 0, null);
+    }
+
+    /**
+     * Get the dragonFightManager field from WorldProviderEnd via reflection.
+     */
+    private static Field getDragonFightField() {
+        if (dragonFightFieldSearched) return dragonFightField;
+
+        dragonFightFieldSearched = true;
+
+        try {
+            // field_186064_g = dragonFightManager
+            dragonFightField = WorldProviderEnd.class.getDeclaredField("field_186064_g");
+            dragonFightField.setAccessible(true);
+
+            return dragonFightField;
+        } catch (NoSuchFieldException e) {
+            // Try MCP name
+            try {
+                dragonFightField = WorldProviderEnd.class.getDeclaredField("dragonFightManager");
+                dragonFightField.setAccessible(true);
+
+                return dragonFightField;
+            } catch (NoSuchFieldException e2) {
+                SuperMobTracker.LOGGER.warn("Could not find dragonFightManager field - dragon simulation may cause respawn issues");
+
+                return null;
+            }
+        }
     }
 
     /**
@@ -277,5 +314,49 @@ public class DropSimulationWorld extends WorldServer {
     @Override
     public void setEntityState(Entity entityIn, byte state) {
         // Ignore entity state changes - prevents particles and sounds in fake world
+    }
+
+    // === DragonFightManager protection for End dimension ===
+
+    // Store the original DragonFightManager when nullified
+    private DragonFightManager savedDragonFightManager = null;
+    private boolean dragonFightManagerNulled = false;
+
+    /**
+     * Temporarily nullify the DragonFightManager on the world provider to prevent
+     * the Ender Dragon from interacting with the real fight manager during simulation.
+     * Call restoreDragonFightManager() when done.
+     */
+    public void nullifyDragonFightManager() {
+        if (dragonFightManagerNulled || !(this.provider instanceof WorldProviderEnd)) return;
+
+        Field field = getDragonFightField();
+        if (field == null) return;
+
+        try {
+            savedDragonFightManager = (DragonFightManager) field.get(this.provider);
+            field.set(this.provider, null);
+            dragonFightManagerNulled = true;
+        } catch (IllegalAccessException e) {
+            SuperMobTracker.LOGGER.warn("Failed to nullify dragonFightManager", e);
+        }
+    }
+
+    /**
+     * Restore the previously nullified DragonFightManager.
+     */
+    public void restoreDragonFightManager() {
+        if (!dragonFightManagerNulled || !(this.provider instanceof WorldProviderEnd)) return;
+
+        Field field = getDragonFightField();
+        if (field == null) return;
+
+        try {
+            field.set(this.provider, savedDragonFightManager);
+            savedDragonFightManager = null;
+            dragonFightManagerNulled = false;
+        } catch (IllegalAccessException e) {
+            SuperMobTracker.LOGGER.warn("Failed to restore dragonFightManager", e);
+        }
     }
 }
