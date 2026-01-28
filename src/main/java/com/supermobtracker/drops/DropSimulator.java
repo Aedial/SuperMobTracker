@@ -1068,6 +1068,166 @@ public class DropSimulator {
     }
 
     /**
+     * Profile a single entity's drop simulation using a provided WorldServer.
+     * This is a synchronous operation that runs on the calling thread.
+     * Used for server-side batch analysis/profiling in CommandAnalyze.
+     *
+     * @param entityId The entity to profile
+     * @param simulationCount Number of kills to simulate
+     * @param world The WorldServer to use for simulation
+     * @return ProfileResult with status and timing information
+     */
+    public static ProfileResult profileEntityServer(ResourceLocation entityId, int simulationCount, WorldServer world) {
+        LogMuter.muteLoggers();
+        try {
+            return profileEntityServerInternal(entityId, simulationCount, world);
+        } finally {
+            LogMuter.restoreLoggers();
+        }
+    }
+
+    /**
+     * Internal server-side profiling logic.
+     */
+    private static ProfileResult profileEntityServerInternal(ResourceLocation entityId, int simulationCount, WorldServer realWorld) {
+        long startTime = System.nanoTime();
+
+        Method dropLoot = getDropLootMethod();
+        if (dropLoot == null) {
+            return new ProfileResult(entityId, ProfileResult.Status.CRASHED,
+                null, "Could not access dropLoot method", System.nanoTime() - startTime);
+        }
+
+        if (realWorld == null || realWorld.getLootTableManager() == null) {
+            return new ProfileResult(entityId, ProfileResult.Status.WORLD_CREATION_FAILED,
+                null, "World or loot table manager is null", System.nanoTime() - startTime);
+        }
+
+        EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
+        if (entry == null || !EntityLiving.class.isAssignableFrom(entry.getEntityClass())) {
+            return new ProfileResult(entityId, ProfileResult.Status.INVALID_ENTITY,
+                null, "Invalid entity", System.nanoTime() - startTime);
+        }
+
+        if (ModConfig.isUnstableSimulationEntity(entityId.toString())) {
+            return new ProfileResult(entityId, ProfileResult.Status.INVALID_ENTITY,
+                null, "gui.mobtracker.drops.unstableSimulation", System.nanoTime() - startTime);
+        }
+
+        int dimension = realWorld.provider.getDimension();
+
+        // Reuse simulation world and fake player across batch calls for performance
+        if (cachedProfileWorld == null || cachedProfileDimension != dimension) {
+            try {
+                cachedProfileWorld = DropSimulationWorld.createInstance(realWorld);
+                cachedProfileDimension = dimension;
+            } catch (Exception e) {
+                SuperMobTracker.LOGGER.error("Failed to create simulation world for " + entityId, e);
+                return new ProfileResult(entityId, ProfileResult.Status.WORLD_CREATION_FAILED,
+                    null, "Failed to create simulation world: " + e.getMessage(), System.nanoTime() - startTime);
+            }
+
+            cachedProfilePlayer = FakePlayerFactory.get(
+                realWorld,
+                new GameProfile(FAKE_PLAYER_UUID, "[SuperMobTracker]")
+            );
+
+            if (cachedProfilePlayer != null && cachedProfilePlayer.capabilities != null) {
+                cachedProfilePlayer.capabilities.isCreativeMode = true;
+            }
+            cachedProfileDamage = DamageSource.causePlayerDamage(cachedProfilePlayer);
+        }
+
+        DropSimulationWorld simWorld = cachedProfileWorld;
+        EntityPlayer fakePlayer = cachedProfilePlayer;
+        DamageSource playerDamage = cachedProfileDamage;
+        Map<DropKey, DropAccumulator> dropMap = new HashMap<>();
+
+        Entity testEntity;
+        try {
+            testEntity = EntityList.createEntityByIDFromName(entry.getRegistryName(), simWorld);
+            if (!(testEntity instanceof EntityLiving)) {
+                return new ProfileResult(entityId, ProfileResult.Status.INVALID_ENTITY,
+                    null, "Entity is not a living entity", System.nanoTime() - startTime);
+            }
+        } catch (Exception e) {
+            SuperMobTracker.LOGGER.warn("Cannot simulate drops for " + entityId + " - entity construction failed", e);
+            return new ProfileResult(entityId, ProfileResult.Status.ENTITY_CONSTRUCTION_FAILED,
+                null, "Entity construction failed: " + e.getMessage(), System.nanoTime() - startTime);
+        }
+
+        try {
+            for (int i = 0; i < simulationCount; i++) {
+                Entity rawEntity = EntityList.createEntityByIDFromName(entry.getRegistryName(), simWorld);
+                if (!(rawEntity instanceof EntityLiving)) continue;
+
+                EntityLiving entity = (EntityLiving) rawEntity;
+
+                Field attackingPlayerField = getAttackingPlayerField();
+                if (attackingPlayerField != null) {
+                    try {
+                        attackingPlayerField.set(entity, fakePlayer);
+                    } catch (IllegalAccessException e) {
+                        SuperMobTracker.LOGGER.warn("Failed to set attackingPlayer field", e);
+                    }
+                }
+
+                simWorld.clearDrops();
+                dropLoot.invoke(entity, true, 0, playerDamage);
+
+                List<ItemStack> baseDrops = simWorld.collectAndClearDrops();
+
+                List<EntityItem> entityItems = new ArrayList<>();
+                for (ItemStack stack : baseDrops) {
+                    if (stack != null && !stack.isEmpty()) {
+                        EntityItem entityItem = new EntityItem(simWorld, 0, 0, 0, stack.copy());
+                        entityItems.add(entityItem);
+                    }
+                }
+
+                LivingDropsEvent event = new LivingDropsEvent(entity, playerDamage, entityItems, 0, true);
+                MinecraftForge.EVENT_BUS.post(event);
+
+                List<ItemStack> spawnedDuringEvent = simWorld.collectAndClearDrops();
+
+                if (!event.isCanceled()) {
+                    List<EntityItem> eventDrops = new ArrayList<>(event.getDrops());
+                    for (EntityItem entityItem : eventDrops) {
+                        ItemStack stack = entityItem.getItem();
+                        if (stack != null && !stack.isEmpty()) {
+                            DropKey key = new DropKey(stack);
+                            dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack)).addDrop(stack.getCount());
+                        }
+                    }
+
+                    for (ItemStack stack : spawnedDuringEvent) {
+                        if (stack != null && !stack.isEmpty()) {
+                            DropKey key = new DropKey(stack);
+                            dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack)).addDrop(stack.getCount());
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            SuperMobTracker.LOGGER.warn("Error during drop simulation for " + entityId, e);
+            return new ProfileResult(entityId, ProfileResult.Status.CRASHED,
+                null, e.getClass().getSimpleName() + ": " + e.getMessage(), System.nanoTime() - startTime);
+        }
+
+        List<DropEntry> entries = new ArrayList<>();
+        for (DropAccumulator acc : dropMap.values()) entries.add(new DropEntry(acc.representativeStack, acc.totalCount, simulationCount));
+
+        entries.sort((a, b) -> Double.compare(b.dropsPerKill, a.dropsPerKill));
+
+        DropSimulationResult simResult = new DropSimulationResult(entityId, entries, simulationCount);
+        long duration = System.nanoTime() - startTime;
+
+        if (entries.isEmpty()) return new ProfileResult(entityId, ProfileResult.Status.NO_DROPS, simResult, null, duration);
+
+        return new ProfileResult(entityId, ProfileResult.Status.SUCCESS, simResult, null, duration);
+    }
+
+    /**
      * Internal profiling logic.
      */
     private static ProfileResult profileEntityInternal(ResourceLocation entityId, int simulationCount) {

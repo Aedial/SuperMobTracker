@@ -25,7 +25,7 @@ import com.supermobtracker.network.NetworkHandler;
 public class SuperMobTracker {
     public static final String MODID = "supermobtracker";
     public static final String NAME = "Super Mob Tracker";
-    public static final String VERSION = "1.2.3";
+    public static final String VERSION = "1.2.4";
 
     public static final Logger LOGGER = LogManager.getLogger(MODID);
 

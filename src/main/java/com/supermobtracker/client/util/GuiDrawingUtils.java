@@ -239,7 +239,7 @@ public final class GuiDrawingUtils {
         GlStateManager.enableRescaleNormal();
         GlStateManager.enableColorMaterial();
         GlStateManager.pushMatrix();
-        GlStateManager.translate(centerX, centerY, 50F);
+        GlStateManager.translate(centerX, centerY, 100F);
         GlStateManager.scale(-scale, scale, scale);
         GlStateManager.rotate(180F, 0.0F, 0.0F, 1.0F);
         GlStateManager.rotate(135F, 0.0F, 1.0F, 0.0F);

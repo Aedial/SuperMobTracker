@@ -8,7 +8,13 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
-## [1.2.3] - 2025-12-23
+## [1.2.4] - 2026-01-28
+### Fixed
+- Really fix the drop simulation not working in multiplayer (I swear).
+- Fix /smtanalyze command not working on dedicated servers. Do note the loot analysis part is quite slower on dedicated servers (about 2-3x), due to the lack of client-side optimizations.
+
+
+## [1.2.3] - 2025-01-23
 ### Added
 - Add enlarged entity preview modal when clicking the entity preview in the mob tracker GUI.
 

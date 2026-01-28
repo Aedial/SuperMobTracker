@@ -31,13 +31,16 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.drops.DropSimulator;
 import com.supermobtracker.drops.DropSimulator.ProfileResult;
+import com.supermobtracker.network.NetworkHandler;
+import com.supermobtracker.network.PacketRequestLootAnalysis;
 import com.supermobtracker.spawn.BiomeDimensionMapper;
 import com.supermobtracker.spawn.ConditionUtils;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
 
 
 /**
- * Client-side command to analyze all mobs and export results to files.
+ * Client command to analyze all mobs and export results to files.
+ * Works locally in singleplayer, or delegates to server in multiplayer for loot analysis.
  * Usage:
  *   /smtanalyze - Run all analyses with default parameters
  *   /smtanalyze mobs [samples] - Analyze all mobs with performance metrics
@@ -48,11 +51,6 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
     private static final int DEFAULT_SAMPLES = 10;
     private static final int DEFAULT_LOOT_SIMULATION_COUNT = 10000;
     private static final String OUTPUT_DIR = "supermobtracker";
-
-    @Override
-    public boolean allowUsageWithoutPrefix(ICommandSender sender, String message) {
-        return false;
-    }
 
     @Override
     public String getName() {
@@ -70,6 +68,11 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
     }
 
     @Override
+    public boolean allowUsageWithoutPrefix(ICommandSender sender, String message) {
+        return false; // Always require /smtanalyze prefix
+    }
+
+    @Override
     public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, BlockPos targetPos) {
         if (args.length == 1) return getListOfStringsMatchingLastWord(args, "mobs", "loot", "dimension");
 
@@ -82,6 +85,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
             // Run all analyses with default parameters
             sendMessage(sender, TextFormatting.YELLOW, "Starting full analysis (this may take a while)...");
             runAllAnalyses(sender, DEFAULT_SAMPLES, BiomeDimensionMapper.getDefaultExtendedCount(), BiomeDimensionMapper.getDefaultNumGrids());
+
             return;
         }
 
@@ -96,8 +100,15 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
 
             case "loot":
                 int simulationCount = args.length > 2 ? parseInt(args[2], 1, 10000) : DEFAULT_LOOT_SIMULATION_COUNT;
-                sendMessage(sender, TextFormatting.YELLOW, "Analyzing loot drops (" + samples + " samples, " + simulationCount + " simulations)...");
-                new Thread(() -> runLootAnalysis(sender, samples, simulationCount), "SMT-LootAnalysis").start();
+
+                // In multiplayer, delegate to server via network packet
+                if (DropSimulator.isMultiplayer()) {
+                    sendMessage(sender, TextFormatting.YELLOW, "Requesting loot analysis from server (" + samples + " samples, " + simulationCount + " simulations)...");
+                    NetworkHandler.INSTANCE.sendToServer(new PacketRequestLootAnalysis(samples, simulationCount));
+                } else {
+                    sendMessage(sender, TextFormatting.YELLOW, "Analyzing loot drops (" + samples + " samples, " + simulationCount + " simulations)...");
+                    new Thread(() -> runLootAnalysis(sender, samples, simulationCount), "SMT-LootAnalysis").start();
+                }
                 break;
 
             case "dimension":
@@ -115,11 +126,36 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
     private void runAllAnalyses(ICommandSender sender, int samples, int extendedCount, int numGrids) {
         long totalStart = System.nanoTime();
 
-        // Run each analysis sequentially
+        // Run each analysis sequentially, catching errors so one failure doesn't stop the others
         new Thread(() -> {
-            runDimensionBenchmark(sender, samples, extendedCount, numGrids);
-            runMobAnalysis(sender, samples);
-            runLootAnalysis(sender, samples, DEFAULT_LOOT_SIMULATION_COUNT);
+            try {
+                runDimensionBenchmark(sender, samples, extendedCount, numGrids);
+            } catch (Exception e) {
+                sendMessage(sender, TextFormatting.RED, "Dimension benchmark failed: " + e.getMessage());
+                SuperMobTracker.LOGGER.error("Dimension benchmark failed", e);
+            }
+
+            try {
+                runMobAnalysis(sender, samples);
+            } catch (Exception e) {
+                sendMessage(sender, TextFormatting.RED, "Mob analysis failed: " + e.getMessage());
+                SuperMobTracker.LOGGER.error("Mob analysis failed", e);
+            }
+
+            // In multiplayer, delegate loot analysis to server via network packet
+            if (DropSimulator.isMultiplayer()) {
+                sendMessage(sender, TextFormatting.YELLOW, "Requesting loot analysis from server...");
+                Minecraft.getMinecraft().addScheduledTask(() -> {
+                    NetworkHandler.INSTANCE.sendToServer(new PacketRequestLootAnalysis(samples, DEFAULT_LOOT_SIMULATION_COUNT));
+                });
+            } else {
+                try {
+                    runLootAnalysis(sender, samples, DEFAULT_LOOT_SIMULATION_COUNT);
+                } catch (Exception e) {
+                    sendMessage(sender, TextFormatting.RED, "Loot analysis failed: " + e.getMessage());
+                    SuperMobTracker.LOGGER.error("Loot analysis failed", e);
+                }
+            }
 
             long totalElapsed = System.nanoTime() - totalStart;
             sendMessage(sender, TextFormatting.GREEN, "All analyses complete! Total time: " + formatDuration(totalElapsed));
@@ -436,6 +472,8 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
 
     /**
      * Analyze loot drops for all mobs with performance metrics.
+     * This always uses profileEntity() which gets the integrated server internally.
+     * For dedicated server scenarios, this should be called from server-side code (packet handlers).
      * Separates results into:
      * - successful: has drops
      * - noDrops: no drops (may not have a loot table or drops are conditional)

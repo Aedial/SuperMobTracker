@@ -44,5 +44,29 @@ public class NetworkHandler {
             packetId++,
             Side.CLIENT
         );
+
+        // Client -> Server: Request loot analysis (batch)
+        INSTANCE.registerMessage(
+            PacketRequestLootAnalysis.Handler.class,
+            PacketRequestLootAnalysis.class,
+            packetId++,
+            Side.SERVER
+        );
+
+        // Server -> Client: Send loot analysis results (batch)
+        INSTANCE.registerMessage(
+            PacketLootAnalysisResult.Handler.class,
+            PacketLootAnalysisResult.class,
+            packetId++,
+            Side.CLIENT
+        );
+
+        // Server -> Client: Send loot analysis progress updates
+        INSTANCE.registerMessage(
+            PacketLootAnalysisProgress.Handler.class,
+            PacketLootAnalysisProgress.class,
+            packetId++,
+            Side.CLIENT
+        );
     }
 }

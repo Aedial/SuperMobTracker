@@ -6,25 +6,35 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 
 import com.google.common.base.Predicate;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.item.EntityItem;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.scoreboard.Scoreboard;
-import net.minecraft.util.EnumFacing;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.EnumParticleTypes;
+import net.minecraft.util.SoundCategory;
+import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
+import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.gen.ChunkProviderServer;
 import net.minecraft.world.storage.loot.LootTableManager;
 
 import sun.reflect.ReflectionFactory;
@@ -43,6 +53,7 @@ public class DropSimulationWorld extends WorldServer {
     private LootTableManager lootTableManager;
     private Scoreboard scoreboard;
     private Chunk fakeChunk;
+    private WorldBorder worldBorder;
 
     /**
      * Private constructor - use createInstance() instead.
@@ -114,6 +125,78 @@ public class DropSimulationWorld extends WorldServer {
             // Use our SimulationChunk instead of EmptyChunk (which is client-only)
             instance.fakeChunk = new SimulationChunk(instance, 0, 0);
 
+            // Create a world border (needed by EntityPlayer constructor)
+            instance.worldBorder = new WorldBorder();
+
+            // Initialize playerEntities to empty list to prevent NPE when entities look for players
+            try {
+                Field playerEntitiesField = World.class.getDeclaredField("field_73010_i"); // playerEntities
+                playerEntitiesField.setAccessible(true);
+                playerEntitiesField.set(instance, new ArrayList<EntityPlayer>());
+            } catch (NoSuchFieldException e) {
+                try {
+                    Field playerEntitiesField = World.class.getDeclaredField("playerEntities");
+                    playerEntitiesField.setAccessible(true);
+                    playerEntitiesField.set(instance, new ArrayList<EntityPlayer>());
+                } catch (NoSuchFieldException e2) {
+                    SuperMobTracker.LOGGER.warn("Could not find World.playerEntities field");
+                }
+            }
+
+            // Initialize loadedEntityList to empty list to prevent iteration issues
+            try {
+                Field loadedEntityListField = World.class.getDeclaredField("field_72996_f"); // loadedEntityList
+                loadedEntityListField.setAccessible(true);
+                loadedEntityListField.set(instance, new ArrayList<Entity>());
+            } catch (NoSuchFieldException e) {
+                try {
+                    Field loadedEntityListField = World.class.getDeclaredField("loadedEntityList");
+                    loadedEntityListField.setAccessible(true);
+                    loadedEntityListField.set(instance, new ArrayList<Entity>());
+                } catch (NoSuchFieldException e2) {
+                    SuperMobTracker.LOGGER.warn("Could not find World.loadedEntityList field");
+                }
+            }
+
+            // Initialize eventListeners to empty list (used by sound/event notification systems)
+            try {
+                Field eventListenersField = World.class.getDeclaredField("field_73021_x"); // eventListeners
+                eventListenersField.setAccessible(true);
+                eventListenersField.set(instance, new ArrayList<>());
+            } catch (NoSuchFieldException e) {
+                try {
+                    Field eventListenersField = World.class.getDeclaredField("eventListeners");
+                    eventListenersField.setAccessible(true);
+                    eventListenersField.set(instance, new ArrayList<>());
+                } catch (NoSuchFieldException e2) {
+                    SuperMobTracker.LOGGER.warn("Could not find World.eventListeners field");
+                }
+            }
+
+            // Initialize capturedBlockSnapshots (Forge field used during world modifications)
+            try {
+                Field capturedField = World.class.getDeclaredField("capturedBlockSnapshots");
+                capturedField.setAccessible(true);
+                capturedField.set(instance, new ArrayList<>());
+            } catch (NoSuchFieldException e) {
+                // May not exist in all versions
+            }
+
+            // Initialize loadedTileEntityList to empty list
+            try {
+                Field tileEntityListField = World.class.getDeclaredField("field_147482_g"); // loadedTileEntityList
+                tileEntityListField.setAccessible(true);
+                tileEntityListField.set(instance, new ArrayList<>());
+            } catch (NoSuchFieldException e) {
+                try {
+                    Field tileEntityListField = World.class.getDeclaredField("loadedTileEntityList");
+                    tileEntityListField.setAccessible(true);
+                    tileEntityListField.set(instance, new ArrayList<>());
+                } catch (NoSuchFieldException e2) {
+                    // May not exist
+                }
+            }
+
             return instance;
         } catch (Exception e) {
             throw new RuntimeException("Failed to create DropSimulationWorld", e);
@@ -183,6 +266,11 @@ public class DropSimulationWorld extends WorldServer {
     }
 
     @Override
+    public WorldBorder getWorldBorder() {
+        return worldBorder;
+    }
+
+    @Override
     public IBlockState getBlockState(BlockPos pos) {
         // Return air for all block queries - entities aren't in the real world
         return Blocks.AIR.getDefaultState();
@@ -203,6 +291,12 @@ public class DropSimulationWorld extends WorldServer {
     public boolean handleMaterialAcceleration(AxisAlignedBB bb, Material material, Entity entity) {
         // Entity is never in water/lava/etc in our fake world
         return false;
+    }
+
+    @Override
+    public List<AxisAlignedBB> getCollisionBoxes(@Nullable Entity entityIn, AxisAlignedBB aabb) {
+        // Return empty list - no collision in simulation world
+        return Collections.emptyList();
     }
 
     @Override
@@ -284,5 +378,161 @@ public class DropSimulationWorld extends WorldServer {
     @Override
     public void setEntityState(Entity entityIn, byte state) {
         // Ignore entity state changes - prevents particles and sounds in fake world
+    }
+
+    // Network isolation - prevents packets from being sent ===
+
+    @Override
+    public MinecraftServer getMinecraftServer() {
+        // Return null to prevent access to server networking infrastructure
+        return null;
+    }
+
+    @Override
+    public ChunkProviderServer getChunkProvider() {
+        // Return null to prevent chunk loading/generation
+        return null;
+    }
+
+    @Override
+    public void onEntityAdded(Entity entityIn) {
+        // No-op - prevents entityTracker.track() which would send spawn packets
+    }
+
+    @Override
+    public void onEntityRemoved(Entity entityIn) {
+        // No-op - prevents entityTracker.untrack() which would send despawn packets
+    }
+
+    @Override
+    public void updateEntityWithOptionalForce(Entity entityIn, boolean forceUpdate) {
+        // No-op - prevents entity tracking updates
+    }
+
+    // === Player isolation - prevents entities from finding/targeting real players ===
+
+    @Override
+    @Nullable
+    public EntityPlayer getClosestPlayer(double x, double y, double z, double distance, boolean spectator) {
+        return null;
+    }
+
+    @Override
+    @Nullable
+    public EntityPlayer getClosestPlayerToEntity(Entity entityIn, double distance) {
+        return null;
+    }
+
+    @Override
+    @Nullable
+    public EntityPlayer getNearestPlayerNotCreative(Entity entityIn, double distance) {
+        return null;
+    }
+
+    @Override
+    @Nullable
+    public EntityPlayer getPlayerEntityByUUID(UUID uuid) {
+        return null;
+    }
+
+    @Override
+    @Nullable
+    public EntityPlayer getPlayerEntityByName(String name) {
+        return null;
+    }
+
+    @Override
+    public boolean isAnyPlayerWithinRangeAt(double x, double y, double z, double range) {
+        return false;
+    }
+
+    @Override
+    @Nullable
+    public EntityPlayer getNearestAttackablePlayer(double posX, double posY, double posZ, double maxXZDistance, double maxYDistance, @Nullable com.google.common.base.Function<EntityPlayer, Double> playerToDouble, @Nullable Predicate<EntityPlayer> predicate) {
+        return null;
+    }
+
+    @Override
+    @Nullable
+    public EntityPlayer getNearestAttackablePlayer(Entity entityIn, double maxXZDistance, double maxYDistance) {
+        return null;
+    }
+
+    @Override
+    @Nullable
+    public EntityPlayer getNearestAttackablePlayer(BlockPos pos, double maxXZDistance, double maxYDistance) {
+        return null;
+    }
+
+    // === Task scheduling isolation ===
+
+    @Override
+    public ListenableFuture<Object> addScheduledTask(Runnable task) {
+        // Don't execute the task, return an already-completed future
+        return Futures.immediateFuture(null);
+    }
+
+    @Override
+    public boolean isCallingFromMinecraftThread() {
+        // Pretend we're always on the main thread to avoid thread checks
+        return true;
+    }
+
+    // === Sound/Effect isolation - prevents sound/particle packets ===
+
+    @Override
+    public void playSound(@Nullable EntityPlayer player, double x, double y, double z,
+                          SoundEvent sound, SoundCategory category, float volume, float pitch) {
+        // No-op - don't send sound packets
+    }
+
+    @Override
+    public void playSound(double x, double y, double z, SoundEvent sound,
+                          SoundCategory category, float volume, float pitch, boolean distanceDelay) {
+        // No-op - don't send sound packets
+    }
+
+    @Override
+    public void playEvent(@Nullable EntityPlayer player, int type, BlockPos pos, int data) {
+        // No-op - don't send event packets
+    }
+
+    @Override
+    public void playEvent(int type, BlockPos pos, int data) {
+        // No-op - don't send event packets
+    }
+
+    @Override
+    public void spawnParticle(EnumParticleTypes particleType, double xCoord, double yCoord, double zCoord,
+                              int numberOfParticles, double xOffset, double yOffset, double zOffset, double particleSpeed, int... particleArguments) {
+        // No-op - don't send particle packets
+    }
+
+    @Override
+    public void spawnParticle(EnumParticleTypes particleType, boolean longDistance, double xCoord, double yCoord, double zCoord,
+                              int numberOfParticles, double xOffset, double yOffset, double zOffset, double particleSpeed, int... particleArguments) {
+        // No-op - don't send particle packets
+    }
+
+    // === Block update isolation - prevents block update packets ===
+
+    @Override
+    public void notifyBlockUpdate(BlockPos pos, IBlockState oldState, IBlockState newState, int flags) {
+        // No-op - don't send block update packets
+    }
+
+    @Override
+    public void markBlockRangeForRenderUpdate(int x1, int y1, int z1, int x2, int y2, int z2) {
+        // No-op - don't trigger render updates
+    }
+
+    @Override
+    public void notifyNeighborsRespectDebug(BlockPos pos, Block blockType, boolean updateObservers) {
+        // No-op - don't notify neighbors
+    }
+
+    @Override
+    public void notifyNeighborsOfStateChange(BlockPos pos, Block blockType, boolean updateObservers) {
+        // No-op - don't notify neighbors
     }
 }

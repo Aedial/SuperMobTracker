@@ -29,11 +29,11 @@ public class ClientProxy implements IProxy {
         // Register spawn event handler if tracking is enabled
         if (ModConfig.clientEnableTracking) MinecraftForge.EVENT_BUS.register(new SpawnEventHandler());
 
-        // Register client-side commands
-        ClientCommandHandler.instance.registerCommand(new CommandAnalyze());
-
         // Restore client-tracked IDs
         SpawnTrackerManager.restoreTrackedIds(ModConfig.getClientTrackedIds());
+
+        // Register client commands
+        ClientCommandHandler.instance.registerCommand(new CommandAnalyze());
     }
 
     @Override

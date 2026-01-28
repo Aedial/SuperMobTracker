@@ -200,6 +200,24 @@ public class SimulationProviderWrapper extends WorldProvider {
         return false;
     }
 
+    @Override
+    public BlockPos getRandomizedSpawnPoint() {
+        // Return a safe default spawn point to avoid NPE when world fields are not fully initialized
+        return BlockPos.ORIGIN;
+    }
+
+    @Override
+    public BlockPos getSpawnPoint() {
+        // Return a safe default spawn point
+        return BlockPos.ORIGIN;
+    }
+
+    @Override
+    public BlockPos getSpawnCoordinate() {
+        // Return a safe spawn coordinate for dimensions that use it (like the End)
+        return BlockPos.ORIGIN;
+    }
+
     // Override init to prevent DragonFightManager creation for End dimension
     @Override
     protected void init() {
