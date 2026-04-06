@@ -80,6 +80,9 @@ public class GuiMobTracker extends GuiScreen {
     // Entity preview modal
     private GuiEntityPreviewModal previewModal = null;
 
+    // Gallery view (alternative tiled selection screen)
+    private GuiGalleryView galleryView = null;
+
     // Preview bounds (updated during draw)
     private int previewX, previewY, previewSize;
 
@@ -121,7 +124,17 @@ public class GuiMobTracker extends GuiScreen {
         listWidget = new MobListWidget(10, 30, leftWidth - 20, height - 70, fontRenderer, this);
         this.buttonList.clear();
 
-        this.buttonList.add(new GuiButton(1, 10, height - 30, leftWidth - 20, 20, getI18nButtonString()));
+        this.buttonList.add(new GuiButton(1, 10, height - 30, leftWidth / 2 - 12, 20, getI18nButtonString()));
+        this.buttonList.add(new GuiButton(2, 10 + leftWidth / 2 - 2, height - 30, leftWidth / 2 - 8, 20,
+                I18n.format("gui.mobtracker.gallery.button")));
+
+        // Initialize or update gallery view
+        if (galleryView == null) {
+            galleryView = new GuiGalleryView(this, analyzer, fontRenderer);
+        }
+        if (galleryView.isVisible()) {
+            galleryView.updateScreenSize(width, height);
+        }
 
         // Initialize biome tooltip widget
         biomeTooltipWidget = new MultiColumnTooltipWidget(fontRenderer);
@@ -172,11 +185,27 @@ public class GuiMobTracker extends GuiScreen {
 
     @Override
     protected void actionPerformed(GuiButton button) throws IOException {
-        if (selected == null) return;
-
         if (button.id == 1) {
             ClientSettings.toggleI18n();
             button.displayString = getI18nButtonString();
+
+            return;
+        }
+
+        if (button.id == 2) {
+            if (galleryView != null) {
+                // close all other views (they should have closed with the button click already)
+                if (previewModal != null && previewModal.isVisible()) {
+                    previewModal.hide();
+                }
+                if (dropsWindow != null && dropsWindow.isVisible()) {
+                    dropsWindow.hide();
+                }
+
+                galleryView.show(width, height);
+            }
+
+            return;
         }
     }
 
@@ -190,6 +219,20 @@ public class GuiMobTracker extends GuiScreen {
 
     @Override
     protected void keyTyped(char typedChar, int keyCode) throws IOException {
+        // Handle gallery view first if visible
+        if (galleryView != null && galleryView.isVisible()) {
+            if (galleryView.handleKey(keyCode)) {
+                // After gallery closes, check if an entity was selected
+                ResourceLocation gallerySelection = galleryView.consumeSelection();
+                if (gallerySelection != null) {
+                    selectEntity(gallerySelection);
+                    listWidget.ensureVisible(gallerySelection);
+                }
+
+                return;
+            }
+        }
+
         // Handle preview modal first if visible
         if (previewModal != null && previewModal.isVisible()) {
             if (previewModal.handleKey(keyCode)) return;
@@ -208,6 +251,20 @@ public class GuiMobTracker extends GuiScreen {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) throws IOException {
+        // Handle gallery view first if visible
+        if (galleryView != null && galleryView.isVisible()) {
+            if (galleryView.handleClick(mouseX, mouseY, mouseButton)) {
+                // Check if an entity was selected
+                ResourceLocation gallerySelection = galleryView.consumeSelection();
+                if (gallerySelection != null) {
+                    selectEntity(gallerySelection);
+                    listWidget.ensureVisible(gallerySelection);
+                }
+
+                return;
+            }
+        }
+
         // Handle preview modal first if visible
         if (previewModal != null && previewModal.isVisible()) {
             if (previewModal.handleClick(mouseX, mouseY, mouseButton)) return;
@@ -325,6 +382,14 @@ public class GuiMobTracker extends GuiScreen {
     public void handleMouseInput() throws IOException {
         super.handleMouseInput();
 
+        // Handle gallery view scroll if visible
+        if (galleryView != null && galleryView.isVisible()) {
+            int wheel = Mouse.getDWheel();
+            if (wheel != 0) galleryView.handleScroll(wheel < 0 ? 1 : -1);
+
+            return;
+        }
+
         // Don't scroll the list if drops window is visible and mouse is over it
         if (dropsWindow != null && dropsWindow.isVisible()) {
             int mouseX = Mouse.getEventX() * this.width / this.mc.displayWidth;
@@ -343,7 +408,8 @@ public class GuiMobTracker extends GuiScreen {
         // Determine if any modal should block hover events
         boolean previewModalBlocking = previewModal != null && previewModal.isVisible();
         boolean dropsWindowBlocking = dropsWindow != null && dropsWindow.isVisible() && dropsWindow.isMouseOver(mouseX, mouseY);
-        boolean modalBlocking = previewModalBlocking || dropsWindowBlocking;
+        boolean galleryViewBlocking = galleryView != null && galleryView.isVisible();
+        boolean modalBlocking = previewModalBlocking || dropsWindowBlocking || galleryViewBlocking;
         int effectiveMouseX = modalBlocking ? -1 : mouseX;
         int effectiveMouseY = modalBlocking ? -1 : mouseY;
 
@@ -370,6 +436,12 @@ public class GuiMobTracker extends GuiScreen {
         // Draw preview modal on top of everything
         if (previewModal != null && previewModal.isVisible()) {
             previewModal.draw(mouseX, mouseY, partialTicks, fontRenderer);
+        }
+
+        // Draw gallery view on top of everything else
+        if (galleryView != null && galleryView.isVisible()) {
+            galleryView.draw(mouseX, mouseY, partialTicks);
+            galleryView.drawTooltips(mouseX, mouseY);
         }
     }
 
@@ -435,6 +507,7 @@ public class GuiMobTracker extends GuiScreen {
         drawRect(panelX, panelY, panelX + panelW, panelY + panelH, 0x80000000);
         if (selected == null) {
             fontRenderer.drawString(I18n.format("gui.mobtracker.noMobSelected"), panelX + 6, panelY + 6, 0xFFFFFF);
+            biomeTooltipWidget.clear();
             return;
         }
 
@@ -451,9 +524,18 @@ public class GuiMobTracker extends GuiScreen {
         float previewRotationY = (System.currentTimeMillis() % 10000L) / 10000.0f * 360.0f;
 
         Entity entity = analyzer.getEntityInstance(selected);
-        if (previewModal == null || !previewModal.isVisible()) {
-            // If preview modal is open, do not draw preview in panel to avoid overlap
+
+        // If any modal is open, do not draw preview in panel to avoid overlap
+        // Mob rendering has issues with overlapping GUI elements
+        boolean renderBlacklisted = ModConfig.shouldRenderEntity(selected.toString())
+            || (previewModal != null && previewModal.isVisible())
+            || (galleryView != null && galleryView.isVisible());
+        if (!renderBlacklisted) {
             GuiDrawingUtils.drawMobPreview(selected, entity, previewX, previewY, previewSize, previewRotationY);
+        } else {
+            // Draw placeholder for render-blacklisted entities
+            drawRect(previewX - 1, previewY - 1, previewX + previewSize + 1, previewY + previewSize + 1, 0xFF808080);
+            drawRect(previewX, previewY, previewX + previewSize, previewY + previewSize, 0xFF404040);
         }
 
         textY += previewSize + 16;
@@ -535,6 +617,8 @@ public class GuiMobTracker extends GuiScreen {
 
             textY = drawWrappedString(fontRenderer, I18n.format(line1), textX, textY, 12, textW, 0xFFAAAA);
             textY = drawWrappedString(fontRenderer, I18n.format(line2), textX, textY, 12, textW, 0xAAAAAA);
+
+            biomeTooltipWidget.clear();
 
             return;
         }
@@ -733,6 +817,7 @@ public class GuiMobTracker extends GuiScreen {
 
     private void drawDimensionTooltip(int mouseX, int mouseY) {
         if (!showDimensionUnknownTooltip) return;
+        if (selected == null || spawnConditions == null || spawnConditions.dimension != null) return;
 
         boolean showTooltip = mouseX >= dimensionLabelX && mouseX <= dimensionLabelX + dimensionLabelW &&
             mouseY >= dimensionLabelY && mouseY <= dimensionLabelY + 12;

@@ -12,6 +12,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
 
 import com.supermobtracker.client.util.GuiDrawingUtils;
+import com.supermobtracker.config.ModConfig;
 
 
 /**
@@ -168,10 +169,12 @@ public class GuiEntityPreviewModal {
         int titleX = modalX + (modalWidth - titleWidth) / 2;
         fontRenderer.drawString(title, titleX, modalY + 8, 0xFFFFFF);
 
-        // Draw the entity preview (slowly rotating)
+        // Draw the entity preview (slowly rotating), skip if render-blacklisted
         float rotationY = (System.currentTimeMillis() % 10000L) / 10000.0f * 360.0f;
         if (rotationLocked != null) rotationY = rotationLocked;
-        GuiDrawingUtils.drawMobPreview(entityId, entity, previewX, previewY, previewSize, rotationY);
+        if (!ModConfig.shouldRenderEntity(entityId.toString())) {
+            GuiDrawingUtils.drawMobPreview(entityId, entity, previewX, previewY, previewSize, rotationY);
+        }
 
         // Draw footer instruction
         String footer = I18n.format("gui.mobtracker.closeModal");

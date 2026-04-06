@@ -42,6 +42,9 @@ public class ModConfig {
         "minecraft:ender_dragon",
         "draconicevolution:chaosguardian"
     )); // entities that corrupt global state during drop simulation
+    public static List<String> clientShouldRenderEntities = new ArrayList<>(Arrays.asList(
+            "extrabotany:gaiaiii"
+    )); // entities that crash when rendered
 
     private static final String enableTrackingDesc = I18n.translateToLocal("config.supermobtracker.client.enableTracking.desc");
     private static final String detectionRangeDesc = I18n.translateToLocal("config.supermobtracker.client.detectionRange.desc");
@@ -59,6 +62,16 @@ public class ModConfig {
     private static final String mobBlacklistDesc = I18n.translateToLocal("config.supermobtracker.client.mobBlacklist.desc");
     private static final String dropSimulationCountDesc = I18n.translateToLocal("config.supermobtracker.client.dropSimulationCount.desc");
     private static final String unstableSimulationEntitiesDesc = I18n.translateToLocal("config.supermobtracker.client.unstableSimulationEntities.desc");
+    private static final String shouldRenderEntitiesDesc = I18n.translateToLocal("config.supermobtracker.client.shouldRenderEntities.desc");
+
+    private static String[] clientUnstableSimulationEntitiesArray = new String[]{
+        "minecraft:ender_dragon",
+        "draconicevolution:chaosguardian"
+    };
+
+    private static String[] clientShouldRenderEntitiesArray = new String[]{
+        "extrabotany:gaiaiii"
+    };
 
     private static final List<String> hiddenConfigs = Arrays.asList(
         "i18nNames",
@@ -149,13 +162,23 @@ public class ModConfig {
         prop.setLanguageKey("config.supermobtracker.client.dropSimulationCount");
         clientDropSimulationCount = prop.getInt();
 
-        prop = config.get("client", "unstableSimulationEntities", new String[]{"minecraft:ender_dragon", "draconicevolution:chaosguardian"}, unstableSimulationEntitiesDesc);
+        prop = config.get("client", "unstableSimulationEntities", clientUnstableSimulationEntitiesArray, unstableSimulationEntitiesDesc);
         prop.setLanguageKey("config.supermobtracker.client.unstableSimulationEntities");
         clientUnstableSimulationEntities = new ArrayList<>();
         for (String s : prop.getStringList()) {
             if (s != null) {
                 String t = s.trim();
                 if (!t.isEmpty()) clientUnstableSimulationEntities.add(t);
+            }
+        }
+
+        prop = config.get("client", "shouldRenderEntities", clientShouldRenderEntitiesArray, shouldRenderEntitiesDesc);
+        prop.setLanguageKey("config.supermobtracker.client.shouldRenderEntities");
+        clientShouldRenderEntities = new ArrayList<>();
+        for (String s : prop.getStringList()) {
+            if (s != null) {
+                String t = s.trim();
+                if (!t.isEmpty()) clientShouldRenderEntities.add(t);
             }
         }
 
@@ -375,6 +398,32 @@ public class ModConfig {
         if (clientUnstableSimulationEntities.contains(id)) return true;
 
         for (String entry : clientUnstableSimulationEntities) {
+            if (id.contains(entry)) return true;
+        }
+
+        return false;
+    }
+
+    public static List<String> getClientShouldRenderEntities() {
+        return new ArrayList<>(clientShouldRenderEntities);
+    }
+
+    public static void setClientShouldRenderEntities(Collection<String> ids) {
+        List<String> newList = new ArrayList<>(ids);
+        if (clientShouldRenderEntities.equals(newList)) return;
+
+        clientShouldRenderEntities = newList;
+        if (config != null) {
+            config.get("client", "shouldRenderEntity", new String[0]).set(clientShouldRenderEntities.toArray(new String[0]));
+            config.save();
+        }
+    }
+
+    public static boolean shouldRenderEntity(String id) {
+        if (id == null) return false;
+        if (clientShouldRenderEntities.contains(id)) return true;
+
+        for (String entry : clientShouldRenderEntities) {
             if (id.contains(entry)) return true;
         }
 

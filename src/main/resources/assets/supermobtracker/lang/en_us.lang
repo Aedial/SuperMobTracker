@@ -20,6 +20,7 @@ config.supermobtracker.client.mobWhitelist.desc=List of entity IDs that are whit
 config.supermobtracker.client.mobBlacklist.desc=List of entity IDs that are blacklisted from tracking.
 config.supermobtracker.client.dropSimulationCount.desc=Number of simulated kills for calculating drop rates.
 config.supermobtracker.client.unstableSimulationEntities.desc=Entity IDs that corrupt global state during drop simulation and should be excluded from simulation. They can be identified by severe performance degradation for every entity after simulating their drops.
+config.supermobtracker.client.shouldRenderEntities.desc=Entity IDs that crash or spam errors when rendered. These entities will not render at all in the preview/gallery.
 
 # Config names (displayed in config GUI)
 config.supermobtracker.client.enableTracking=Enable Tracking
@@ -38,6 +39,7 @@ config.supermobtracker.client.mobWhitelist=Mob Whitelist
 config.supermobtracker.client.mobBlacklist=Mob Blacklist
 config.supermobtracker.client.dropSimulationCount=Drop Simulation Count
 config.supermobtracker.client.unstableSimulationEntities=Unstable Simulation Entities
+config.supermobtracker.client.shouldRenderEntities=Should Render Entities
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=IDs: Localized
@@ -142,6 +144,14 @@ gui.mobtracker.any=Any
 gui.mobtracker.unknown=Unknown
 gui.mobtracker.clickToEnlarge=Click to enlarge
 gui.mobtracker.closeModal=Click outside or press Escape to close
+
+# Gallery View
+gui.mobtracker.gallery.button=Gallery
+gui.mobtracker.gallery.title=Entity Gallery
+gui.mobtracker.gallery.clickToSelect=Click to select
+gui.mobtracker.gallery.escToExit=Esc to exit
+gui.mobtracker.gallery.spaceToStopRotation=Space to stop rotation
+gui.mobtracker.gallery.scrollInfo=Row %s of %s (%s visible)
 
 # Attributes
 gui.mobtracker.attribute.boss=Boss

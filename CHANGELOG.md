@@ -8,6 +8,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.2.5] - 2026-04-06
+### Added
+- Add entity cards selection screen, an alternative to the mob names list that shows a tiling of entity models instead.
+- Add "Should Render Entities" config to skip entity rendering for entities that crash or spam errors when rendered. Applies to the detail panel preview, the enlarged modal, and the gallery view.
+
+### Fixed
+- Fix biomes tooltip not always updating correctly when switching mobs.
+
+
 ## [1.2.4] - 2026-01-28
 ### Fixed
 - Really fix the drop simulation not working in multiplayer (I swear).
