@@ -39,7 +39,7 @@ config.supermobtracker.client.mobWhitelist=生物白名单
 config.supermobtracker.client.mobBlacklist=生物黑名单
 config.supermobtracker.client.dropSimulationCount=掉落物模拟次数
 config.supermobtracker.client.unstableSimulationEntities=不稳定的模拟实体
-config.supermobtracker.client.shouldRenderEntities=应当渲染的实体
+config.supermobtracker.client.shouldRenderEntities=不应当渲染的实体
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=ID显示：本地化
