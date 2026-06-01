@@ -49,7 +49,7 @@ gui.mobtracker.separator=、
 gui.mobtracker.noMobSelected=从列表中选择一个生物
 gui.mobtracker.noSpawnData=无可用生成数据
 gui.mobtracker.cannotSpawnNaturally=该实体不会自然生成。
-gui.mobtracker.cannotSpawnNaturallyHint=可能只能通过刷怪箱、命令或者特殊游戏机制生成（例如Boss召唤）。
+gui.mobtracker.cannotSpawnNaturallyHint=可能只能通过刷怪箱、命令或者特殊游戏机制生成（例如Boss召唤）。为此实体填充spawn_hints.json（参见README）以显示其生成来源和条件。
 gui.mobtracker.analysisCrashed=生成分析失败。
 gui.mobtracker.analysisCrashedHint=分析该实体的生成条件时发生错误。
 gui.mobtracker.noSpawnConditions=无法确定生成条件。这可能是因为存在未处理的生成要求，或生成检查中的随机性。尝试点击重试按钮。
@@ -173,6 +173,14 @@ gui.mobtracker.hint.sky=可能需要天空可见（地表生成）。
 gui.mobtracker.hint.moonphase=可能需要特定月相（例如：满月）。
 gui.mobtracker.hint.slimechunk=可能需要史莱姆区块。
 gui.mobtracker.hint.nether=可能需要下界类维度。
+gui.mobtracker.spawnReason=生成来源：%s
+gui.mobtracker.spawnReason.natural=自然生成
+gui.mobtracker.spawnReason.worldgen=世界生成
+gui.mobtracker.spawnReason.structure=结构
+gui.mobtracker.spawnReason.spawner=刷怪箱
+gui.mobtracker.spawnReason.event=事件/脚本
+gui.mobtracker.spawnReason.command=命令
+gui.mobtracker.spawnReason.other=未知/其他
 
 # HUD Position Selector
 gui.supermobtracker.hudPosition.top_left=顶部左侧
