@@ -5,7 +5,8 @@ key.categories.supermobtracker=超级生物追踪器
 
 # Config descriptions
 config.supermobtracker.client.enableTracking.desc=启用生物追踪（需要重启客户端）。
-config.supermobtracker.client.detectionRange.desc=检测被追踪生物给予其发光效果的范围（以方块为单位）。
+config.supermobtracker.client.detectionRange.desc=被追踪生物的检测范围（以格为单位），用于触发透视或发光高亮效果。
+config.supermobtracker.client.useModelXRay.desc=穿过墙壁渲染被追踪生物时，使用正常模型，而非原版的发光轮廓。
 config.supermobtracker.client.i18nNames.desc=在追踪器GUI中使用本地化名称。
 config.supermobtracker.client.spawnCheckRetries.desc=检查生成条件的最大重试次数。数值越高，越能有效处理随机生成条件，但会增加分析耗时。
 config.supermobtracker.client.trackedEntityIds.desc=当前正在追踪的生物ID列表。
@@ -25,6 +26,7 @@ config.supermobtracker.client.shouldRenderEntities.desc=渲染时会崩溃或大
 # Config names (displayed in config GUI)
 config.supermobtracker.client.enableTracking=启用追踪
 config.supermobtracker.client.detectionRange=检测范围
+config.supermobtracker.client.useModelXRay=使用模型透视
 config.supermobtracker.client.i18nNames=本地化名称
 config.supermobtracker.client.spawnCheckRetries=生成检查条目
 config.supermobtracker.client.trackedEntityIds=追踪的实体ID
