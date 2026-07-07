@@ -8,6 +8,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.4.0] - 2026-07-06
+### Added
+- Add model-based x-ray rendering for tracked mobs (courtesy of @zzhalex233), with a config toggle to switch between this new textured rendering and the old vanilla outline glow.
+
+
 ## [1.3.0] - 2026-06-15
 ### Added
 - Add JSON-based external spawn hints for mobs that do not use normal biome spawn tables, with documented example and JSON Schema.

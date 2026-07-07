@@ -11,6 +11,7 @@ import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.client.event.ClientEvents;
 import com.supermobtracker.client.gui.GuiHandler;
 import com.supermobtracker.client.input.KeyBindings;
+import com.supermobtracker.client.render.TrackedEntityXrayRenderer;
 import com.supermobtracker.tracking.SpawnEventHandler;
 import com.supermobtracker.tracking.SpawnTrackerManager;
 
@@ -25,6 +26,7 @@ public class ClientProxy implements IProxy {
     @Override
     public void init() {
         MinecraftForge.EVENT_BUS.register(new ClientEvents());
+        MinecraftForge.EVENT_BUS.register(new TrackedEntityXrayRenderer());
 
         // Register spawn event handler if tracking is enabled
         if (ModConfig.clientEnableTracking) MinecraftForge.EVENT_BUS.register(new SpawnEventHandler());
