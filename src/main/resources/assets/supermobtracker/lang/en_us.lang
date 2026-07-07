@@ -5,7 +5,8 @@ key.categories.supermobtracker=Super Mob Tracker
 
 # Config descriptions
 config.supermobtracker.client.enableTracking.desc=Enable tracking of mobs (requires Minecraft restart).
-config.supermobtracker.client.detectionRange.desc=Range in blocks to detect tracked mobs for glowing effect.
+config.supermobtracker.client.detectionRange.desc=Range in blocks to detect tracked mobs for the x-ray or glow highlight effect.
+config.supermobtracker.client.useModelXRay.desc=Render tracked mobs through walls with their normal model instead of using the vanilla glow outline.
 config.supermobtracker.client.i18nNames.desc=Use localized names in the tracker GUI.
 config.supermobtracker.client.spawnCheckRetries.desc=Maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time.
 config.supermobtracker.client.trackedEntityIds.desc=List of entity IDs currently being tracked.
@@ -25,6 +26,7 @@ config.supermobtracker.client.shouldRenderEntities.desc=Entity IDs that crash or
 # Config names (displayed in config GUI)
 config.supermobtracker.client.enableTracking=Enable Tracking
 config.supermobtracker.client.detectionRange=Detection Range
+config.supermobtracker.client.useModelXRay=Use Model X-Ray
 config.supermobtracker.client.i18nNames=Localized Names
 config.supermobtracker.client.spawnCheckRetries=Spawn Check Retries
 config.supermobtracker.client.trackedEntityIds=Tracked Entity IDs

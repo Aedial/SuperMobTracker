@@ -1,5 +1,13 @@
 package com.supermobtracker.client.event;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
@@ -29,19 +37,12 @@ import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.config.ModConfig.HudPosition;
 import com.supermobtracker.tracking.SpawnTrackerManager;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
 
 public class ClientEvents {
 
     private static final int BUTTON_ID = 9001;
     private static final int BUTTON_SIZE = 8;
+    private static final String TEMP_GLOW_TAG = "smt_temp_glow";
 
     // Cached inventory tracker button bounds for tooltip rendering
     private static int trackerX = -1;
@@ -52,6 +53,9 @@ public class ClientEvents {
     // Reflection fields for accessing guiLeft/guiTop
     private static Field guiLeftField;
     private static Field guiTopField;
+
+    // Whether we already cleared the temporary glow for switching to model xray mode, to avoid re-clearing every tick
+    private boolean clearedOutlineGlowForXray = false;
 
     static {
         try {
@@ -89,6 +93,18 @@ public class ClientEvents {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.world == null || mc.player == null) return;
 
+        // If we just switched to model xray mode, clear any existing temporary glow from the outline mode
+        if (ModConfig.isClientUseModelXRay()) {
+            if (!clearedOutlineGlowForXray) {
+                clearTemporaryGlow(mc.world.loadedEntityList);
+                clearedOutlineGlowForXray = true;
+            }
+
+            return;
+        }
+
+        clearedOutlineGlowForXray = false;
+
         for (Entity entity : mc.world.loadedEntityList) {
             boolean withinRange = mc.player.getDistanceSq(entity) <= ModConfig.clientDetectionRange * ModConfig.clientDetectionRange;
             boolean tracked = SpawnTrackerManager.isTracked(entity);
@@ -102,15 +118,24 @@ public class ClientEvents {
             if (tracked && withinRange && allowed) {
                 if (!entity.isGlowing()) {
                     entity.setGlowing(true);
-                    entity.getEntityData().setBoolean("smt_temp_glow", true);
+                    entity.getEntityData().setBoolean(TEMP_GLOW_TAG, true);
                 }
             } else {
-                if (entity.getEntityData().getBoolean("smt_temp_glow")) {
-                    entity.setGlowing(false);
-                    entity.getEntityData().removeTag("smt_temp_glow");
-                }
+                clearTemporaryGlow(entity);
             }
         }
+    }
+
+    // The outline mode owns this temporary glow state, so switching to model xray must clear it immediately.
+    private void clearTemporaryGlow(List<Entity> entities) {
+        for (Entity entity : entities) clearTemporaryGlow(entity);
+    }
+
+    private void clearTemporaryGlow(Entity entity) {
+        if (!entity.getEntityData().getBoolean(TEMP_GLOW_TAG)) return;
+
+        entity.setGlowing(false);
+        entity.getEntityData().removeTag(TEMP_GLOW_TAG);
     }
 
     @SubscribeEvent

@@ -26,6 +26,7 @@ public class ModConfig {
 
     public static boolean clientEnableTracking = true; // can disable tracking entirely
     public static double clientDetectionRange = 64.0; // range for spawn event consideration client side
+    public static boolean clientUseModelXRay = true; // render tracked entities's models instead of using glow outlines
     public static boolean clientI18nNames = true; // localize names in UI/HUD
     public static int clientSpawnCheckRetries = 100; // retry count for random spawn checks
     public static List<String> clientTrackedEntityIds = new ArrayList<>();
@@ -49,6 +50,7 @@ public class ModConfig {
 
     private static final String enableTrackingDesc = I18n.translateToLocal("config.supermobtracker.client.enableTracking.desc");
     private static final String detectionRangeDesc = I18n.translateToLocal("config.supermobtracker.client.detectionRange.desc");
+    private static final String useModelXRayDesc = I18n.translateToLocal("config.supermobtracker.client.useModelXRay.desc");
     private static final String i18nNamesDesc = I18n.translateToLocal("config.supermobtracker.client.i18nNames.desc");
     private static final String spawnCheckRetriesDesc = I18n.translateToLocal("config.supermobtracker.client.spawnCheckRetries.desc");
     private static final String trackedEntityIdsDesc = I18n.translateToLocal("config.supermobtracker.client.trackedEntityIds.desc");
@@ -109,6 +111,10 @@ public class ModConfig {
         prop = config.get("client", "detectionRange", (float) clientDetectionRange, detectionRangeDesc, 8f, 256f);
         prop.setLanguageKey("config.supermobtracker.client.detectionRange");
         clientDetectionRange = prop.getDouble();
+
+        prop = config.get("client", "useModelXRay", clientUseModelXRay, useModelXRayDesc);
+        prop.setLanguageKey("config.supermobtracker.client.useModelXRay");
+        clientUseModelXRay = prop.getBoolean();
 
         prop = config.get("client", "spawnCheckRetries", clientSpawnCheckRetries, spawnCheckRetriesDesc, 1, 1000);
         prop.setLanguageKey("config.supermobtracker.client.spawnCheckRetries");
@@ -393,6 +399,20 @@ public class ModConfig {
 
     public static boolean isClientHudEnabled() {
         return clientHudEnabled;
+    }
+
+    public static boolean isClientUseModelXRay() {
+        return clientUseModelXRay;
+    }
+
+    public static void setClientUseModelXRay(boolean value) {
+        if (clientUseModelXRay == value) return;
+
+        clientUseModelXRay = value;
+        if (config != null) {
+            config.get("client", "useModelXRay", true).set(value);
+            config.save();
+        }
     }
 
     public static List<String> getClientUnstableSimulationEntities() {
