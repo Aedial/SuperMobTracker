@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -45,6 +46,7 @@ public final class ExternalSpawnHints {
     private static final int MAX_TIME_OF_DAY = 23999;
     private static final Map<String, BiomeDictionary.Type> BIOME_TYPES_BY_NAME = buildBiomeTypeMap();
     private static final Set<String> VALID_WEATHERS = new LinkedHashSet<>(Arrays.asList("clear", "rain", "thunder"));
+    private static final Pattern TRANSLATION_KEY_PATTERN = Pattern.compile("[a-z0-9_.-]+");
 
     private static Map<ResourceLocation, HintEntry> cachedEntries = Collections.emptyMap();
     private static long lastLoadedTimestamp = Long.MIN_VALUE;
@@ -193,7 +195,12 @@ public final class ExternalSpawnHints {
         }
 
         entry.dimensionId = getInteger(object, "dimensionId");
-        entry.dimensionName = getString(object, "dimensionName");
+        String dimensionName = getString(object, "dimensionName");
+        if (dimensionName != null && !isTranslationKey(dimensionName)) {
+            SuperMobTracker.LOGGER.warn("Ignoring non-localized dimensionName '{}' in spawn hint entry {} from {}.", dimensionName, index, sourceName);
+        } else {
+            entry.dimensionName = dimensionName;
+        }
         entry.groundBlocks.addAll(getStringList(object, "groundBlocks"));
 
         IntRange lightLevels = parseRange(object, "lightLevels", MIN_LIGHT_LEVEL, MAX_LIGHT_LEVEL, index, sourceName);
@@ -214,7 +221,14 @@ public final class ExternalSpawnHints {
         entry.moonPhases.addAll(getIntegerList(object, "moonPhases"));
         entry.requiresSlimeChunk = getBoolean(object, "requiresSlimeChunk");
         entry.requiresNether = getBoolean(object, "requiresNether");
-        entry.hints.addAll(getStringList(object, "hints"));
+        for (String hintKey : getStringList(object, "hints")) {
+            if (!isTranslationKey(hintKey)) {
+                SuperMobTracker.LOGGER.warn("Ignoring non-localized hint '{}' in spawn hint entry {} from {}.", hintKey, index, sourceName);
+                continue;
+            }
+
+            entry.hints.add(hintKey);
+        }
 
         return entry;
     }
@@ -224,6 +238,10 @@ public final class ExternalSpawnHints {
 
         String normalized = spawnReason.trim().toLowerCase(Locale.ROOT);
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static boolean isTranslationKey(String value) {
+        return value != null && TRANSLATION_KEY_PATTERN.matcher(value).matches();
     }
 
     private static JsonObject getObject(JsonObject object, String key) {

@@ -26,16 +26,16 @@ public final class ConditionUtils {
     /** Localization key for unknown value */
     public static final String KEY_UNKNOWN = I18n.translateToLocal("gui.mobtracker.unknown");
 
-    /** Hint localization keys */
-    public static final String HINT_LIGHT = I18n.translateToLocal("gui.mobtracker.hint.light");
-    public static final String HINT_GROUND = I18n.translateToLocal("gui.mobtracker.hint.ground");
-    public static final String HINT_BIOME = I18n.translateToLocal("gui.mobtracker.hint.biome");
-    public static final String HINT_TIME = I18n.translateToLocal("gui.mobtracker.hint.time");
-    public static final String HINT_WEATHER = I18n.translateToLocal("gui.mobtracker.hint.weather");
-    public static final String HINT_SKY = I18n.translateToLocal("gui.mobtracker.hint.sky");
-    public static final String HINT_MOON_PHASE = I18n.translateToLocal("gui.mobtracker.hint.moonphase");
-    public static final String HINT_SLIME_CHUNK = I18n.translateToLocal("gui.mobtracker.hint.slimechunk");
-    public static final String HINT_NETHER = I18n.translateToLocal("gui.mobtracker.hint.nether");
+    /** Hint localization keys, resolved by the GUI at render time. */
+    public static final String HINT_LIGHT = "gui.mobtracker.hint.light";
+    public static final String HINT_GROUND = "gui.mobtracker.hint.ground";
+    public static final String HINT_BIOME = "gui.mobtracker.hint.biome";
+    public static final String HINT_TIME = "gui.mobtracker.hint.time";
+    public static final String HINT_WEATHER = "gui.mobtracker.hint.weather";
+    public static final String HINT_SKY = "gui.mobtracker.hint.sky";
+    public static final String HINT_MOON_PHASE = "gui.mobtracker.hint.moonphase";
+    public static final String HINT_SLIME_CHUNK = "gui.mobtracker.hint.slimechunk";
+    public static final String HINT_NETHER = "gui.mobtracker.hint.nether";
 
     /** Whether profiling is enabled (Java arg). Can be temporarily suppressed. */
     private static final boolean PROFILING_ARG = Boolean.getBoolean("supermobtracker.profile");

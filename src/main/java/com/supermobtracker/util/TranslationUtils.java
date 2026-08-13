@@ -136,6 +136,10 @@ public final class TranslationUtils {
     public static String translateDimensionName(String dimName) {
         if (dimName == null || dimName.isEmpty()) return "?";
 
+        // External spawn hints provide an explicit translation key for dimensions
+        // whose runtime providers do not expose a stable registry name.
+        if (I18n.hasKey(dimName)) return I18n.format(dimName);
+
         // Parse namespace and path
         String namespace = "minecraft";
         String path = dimName;

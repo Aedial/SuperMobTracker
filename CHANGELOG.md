@@ -8,6 +8,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.4.2] - 2026-08-13
+### Added
+- Add spawn conditions for (most) mobs of Ice and Fire, Erebus, Twilight Forest, and The Betweenlands, which didn't have any native biome spawn conditions before (due to custom spawn logic). Some may still be missing, you can PR them to the bundled spawn_hints.defaults.json file, or add them to your own spawn_hints.json file (in config).
+
+
+## [1.4.1] - 2026-07-12
+### Fixed
+- Fix drop simulation world creation failing with Alfheim 1.6 due to constructor-bypassed world lighting-engine initialization.
+
+
 ## [1.4.0] - 2026-07-06
 ### Added
 - Add model-based x-ray rendering for tracked mobs (courtesy of @zzhalex233), with a config toggle to switch between this new textured rendering and the old vanilla outline glow.

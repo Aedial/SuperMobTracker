@@ -2,6 +2,8 @@ package com.supermobtracker.drops;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -120,6 +122,10 @@ public class DropSimulationWorld extends WorldServer {
             isRemoteField.setAccessible(true);
             isRemoteField.set(instance, false);
 
+            // Optional Alfheim compatibility: constructor-bypassed worlds skip mixin field
+            // initialization, so we need to populate the lighting engine field manually.
+            initializeAlfheimLightingEngine(instance, realWorld);
+
             // Create a fake empty chunk to return from getChunk() methods
             // Some mods call World.getEntitiesWithinAABB which uses getChunk internally
             // Use our SimulationChunk instead of EmptyChunk (which is client-only)
@@ -201,6 +207,83 @@ public class DropSimulationWorld extends WorldServer {
         } catch (Exception e) {
             throw new RuntimeException("Failed to create DropSimulationWorld", e);
         }
+    }
+
+    /**
+     * Initialize Alfheim's optional world lighting-engine field when present.
+     * ReflectionFactory bypasses constructors, so mixin-backed field initialization
+     * does not run for this fake world.
+     * Reflection is used to avoid a hard dependency on a specific Alfheim version.
+     */
+    private static void initializeAlfheimLightingEngine(DropSimulationWorld instance, WorldServer realWorld) {
+        try {
+            Method getLightingEngine = findMethodRecursive(realWorld.getClass(), "getAlfheim$lightingEngine");
+            if (getLightingEngine == null) return;
+
+            Object lightingEngine = getLightingEngine.invoke(realWorld);
+            if (lightingEngine == null) return;
+
+            // Prefer a dedicated engine tied to the simulation world.
+            try {
+                Constructor<?> lightingConstructor = lightingEngine.getClass().getDeclaredConstructor(World.class);
+                lightingConstructor.setAccessible(true);
+                lightingEngine = lightingConstructor.newInstance(instance);
+            } catch (ReflectiveOperationException ignored) {
+                // Fall back to the real world's engine when constructor isn't accessible.
+            }
+
+            Field alfheimLightingField = findFieldRecursive(instance.getClass(), "alfheim$lightingEngine");
+            if (alfheimLightingField == null) return;
+
+            alfheimLightingField.setAccessible(true);
+
+            Class<?> fieldType = alfheimLightingField.getType();
+            if (fieldType.isInstance(lightingEngine)) {
+                alfheimLightingField.set(instance, lightingEngine);
+                return;
+            }
+
+            if (AtomicReference.class.isAssignableFrom(fieldType)) {
+                alfheimLightingField.set(instance, new AtomicReference<>(lightingEngine));
+                return;
+            }
+
+            SuperMobTracker.LOGGER.debug(
+                "Skipping Alfheim lighting engine setup due to incompatible field type: {}",
+                fieldType.getName()
+            );
+        } catch (ReflectiveOperationException e) {
+            SuperMobTracker.LOGGER.debug("Skipping Alfheim lighting engine setup for simulation world", e);
+        }
+    }
+
+    @Nullable
+    private static Method findMethodRecursive(Class<?> type, String methodName) {
+        Class<?> current = type;
+        while (current != null) {
+            for (Method method : current.getDeclaredMethods()) {
+                if (methodName.equals(method.getName()) && method.getParameterCount() == 0) {
+                    method.setAccessible(true);
+                    return method;
+                }
+            }
+            current = current.getSuperclass();
+        }
+
+        return null;
+    }
+
+    @Nullable
+    private static Field findFieldRecursive(Class<?> type, String fieldName) {
+        Class<?> current = type;
+        while (current != null) {
+            for (Field field : current.getDeclaredFields()) {
+                if (fieldName.equals(field.getName())) return field;
+            }
+            current = current.getSuperclass();
+        }
+
+        return null;
     }
 
     /**

@@ -51,7 +51,7 @@ Example:
 }
 ```
 
-See `docs/spawn_hints.example.json` for a copy-paste example and `docs/spawn_hints.schema.json` for the JSON Schema.
+See [`docs/spawn_hints.example.json`](https://github.com/Aedial/SuperMobTracker/tree/main/docs/spawn_hints.example.json) for a copy-paste example and [`docs/spawn_hints.schema.json`](https://github.com/Aedial/SuperMobTracker/tree/main/docs/spawn_hints.schema.json) for the JSON Schema. You can also use the bundled [`spawn_hints.defaults.json`](https://github.com/Aedial/SuperMobTracker/tree/main/src/main/resources/assets/supermobtracker/spawn_hints.defaults.json) as a reference.
 
 
 ## FAQ
