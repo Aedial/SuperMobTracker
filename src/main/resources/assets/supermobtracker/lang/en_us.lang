@@ -132,6 +132,9 @@ gui.mobtracker.dimension.unknown.tooltip.complete=Could not determine dimension:
 dimension.overworld=Overworld
 dimension.the_nether=The Nether
 dimension.the_end=The End
+dimension.erebus=The Erebus
+dimension.thebetweenlands=The Betweenlands
+dimension.twilightforest=Twilight Forest
 
 # Biomes
 gui.mobtracker.biomes=Biomes: %s
@@ -145,7 +148,7 @@ gui.mobtracker.hintsHeader=Notes:
 gui.mobtracker.any=Any
 gui.mobtracker.unknown=Unknown
 gui.mobtracker.clickToEnlarge=Click to enlarge
-gui.mobtracker.closeModal=Click outside or press Escape to close
+gui.mobtracker.closeModal=Click outside or press Escape to close, click Space to toggle rotation
 
 # Gallery View
 gui.mobtracker.gallery.button=Gallery
@@ -175,6 +178,12 @@ gui.mobtracker.hint.sky=May require sky visibility (surface spawning).
 gui.mobtracker.hint.moonphase=May require a specific moon phase (e.g., full moon).
 gui.mobtracker.hint.slimechunk=May require a slime chunk.
 gui.mobtracker.hint.nether=May require a Nether-like dimension.
+gui.mobtracker.hint.structure=Spawns in a structure.
+gui.mobtracker.hint.spawner_only=Spawner-only.
+gui.mobtracker.hint.chunk_generation=Spawns in the wild, but only during chunk generation.
+gui.mobtracker.hint.away_from_world_spawn=Only generates away from world spawn.
+gui.mobtracker.hint.block_or_item=Can be released by a block or item.
+gui.mobtracker.hint.block_triggered=Released when a specific block is broken or activated.
 gui.mobtracker.spawnReason=Spawn source: %s
 gui.mobtracker.spawnReason.natural=Natural spawn
 gui.mobtracker.spawnReason.worldgen=Wordgen

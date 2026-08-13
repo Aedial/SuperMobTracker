@@ -803,7 +803,7 @@ public class GuiMobTracker extends GuiScreen {
             textY += 10;
             textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.hintsHeader"), textX, textY, 10, textW, color);
 
-            for (String hint : hints) textY = drawWrappedString(fontRenderer, "- " + hint, textX + 6, textY, 12, textW, hintColor);
+            for (String hint : hints) textY = drawWrappedString(fontRenderer, "- " + I18n.format(hint), textX + 6, textY, 12, textW, hintColor);
         }
 
         // Store biome tooltip data for later rendering (after buttons are drawn)

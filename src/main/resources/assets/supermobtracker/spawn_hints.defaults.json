@@ -1,0 +1,1027 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "entityId": "iceandfire:gorgon",
+      "spawnReason": "structure",
+      "biomes": {"types": ["BEACH"]},
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "iceandfire:siren",
+      "spawnReason": "worldgen",
+      "biomes": {"types": ["OCEAN"]},
+      "groundBlocks": ["water"],
+      "hints": ["gui.mobtracker.hint.chunk_generation"]
+    },
+    {
+      "entityId": "iceandfire:cyclops",
+      "spawnReason": "worldgen",
+      "biomes": {"types": ["BEACH", "PLAINS"]},
+      "hints": ["gui.mobtracker.hint.chunk_generation"]
+    },
+    {
+      "entityId": "iceandfire:firedragon",
+      "spawnReason": "worldgen",
+      "hints": ["gui.mobtracker.hint.chunk_generation"]
+    },
+    {
+      "entityId": "iceandfire:icedragon",
+      "spawnReason": "worldgen",
+      "biomes": {"types": ["COLD", "SNOWY"]},
+      "hints": ["gui.mobtracker.hint.chunk_generation"]
+    },
+    {
+      "entityId": "iceandfire:lightningdragon",
+      "spawnReason": "worldgen",
+      "biomes": {"types": ["JUNGLE", "MESA", "SAVANNA"]},
+      "hints": ["gui.mobtracker.hint.chunk_generation"]
+    },
+    {
+      "entityId": "iceandfire:hippocampus",
+      "spawnReason": "worldgen",
+      "biomes": {"types": ["OCEAN"]},
+      "groundBlocks": ["water"],
+      "yLevels": {"min": 20, "max": 59},
+      "hints": ["gui.mobtracker.hint.chunk_generation"]
+    },
+    {
+      "entityId": "iceandfire:seaserpent",
+      "spawnReason": "worldgen",
+      "biomes": {"types": ["OCEAN"]},
+      "groundBlocks": ["water"],
+      "yLevels": {"min": 20, "max": 59},
+      "hints": ["gui.mobtracker.hint.chunk_generation"]
+    },
+    {
+      "entityId": "iceandfire:stymphalianbird",
+      "spawnReason": "worldgen",
+      "biomes": {"types": ["SWAMP"]},
+      "hints": ["gui.mobtracker.hint.chunk_generation", "gui.mobtracker.hint.away_from_world_spawn"]
+    },
+    {
+      "entityId": "iceandfire:if_pixie",
+      "spawnReason": "structure",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "iceandfire:snowvillager",
+      "spawnReason": "structure",
+      "biomes": {"types": ["COLD", "SNOWY"]},
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "iceandfire:myrmex_queen",
+      "spawnReason": "structure",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "iceandfire:myrmex_worker",
+      "spawnReason": "structure",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "iceandfire:myrmex_soldier",
+      "spawnReason": "structure",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "iceandfire:myrmex_sentinel",
+      "spawnReason": "structure",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "iceandfire:if_hydra",
+      "spawnReason": "structure",
+      "biomes": {"types": ["SWAMP"]},
+      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.away_from_world_spawn"]
+    },
+    {
+      "entityId": "erebus:erebus.antlion_boss",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "erebus:erebus.antlion_mini_boss",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "erebus:erebus.tarantula_mini_boss",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["erebus:ulterior_outback"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "erebus:erebus.umber_golem_idol",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus",
+      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_or_item"]
+    },
+    {
+      "entityId": "erebus:erebus.mosquito",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:submerged_swamp", "erebus:subterranean_savannah", "erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.fly",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:petrified_forest", "erebus:subterranean_savannah", "erebus:ulterior_outback", "erebus:underground_jungle", "erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.wasp",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:subterranean_savannah", "erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.beetle_larva",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:submerged_swamp", "erebus:subterranean_savannah", "erebus:ulterior_outback", "erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.beetle",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:submerged_swamp", "erebus:subterranean_savannah", "erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.grasshopper",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:subterranean_savannah"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.chameleon_tick",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:petrified_forest", "erebus:subterranean_savannah", "erebus:ulterior_outback", "erebus:underground_jungle", "erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.scytodes",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:petrified_forest", "erebus:subterranean_savannah", "erebus:ulterior_outback", "erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.tarantula",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:subterranean_savannah", "erebus:ulterior_outback", "erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.scorpion",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:subterranean_savannah", "erebus:ulterior_outback", "erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.glow_worm",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:petrified_forest", "erebus:subterranean_savannah"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.rhino_beetle",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:ulterior_outback"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.centipede",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:submerged_swamp", "erebus:ulterior_outback", "erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.black_widow",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:petrified_forest", "erebus:ulterior_outback", "erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.bot_fly",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:petrified_forest", "erebus:ulterior_outback", "erebus:underground_jungle", "erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.honey_pot_ant",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:ulterior_outback"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.midge_swarm",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:ulterior_outback"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.solifuge",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:ulterior_outback", "erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.fungal_weevil",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:fungal_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.crushroom",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:fungal_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.black_ant",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:fungal_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.punchroom",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:fungal_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.stag_beetle",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:fungal_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.zombie_ant",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:fungal_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.zombie_ant_soldier",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:fungal_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.worker_bee",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.dragon_fly",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:submerged_swamp"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.moth",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:petrified_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.crop_weevil",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.velvet_worm",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest", "erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.cicada",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.titan_beetle",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:elysian_fields", "erebus:fields_sub_forest"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.bombardier_beetle",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.bombardier_beetle_larva",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.jumping_spider",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:petrified_forest", "erebus:submerged_swamp", "erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.praying_mantis",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:underground_jungle"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.leech",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:submerged_swamp"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.blood_snail",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:submerged_swamp"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.pond_skater",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:submerged_swamp"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.bog_maw",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:submerged_swamp"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.fire_ant",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.fire_ant_soldier",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.antlion",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "erebus:erebus.lava_web_spider",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["erebus:volcanic_desert"]},
+      "dimensionId": 66,
+      "dimensionName": "dimension.erebus"
+    },
+    {
+      "entityId": "thebetweenlands:pyrad",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "thebetweenlands:fortress_boss",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["thebetweenlands:marsh_0", "thebetweenlands:marsh_1"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "thebetweenlands:sludge_menace",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["thebetweenlands:sludge_plains_clearing"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "thebetweenlands:chiromaw_matriarch",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["thebetweenlands:raised_isles"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "thebetweenlands:anadia",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:angler",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:blood_snail",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:patchy_islands", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:boulder_sprite",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:bubbler_crab",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:cave_fish",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:chiromaw",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:chiromaw_greebling_rider",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:dragonfly",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:wild_emberling",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:patchy_islands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:firefly",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:patchy_islands", "thebetweenlands:swamplands", "thebetweenlands:deep_waters", "thebetweenlands:coarse_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:swamplands_clearing", "thebetweenlands:sludge_plains_clearing"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:freshwater_urchin",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:deep_waters"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:frog",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:gas_cloud",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:marsh_0", "thebetweenlands:marsh_1"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:gecko",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:toad",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:greebling",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:greebling_coracle",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:deep_waters"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:jellyfish",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:deep_waters"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:jellyfish_cave",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:deep_waters"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:leech",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:patchy_islands", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:lurker",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:mire_snail",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:patchy_islands", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:olm",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:peat_mummy",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:patchy_islands", "thebetweenlands:swamplands", "thebetweenlands:deep_waters", "thebetweenlands:coarse_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:swamplands_clearing", "thebetweenlands:sludge_plains_clearing"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:rock_snot",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:deep_waters"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:root_sprite",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:raised_isles"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:shambler",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:patchy_islands", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:silt_crab",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:patchy_islands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:sludge",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:smoll_sludge",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:sporeling",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:stalker",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:swamp_hag",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:patchy_islands", "thebetweenlands:swamplands", "thebetweenlands:deep_waters", "thebetweenlands:coarse_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:swamplands_clearing", "thebetweenlands:sludge_plains_clearing"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:swarm",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:tar_beast",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "thebetweenlands:wight",
+      "spawnReason": "natural",
+      "biomes": {"ids": ["thebetweenlands:coarse_islands", "thebetweenlands:deep_waters", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1", "thebetweenlands:patchy_islands", "thebetweenlands:raised_isles", "thebetweenlands:sludge_plains", "thebetweenlands:sludge_plains_clearing", "thebetweenlands:swamplands"]},
+      "dimensionId": 20,
+      "dimensionName": "dimension.thebetweenlands"
+    },
+    {
+      "entityId": "twilightforest:naga",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:lich",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:hydra",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:fire_swamp"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:ur_ghast",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:knight_phantom",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:snow_queen",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_glacier"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:minoshroom",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_swamp"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:yeti_alpha",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:snowy_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:redcap",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:redcap_sapper",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest", "twilightforest:dark_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:swarm_spider",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:hostile_wolf",
+      "spawnReason": "spawner",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.spawner_only"]
+    },
+    {
+      "entityId": "twilightforest:hedge_spider",
+      "spawnReason": "spawner",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.spawner_only"]
+    },
+    {
+      "entityId": "twilightforest:wraith",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:fire_beetle",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest", "twilightforest:twilight_swamp"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:slime_beetle",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest", "twilightforest:twilight_swamp", "twilightforest:dark_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:pinch_beetle",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest", "twilightforest:twilight_swamp", "twilightforest:dark_forest_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:death_tome",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_forest", "twilightforest:dense_twilight_forest", "twilightforest:mushroom_forest", "twilightforest:twilight_stream", "twilightforest:twilight_clearing", "twilightforest:oak_savannah", "twilightforest:firefly_forest", "twilightforest:thornlands", "twilightforest:spooky_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:snow_guardian",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_glacier"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:stable_ice_core",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_glacier"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:unstable_ice_core",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_glacier"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:minotaur",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_swamp"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:maze_slime",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_swamp"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:tower_golem",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:mini_ghast",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:tower_broodling",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:tower_ghast",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:tower_termite",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+    },
+    {
+      "entityId": "twilightforest:blockchain_goblin",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:goblin_knight_lower",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:helmet_crab",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:dark_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:giant_miner",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_highlands"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:armored_giant",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:twilight_highlands", "twilightforest:highlands_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:harbinger_cube",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:highlands_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:adherent",
+      "spawnReason": "structure",
+      "biomes": {"ids": ["twilightforest:highlands_center"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.structure"]
+    },
+    {
+      "entityId": "twilightforest:quest_ram",
+      "spawnReason": "worldgen",
+      "biomes": {"ids": ["twilightforest:enchanted_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.chunk_generation"]
+    },
+    {
+      "entityId": "twilightforest:rising_zombie",
+      "spawnReason": "spawner",
+      "biomes": {"ids": ["twilightforest:spooky_forest"]},
+      "dimensionId": 7,
+      "dimensionName": "dimension.twilightforest",
+      "hints": ["gui.mobtracker.hint.spawner_only"]
+    }
+  ]
+}

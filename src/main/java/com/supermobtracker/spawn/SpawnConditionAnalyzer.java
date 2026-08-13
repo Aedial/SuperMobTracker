@@ -222,13 +222,14 @@ public class SpawnConditionAnalyzer {
         public boolean failed() {
             if (hasNonNaturalSpawnReason()) return false;
 
+            boolean hasBiomes = biomes != null && !biomes.isEmpty() && !biomes.get(0).equals("unknown");
             boolean hasLightLevels = !lightLevels.isEmpty();
             boolean hasYLevels = !yLevels.isEmpty();
             boolean hasGroundBlocks = groundBlocks != null && !groundBlocks.isEmpty() && !groundBlocks.get(0).equals("unknown");
             boolean hasTimeOfDay = timeOfDay != null && !timeOfDay.isEmpty();
             boolean hasWeather = weather != null && !weather.isEmpty() && !weather.get(0).equals("unknown");
 
-            return !(hasLightLevels || hasYLevels || hasGroundBlocks || hasTimeOfDay || hasWeather);
+            return !(hasBiomes || hasLightLevels || hasYLevels || hasGroundBlocks || hasTimeOfDay || hasWeather);
         }
 
         /**
@@ -236,6 +237,13 @@ public class SpawnConditionAnalyzer {
          */
         public boolean isSparse() {
             if (hasNonNaturalSpawnReason()) return false;
+
+            boolean hasBiomes = biomes != null && !biomes.isEmpty() && !biomes.get(0).equals("unknown");
+            boolean hasOtherConditions = !lightLevels.isEmpty() || !yLevels.isEmpty() ||
+                                         groundBlocks != null && !groundBlocks.isEmpty() && !groundBlocks.get(0).equals("unknown") ||
+                                         timeOfDay != null && !timeOfDay.isEmpty() ||
+                                         weather != null && !weather.isEmpty() && !weather.get(0).equals("unknown");
+            if (hasBiomes && !hasOtherConditions) return false;
 
             return Utils.formatRangeFromList(lightLevels, ",").contains(",") ||
                    Utils.formatRangeFromList(yLevels, ",").contains(",") ||
