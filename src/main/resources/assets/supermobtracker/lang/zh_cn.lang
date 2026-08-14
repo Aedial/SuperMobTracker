@@ -132,6 +132,9 @@ gui.mobtracker.dimension.unknown.tooltip.complete=无法确定维度：在所有
 dimension.overworld=主世界
 dimension.the_nether=下界
 dimension.the_end=末地
+dimension.erebus=混沌之地
+dimension.thebetweenlands=交错次元
+dimension.twilightforest=暮色森林
 
 # Biomes
 gui.mobtracker.biomes=生物群系：%s
@@ -145,7 +148,7 @@ gui.mobtracker.hintsHeader=备注：
 gui.mobtracker.any=任意
 gui.mobtracker.unknown=未知
 gui.mobtracker.clickToEnlarge=点击放大
-gui.mobtracker.closeModal=点击外部或按Esc关闭
+gui.mobtracker.closeModal=点击外部或按Esc关闭，按空格键切换实体旋转
 
 # Gallery View
 gui.mobtracker.gallery.button=画廊
@@ -175,6 +178,12 @@ gui.mobtracker.hint.sky=可能需要天空可见（地表生成）。
 gui.mobtracker.hint.moonphase=可能需要特定月相（例如：满月）。
 gui.mobtracker.hint.slimechunk=可能需要史莱姆区块。
 gui.mobtracker.hint.nether=可能需要下界类维度。
+gui.mobtracker.hint.structure=在结构中生成。
+gui.mobtracker.hint.spawner_only=仅由刷怪箱生成。
+gui.mobtracker.hint.chunk_generation=在野外生成，但仅发生在区块生成期间。
+gui.mobtracker.hint.away_from_world_spawn=仅在远离世界出生点的地方生成。
+gui.mobtracker.hint.block_or_item=可由方块或物品释放。
+gui.mobtracker.hint.block_triggered=当特定方块被破坏或激活时释放。
 gui.mobtracker.spawnReason=生成来源：%s
 gui.mobtracker.spawnReason.natural=自然生成
 gui.mobtracker.spawnReason.worldgen=世界生成
