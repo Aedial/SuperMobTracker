@@ -22,7 +22,7 @@ import com.supermobtracker.drops.DropSimulator;
 import com.supermobtracker.drops.DropSimulator.DropEntry;
 import com.supermobtracker.drops.DropSimulator.DropSimulationResult;
 import com.supermobtracker.drops.DropSimulator.SimulationTask;
-import com.supermobtracker.util.JEIHelper;
+import com.supermobtracker.integration.jei.JEIHelper;
 import com.supermobtracker.util.Utils;
 
 

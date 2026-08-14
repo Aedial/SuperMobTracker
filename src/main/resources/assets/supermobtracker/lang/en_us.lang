@@ -2,26 +2,7 @@
 
 key.supermobtracker.open=Open Mob Tracker
 key.categories.supermobtracker=Super Mob Tracker
-
-# Config descriptions
-config.supermobtracker.client.enableTracking.desc=Enable tracking of mobs (requires Minecraft restart).
-config.supermobtracker.client.detectionRange.desc=Range in blocks to detect tracked mobs for the x-ray or glow highlight effect.
-config.supermobtracker.client.useModelXRay.desc=Render tracked mobs through walls with their normal model instead of using the vanilla glow outline.
-config.supermobtracker.client.i18nNames.desc=Use localized names in the tracker GUI.
-config.supermobtracker.client.spawnCheckRetries.desc=Maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time.
-config.supermobtracker.client.trackedEntityIds.desc=List of entity IDs currently being tracked.
-config.supermobtracker.client.lastSelectedEntity.desc=Last selected entity in the mob tracker GUI.
-config.supermobtracker.client.filterText.desc=Last filter text in the mob tracker GUI.
-config.supermobtracker.client.hudPosition.desc=Position of the tracking overlay on screen.
-config.supermobtracker.client.hudPaddingExternal.desc=Padding from screen edge for the tracking overlay.
-config.supermobtracker.client.hudPaddingInternal.desc=Padding inside the tracking overlay box.
-config.supermobtracker.client.hudLineSpacing.desc=Spacing between lines in the tracking overlay.
-config.supermobtracker.client.hudEnabled.desc=Whether to show the tracking overlay on screen.
-config.supermobtracker.client.mobWhitelist.desc=List of entity IDs that are whitelisted for tracking (takes precedence over blacklist).
-config.supermobtracker.client.mobBlacklist.desc=List of entity IDs that are blacklisted from tracking.
-config.supermobtracker.client.dropSimulationCount.desc=Number of simulated kills for calculating drop rates.
-config.supermobtracker.client.unstableSimulationEntities.desc=Entity IDs that corrupt global state during drop simulation and should be excluded from simulation. They can be identified by severe performance degradation for every entity after simulating their drops.
-config.supermobtracker.client.shouldRenderEntities.desc=Entity IDs that crash or spam errors when rendered. These entities will not render at all in the preview/gallery.
+supermobtracker.config.title=Super Mob Tracker Configuration
 
 # Config names (displayed in config GUI)
 config.supermobtracker.client.enableTracking=Enable Tracking
@@ -42,6 +23,27 @@ config.supermobtracker.client.mobBlacklist=Mob Blacklist
 config.supermobtracker.client.dropSimulationCount=Drop Simulation Count
 config.supermobtracker.client.unstableSimulationEntities=Unstable Simulation Entities
 config.supermobtracker.client.shouldRenderEntities=Should Render Entities
+
+# Config descriptions
+config.supermobtracker.client=Client
+config.supermobtracker.client.enableTracking.tooltip=Enable tracking of mobs (requires Minecraft restart).
+config.supermobtracker.client.detectionRange.tooltip=Range in blocks to detect tracked mobs for the x-ray or glow highlight effect.
+config.supermobtracker.client.useModelXRay.tooltip=Render tracked mobs through walls with their normal model instead of using the vanilla glow outline.
+config.supermobtracker.client.i18nNames.tooltip=Use localized names in the tracker GUI.
+config.supermobtracker.client.spawnCheckRetries.tooltip=Maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time.
+config.supermobtracker.client.trackedEntityIds.tooltip=List of entity IDs currently being tracked.
+config.supermobtracker.client.lastSelectedEntity.tooltip=Last selected entity in the mob tracker GUI.
+config.supermobtracker.client.filterText.tooltip=Last filter text in the mob tracker GUI.
+config.supermobtracker.client.hudPosition.tooltip=Position of the tracking overlay on screen.
+config.supermobtracker.client.hudPaddingExternal.tooltip=Padding from screen edge for the tracking overlay.
+config.supermobtracker.client.hudPaddingInternal.tooltip=Padding inside the tracking overlay box.
+config.supermobtracker.client.hudLineSpacing.tooltip=Spacing between lines in the tracking overlay.
+config.supermobtracker.client.hudEnabled.tooltip=Whether to show the tracking overlay on screen.
+config.supermobtracker.client.mobWhitelist.tooltip=List of entity IDs that are whitelisted for tracking (takes precedence over blacklist).
+config.supermobtracker.client.mobBlacklist.tooltip=List of entity IDs that are blacklisted from tracking.
+config.supermobtracker.client.dropSimulationCount.tooltip=Number of simulated kills for calculating drop rates.
+config.supermobtracker.client.unstableSimulationEntities.tooltip=Entity IDs that corrupt global state during drop simulation and should be excluded from simulation. They can be identified by severe performance degradation for every entity after simulating their drops.
+config.supermobtracker.client.shouldRenderEntities.tooltip=Entity IDs that crash or spam errors when rendered. These entities will not render at all in the preview/gallery.
 
 # GUI Labels
 gui.supermobtracker.i18nIDs.on=IDs: Localized
@@ -205,3 +207,4 @@ gui.supermobtracker.hudPosition.bottom_center=Bottom Center
 gui.supermobtracker.hudPosition.bottom_right=Bottom Right
 gui.supermobtracker.hudPosition.button=HUD: %s
 gui.supermobtracker.hudPosition.label=HUD Position
+gui.supermobtracker.hudPosition.label.tooltip=Position of the tracking overlay on screen.

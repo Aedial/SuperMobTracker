@@ -10,24 +10,19 @@ import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 
-import com.supermobtracker.IProxy;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.network.NetworkHandler;
 
 
 @Mod(
-    modid = SuperMobTracker.MODID,
-    name = SuperMobTracker.NAME,
-    version = SuperMobTracker.VERSION,
-    acceptedMinecraftVersions = "[1.12,1.12.2]",
+    modid = Tags.MODID,
+    name = Tags.MODNAME,
+    version = Tags.VERSION,
+    acceptedMinecraftVersions = "[1.12.2]",
     guiFactory = "com.supermobtracker.config.ConfigGuiFactory"
 )
 public class SuperMobTracker {
-    public static final String MODID = "supermobtracker";
-    public static final String NAME = "Super Mob Tracker";
-    public static final String VERSION = "1.2.4";
-
-    public static final Logger LOGGER = LogManager.getLogger(MODID);
+    public static final Logger LOGGER = LogManager.getLogger(Tags.MODID);
 
     @SidedProxy(clientSide = "com.supermobtracker.client.ClientProxy", serverSide = "com.supermobtracker.server.ServerProxy")
     public static IProxy proxy;

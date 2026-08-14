@@ -4,7 +4,7 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import net.minecraftforge.fml.relauncher.Side;
 
-import com.supermobtracker.SuperMobTracker;
+import com.supermobtracker.Tags;
 
 
 /**
@@ -13,7 +13,7 @@ import com.supermobtracker.SuperMobTracker;
  */
 public class NetworkHandler {
 
-    public static final SimpleNetworkWrapper INSTANCE = NetworkRegistry.INSTANCE.newSimpleChannel(SuperMobTracker.MODID);
+    public static final SimpleNetworkWrapper INSTANCE = NetworkRegistry.INSTANCE.newSimpleChannel(Tags.MODID);
 
     private static int packetId = 0;
 

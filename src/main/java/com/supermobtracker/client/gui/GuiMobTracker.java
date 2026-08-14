@@ -7,49 +7,36 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Locale;
-import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
-import org.lwjgl.opengl.GL11;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.block.Block;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
-import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.renderer.RenderHelper;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityHanging;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
-import net.minecraft.world.biome.Biome;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
-import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.client.ClientSettings;
 import com.supermobtracker.client.util.GuiDrawingUtils;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.drops.DropSimulator;
+import com.supermobtracker.integration.jei.JEIHelper;
 import com.supermobtracker.spawn.BiomeDimensionMapper;
 import com.supermobtracker.spawn.ConditionUtils;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
 import com.supermobtracker.tracking.SpawnTrackerManager;
-import com.supermobtracker.util.JEIHelper;
 import com.supermobtracker.util.TranslationUtils;
 import com.supermobtracker.util.Utils;
 
@@ -101,8 +88,6 @@ public class GuiMobTracker extends GuiScreen {
     private boolean showDimensionUnknownTooltip = false;
     private int dimensionLabelX, dimensionLabelY, dimensionLabelW;
 
-    private static final int entityBgColor = 0xFF404040;
-    private static final int entityBorderColor = 0xFF808080;
     private static final int lightColor = 0xFFFFAA;
     private static final int ylevelColor = 0xAAAAFF;
     private static final int groundColor = 0xAAFFAA;

@@ -1,4 +1,4 @@
-package com.supermobtracker.util;
+package com.supermobtracker.integration.jei;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -21,7 +21,6 @@ import mezz.jei.api.recipe.IRecipeCategory;
 import mezz.jei.api.recipe.IRecipeWrapper;
 
 import com.supermobtracker.SuperMobTracker;
-import com.supermobtracker.integration.JEIIntegration;
 
 
 /**

@@ -24,7 +24,7 @@ gradle setupDecompWorkspace
 gradle build
 ```
 
-If this adds/changes runtime behavior, include a minimal OC program or steps to verify in-game.
+If this adds/changes runtime behavior, include steps to verify in-game.
 
 ## Checklist
 - [ ] I built the project locally with Java 8 using `gradle build`.

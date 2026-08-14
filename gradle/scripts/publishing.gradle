@@ -1,0 +1,135 @@
+apply from: 'gradle/scripts/helpers.gradle'
+
+setDefaultProperty('publish_to_maven', true, false)
+setDefaultProperty('publish_to_curseforge', true, false)
+setDefaultProperty('publish_to_modrinth', true, false)
+
+// CI can override these via -P flags to support RC/pre-release tags where the changelog
+// section doesn't match mod_version (e.g. mod_version=1.4.0, tag=v1.4.0-rc1).
+// - curseforge_changelog: raw markdown changelog content (bypasses parserChangelog())
+// - curseforge_display_name: override CurseForge display name (default: "Mod Name mod_version")
+setDefaultProperty('curseforge_changelog', false, '')
+setDefaultProperty('curseforge_display_name', false, '')
+
+if (propertyBool('publish_to_maven')) {
+    assertProperty('maven_name')
+    assertProperty('maven_url')
+    publishing {
+        repositories {
+            maven {
+                name propertyString('maven_name').replaceAll("\\s", "")
+                url propertyString('maven_url')
+                credentials(PasswordCredentials)
+            }
+        }
+        publications {
+            mavenJava(MavenPublication) {
+                from components.java // Publish with standard artifacts
+                setGroupId(propertyString('root_package'))// Publish with root package as maven group
+                setArtifactId(propertyString('mod_id')) // Publish artifacts with mod id as the artifact id
+
+                // Custom artifact:
+                // If you want to publish a different artifact to the one outputted when building normally
+                // Create a different gradle task (Jar task), in extra.gradle
+                // Remove the 'from components.java' line above
+                // Add this line (change the task name):
+                // artifacts task_name
+            }
+        }
+    }
+}
+
+// Documentation here: https://github.com/Darkhax/CurseForgeGradle
+if (propertyBool('publish_to_curseforge')) {
+    assertProperty('curseforge_project_id')
+    assertProperty('release_type')
+    setDefaultProperty('curseforge_debug', false, false)
+    setDefaultProperty('client_side', false, true)
+    setDefaultProperty('server_side', false, true)
+
+    if (!propertyBool('client_side') && !propertyBool('server_side')) {
+        throw new GradleException('At least one of client_side and server_side must be true!')
+    }
+
+    tasks.named('curseforge') {
+        debugMode = propertyBool('curseforge_debug')
+        apiToken = System.getenv('CURSEFORGE_TOKEN') == null ? '' : System.getenv('CURSEFORGE_TOKEN')
+        dependsOn(tasks.reobfJar)
+
+        def mainFile = upload(propertyString('curseforge_project_id'), tasks.reobfJar)
+
+        // Use CI-provided changelog if set, otherwise extract from CHANGELOG.md
+        def clOverride = propertyString('curseforge_changelog')
+        def changelogRaw = ''
+        if (!clOverride.isEmpty()) {
+            changelogRaw = clOverride
+        } else if (propertyBool('publish_with_changelog')) {
+            changelogRaw = parserChangelog()
+        }
+
+        // Use CI-provided display name if set, otherwise default to "Mod Name mod_version"
+        def dnOverride = propertyString('curseforge_display_name')
+        def displayName = !dnOverride.isEmpty() ? dnOverride : "${propertyString('mod_name')} ${propertyString('mod_version')}"
+
+        mainFile.displayName = displayName
+        mainFile.releaseType = propertyString('release_type')
+        if (!changelogRaw.isEmpty()) {
+            mainFile.changelog = changelogRaw
+            mainFile.changelogType = 'markdown'
+        }
+
+        mainFile.addJavaVersion('Java 8')
+        mainFile.addModLoader('Forge')
+        mainFile.addGameVersion('1.12.2')
+
+        if (propertyBool('client_side')) mainFile.addEnvironment('Client')
+        if (propertyBool('server_side')) mainFile.addEnvironment('Server')
+
+        if (propertyBool('use_asset_mover')) {
+            mainFile.addRelation('assetmover', 'requiredDependency')
+        }
+        if (propertyBool('use_mixins')) {
+            mainFile.addRelation('mixin-booter', 'optionalDependency')
+        }
+
+        // Optional: JEI
+        mainFile.addRelation('jei', 'optionalDependency')
+        // Optional: JER
+        mainFile.addRelation('just-enough-resources-jer', 'optionalDependency')
+    }
+}
+
+// Documentation here: https://github.com/modrinth/minotaur
+if (propertyBool('publish_to_modrinth')) {
+    apply plugin: 'com.modrinth.minotaur'
+    assertProperty('modrinth_project_id')
+    assertProperty('release_type')
+    setDefaultProperty('modrinth_debug', false, false)
+    modrinth {
+        token = System.getenv('MODRINTH_TOKEN') ? "" : System.getenv('MODRINTH_TOKEN')
+        projectId = propertyString('modrinth_project_id')
+        versionNumber = propertyString('mod_version')
+        versionType = propertyString('release_type')
+        uploadFile = tasks.reobfJar
+        gameVersions = ['1.12.2']
+        loaders = ['forge']
+        debugMode = propertyBool('modrinth_debug')
+        if (propertyBool('use_mixins') || propertyBool('use_asset_mover')) {
+            dependencies {
+                if (propertyBool('use_mixins')) {
+                    required.project 'mixinbooter'
+                }
+                if (propertyBool('use_asset_mover')) {
+                    required.project 'assetmover'
+                }
+            }
+        }
+        if (propertyBool('publish_with_changelog')) {
+            changelog = parserChangelog()
+        }
+        if (propertyBool('modrinth_sync_readme')) {
+            syncBodyFrom = file('README.md').text
+            tasks.modrinth.dependsOn(tasks.modrinthSyncBody)
+        }
+    }
+}
