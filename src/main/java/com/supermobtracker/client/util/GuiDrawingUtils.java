@@ -69,7 +69,9 @@ public final class GuiDrawingUtils {
         GlStateManager.disableAlpha();
         GlStateManager.disableDepth();
         GlStateManager.disableCull();
-        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        GlStateManager.tryBlendFuncSeparate(
+            GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+            GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
         GlStateManager.shadeModel(GL11.GL_SMOOTH);
         GlStateManager.color(r, g, b, a);
 
@@ -127,7 +129,9 @@ public final class GuiDrawingUtils {
         GlStateManager.disableAlpha();
         GlStateManager.disableDepth();
         GlStateManager.disableCull();
-        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        GlStateManager.tryBlendFuncSeparate(
+            GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+            GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
         GlStateManager.shadeModel(GL11.GL_SMOOTH);
 
         Tessellator tessellator = Tessellator.getInstance();
@@ -182,7 +186,9 @@ public final class GuiDrawingUtils {
         GlStateManager.disableAlpha();
         GlStateManager.disableDepth();
         GlStateManager.disableCull();
-        GlStateManager.tryBlendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        GlStateManager.tryBlendFuncSeparate(
+            GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+            GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
         GlStateManager.color(r, g, b, a);
 
         GL11.glLineWidth(thickness);
@@ -264,7 +270,7 @@ public final class GuiDrawingUtils {
         } catch (Throwable t) {
             if (!entitiesWithRenderErrors.contains(id)) {
                 entitiesWithRenderErrors.add(id);
-                SuperMobTracker.LOGGER.warn("Failed to render entity preview for " + id + ": " + t.getMessage());
+                SuperMobTracker.LOGGER.warn("Failed to render entity preview for {}: {}", id, t.getMessage());
             }
         }
 

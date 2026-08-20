@@ -15,13 +15,14 @@ import net.minecraft.client.renderer.GlStateManager;
  */
 public class MultiColumnTooltipWidget {
 
+    private static final int labelHeight = 12;
+
     private final FontRenderer fontRenderer;
 
     // Label bounds (the area that triggers the tooltip)
     private int labelX;
     private int labelY;
     private int labelWidth;
-    private int labelHeight = 12;
 
     // Lines to display
     private List<String> lines = null;

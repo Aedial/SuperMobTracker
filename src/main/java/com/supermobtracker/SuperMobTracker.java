@@ -24,7 +24,9 @@ import com.supermobtracker.network.NetworkHandler;
 public class SuperMobTracker {
     public static final Logger LOGGER = LogManager.getLogger(Tags.MODID);
 
-    @SidedProxy(clientSide = "com.supermobtracker.client.ClientProxy", serverSide = "com.supermobtracker.server.ServerProxy")
+    @SidedProxy(
+        clientSide = "com.supermobtracker.client.ClientProxy",
+        serverSide = "com.supermobtracker.server.ServerProxy")
     public static IProxy proxy;
 
     @Mod.Instance

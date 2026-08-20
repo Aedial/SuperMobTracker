@@ -55,7 +55,9 @@ public class GuiHudPositionSelector extends GuiScreen {
             "bottom_left", "bottom_center", "bottom_right"
         };
         String[] buttonLabels = new String[9];
-        for (int i = 0; i < labels.length; i++) buttonLabels[i] = I18n.format("gui.supermobtracker.hudPosition." + labels[i]);
+        for (int i = 0; i < labels.length; i++) {
+            buttonLabels[i] = I18n.format("gui.supermobtracker.hudPosition." + labels[i]);
+        }
 
         int btnH = 20;
         int btnW = 0;
@@ -86,7 +88,7 @@ public class GuiHudPositionSelector extends GuiScreen {
     }
 
     @Override
-    protected void actionPerformed(GuiButton button) throws IOException {
+    protected void actionPerformed(GuiButton button) {
         if (button.id >= BTN_TOP_LEFT && button.id <= BTN_BOTTOM_RIGHT) {
             HudPosition[] positions = {
                 HudPosition.TOP_LEFT, HudPosition.TOP_CENTER, HudPosition.TOP_RIGHT,

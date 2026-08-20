@@ -7,7 +7,6 @@ import net.minecraft.client.settings.KeyBinding;
 import net.minecraftforge.client.settings.KeyConflictContext;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 
-import com.supermobtracker.client.gui.GuiHandler;
 import com.supermobtracker.client.gui.GuiMobTracker;
 
 public class KeyBindings {

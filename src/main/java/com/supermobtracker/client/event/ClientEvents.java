@@ -1,12 +1,7 @@
 package com.supermobtracker.client.event;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
@@ -16,7 +11,6 @@ import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.client.gui.inventory.GuiContainerCreative;
 import net.minecraft.client.gui.inventory.GuiInventory;
-import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
@@ -32,10 +26,10 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import com.supermobtracker.client.input.KeyBindings;
 import com.supermobtracker.client.gui.GuiIconButton;
 import com.supermobtracker.client.gui.GuiMobTracker;
-import com.supermobtracker.config.GuiHudPositionSelector;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.config.ModConfig.HudPosition;
 import com.supermobtracker.tracking.SpawnTrackerManager;
+import com.supermobtracker.util.ReflectionUtils;
 
 
 public class ClientEvents {
@@ -58,27 +52,14 @@ public class ClientEvents {
     private boolean clearedOutlineGlowForXray = false;
 
     static {
-        try {
-            // Try to find guiLeft and guiTop fields (they may have different names due to obfuscation)
-            for (Field field : GuiContainer.class.getDeclaredFields()) {
-                if (field.getType() == int.class) field.setAccessible(true);
-            }
-
-            guiLeftField = GuiContainer.class.getDeclaredField("guiLeft");
-            guiTopField = GuiContainer.class.getDeclaredField("guiTop");
-            guiLeftField.setAccessible(true);
-            guiTopField.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            // Try obfuscated names
-            try {
-                guiLeftField = GuiContainer.class.getDeclaredField("field_147003_i");
-                guiTopField = GuiContainer.class.getDeclaredField("field_147009_r");
-                guiLeftField.setAccessible(true);
-                guiTopField.setAccessible(true);
-            } catch (NoSuchFieldException e2) {
-                // Leave as null, will use fallback positioning
-            }
+        // Try to find guiLeft and guiTop fields (they may have different names due to obfuscation)
+        for (Field field : GuiContainer.class.getDeclaredFields()) {
+            if (field.getType() == int.class) field.setAccessible(true);
         }
+
+        guiLeftField = ReflectionUtils.getDeclaredField(GuiContainer.class, "guiLeft", "field_147003_i");
+        guiTopField = ReflectionUtils.getDeclaredField(GuiContainer.class, "guiTop", "field_147009_r");
+        // If not found, leave as null, will use fallback positioning
     }
 
     @SubscribeEvent
@@ -197,7 +178,8 @@ public class ClientEvents {
      *
      * @return int[] with {x, y} or null if no valid position found
      */
-    private int[] findNonCollidingPosition(int startX, int startY, int btnW, int btnH, List<GuiButton> buttons, int guiLeft, int guiTop) {
+    private int[] findNonCollidingPosition(int startX, int startY, int btnW, int btnH,
+            List<GuiButton> buttons, int guiLeft, int guiTop) {
         // Off-hand slot Y position in survival inventory is around guiTop + 62
         int offhandSlotY = guiTop + 62;
 
@@ -318,10 +300,6 @@ public class ClientEvents {
 
         int boxX, boxY;
         switch (position) {
-            case TOP_LEFT:
-                boxX = paddingExternal;
-                boxY = paddingExternal;
-                break;
             case TOP_CENTER:
                 boxX = (screenW - boxW) / 2;
                 boxY = paddingExternal;
@@ -354,6 +332,7 @@ public class ClientEvents {
                 boxX = screenW - boxW - paddingExternal;
                 boxY = screenH - boxH - paddingExternal;
                 break;
+            case TOP_LEFT:
             default:
                 boxX = paddingExternal;
                 boxY = paddingExternal;
@@ -371,8 +350,8 @@ public class ClientEvents {
         // Draw text
         int textX = boxX + paddingInternal;
         int textY = boxY + paddingInternal;
-        for (int i = 0; i < lines.size(); i++) {
-            mc.fontRenderer.drawString(lines.get(i), textX, textY, 0xFFFFFF);
+        for (String line : lines) {
+            mc.fontRenderer.drawString(line, textX, textY, 0xFFFFFF);
             textY += lineHeight + lineSpacing;
         }
     }
@@ -387,9 +366,10 @@ public class ClientEvents {
         if (event.getGui() instanceof GuiInventory || event.getGui() instanceof GuiContainerCreative) {
             int mx = event.getMouseX();
             int my = event.getMouseY();
-            GuiScreen screen = (GuiScreen) event.getGui();
+            GuiScreen screen = event.getGui();
             if (trackerX >= 0 && mx >= trackerX && mx <= trackerX + trackerW && my >= trackerY && my <= trackerY + trackerH) {
-                screen.drawHoveringText(Arrays.asList(I18n.format("key.categories.supermobtracker")), mx, my);
+                String tooltip = I18n.format("key.categories.supermobtracker");
+                screen.drawHoveringText(Collections.singletonList(tooltip), mx, my);
             }
         }
     }

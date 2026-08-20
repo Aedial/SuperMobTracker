@@ -6,12 +6,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.EntityLiving;
-import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.config.ModConfig;
+
 
 /**
  * Shared utilities for spawn condition analysis.
@@ -19,12 +22,6 @@ import com.supermobtracker.config.ModConfig;
 public final class ConditionUtils {
 
     public static final List<String> DEFAULT_WEATHERS = Arrays.asList("clear", "rain", "thunder");
-
-    /** Localization key for "any" value */
-    public static final String KEY_ANY = I18n.translateToLocal("gui.mobtracker.any");
-
-    /** Localization key for unknown value */
-    public static final String KEY_UNKNOWN = I18n.translateToLocal("gui.mobtracker.unknown");
 
     /** Hint localization keys, resolved by the GUI at render time. */
     public static final String HINT_LIGHT = "gui.mobtracker.hint.light";
@@ -54,13 +51,14 @@ public final class ConditionUtils {
      *               will be translated as prefix.string
      * @return Translated list of strings
      */
+    @SideOnly(Side.CLIENT)
     public static List<String> translateList(List<String> list, String prefix) {
         if (list == null) return null;
         if (prefix == null) return list;
 
-        if (prefix.isEmpty()) return list.stream().map(s -> I18n.translateToLocal(s)).collect(Collectors.toList());
+        if (prefix.isEmpty()) return list.stream().map(I18n::format).collect(Collectors.toList());
 
-        return list.stream().map(s -> I18n.translateToLocal(prefix + "." + s)).collect(Collectors.toList());
+        return list.stream().map(s -> I18n.format(prefix + "." + s)).collect(Collectors.toList());
     }
 
     /**
@@ -74,7 +72,8 @@ public final class ConditionUtils {
             return c.newInstance(world);
         } catch (Exception e) {
             if (ConditionUtils.shouldShowCrashes()) {
-                SuperMobTracker.LOGGER.error("Error creating entity instance for class " + entityClass.getName(), e);
+                SuperMobTracker.LOGGER.error(
+                    "Error creating entity instance for class {}", entityClass.getName(), e);
             }
 
             return null;
@@ -163,12 +162,5 @@ public final class ConditionUtils {
         if (entity != null) entity.getRNG().setSeed(seed);
 
         return entity;
-    }
-
-    /**
-     * Extract the biome path from a biome ID (removes namespace prefix if present).
-     */
-    public static String extractBiomePath(String biomeId) {
-        return biomeId.contains(":") ? biomeId.split(":", 2)[1] : biomeId;
     }
 }

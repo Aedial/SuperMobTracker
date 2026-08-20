@@ -49,7 +49,7 @@ public class Utils {
      * @param fr       FontRenderer to measure text width
      * @param text     Text to wrap
      * @param maxWidth Maximum width in pixels
-     * @return Array of wrapped lines
+     * @return List of wrapped lines
      */
     public static List<String> wrapText(FontRenderer fr, String text, int maxWidth) {
         List<String> lines = new ArrayList<>();
@@ -72,7 +72,7 @@ public class Utils {
                     if (cur.length() == 0) {
                         cur.append(w);
                     } else {
-                        String test = cur.toString() + " " + w;
+                        String test = cur + " " + w;
                         if (fr.getStringWidth(test) <= maxWidth) {
                             cur.append(" ").append(w);
                         } else {
@@ -91,7 +91,7 @@ public class Utils {
                             // Try to append as many chars from the word to the current line as will fit.
                             int end = start;
                             for (int e = start; e < wlen; e++) {
-                                String test = cur.toString() + w.substring(start, e + 1);
+                                String test = cur + w.substring(start, e + 1);
                                 if (fr.getStringWidth(test) <= maxWidth) {
                                     end = e + 1;
                                 } else break;
@@ -104,7 +104,7 @@ public class Utils {
                                 continue;
                             }
 
-                            cur.append(w.substring(start, end));
+                            cur.append(w, start, end);
                             start = end;
 
                             // After filling the current line, flush it so further chunks start on a new line.

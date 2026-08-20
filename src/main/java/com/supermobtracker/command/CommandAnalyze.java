@@ -37,6 +37,8 @@ import com.supermobtracker.spawn.BiomeDimensionMapper;
 import com.supermobtracker.spawn.ConditionUtils;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
 
+import javax.annotation.Nonnull;
+
 
 /**
  * Client command to analyze all mobs and export results to files.
@@ -53,12 +55,14 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
     private static final String OUTPUT_DIR = "supermobtracker";
 
     @Override
+    @Nonnull
     public String getName() {
         return "smtanalyze";
     }
 
     @Override
-    public String getUsage(ICommandSender sender) {
+    @Nonnull
+    public String getUsage(@Nonnull ICommandSender sender) {
         return "/smtanalyze [mobs|loot|dimension] [samples] [simulationCount|extendedCount] [numGrids]";
     }
 
@@ -73,18 +77,22 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
     }
 
     @Override
-    public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, BlockPos targetPos) {
+    @Nonnull
+    public List<String> getTabCompletions(@Nonnull MinecraftServer server, @Nonnull ICommandSender sender,
+            String[] args, BlockPos targetPos) {
         if (args.length == 1) return getListOfStringsMatchingLastWord(args, "mobs", "loot", "dimension");
 
         return Collections.emptyList();
     }
 
     @Override
-    public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
+    public void execute(@Nonnull MinecraftServer server, @Nonnull ICommandSender sender, String[] args)
+            throws CommandException {
         if (args.length == 0) {
             // Run all analyses with default parameters
             sendMessage(sender, TextFormatting.YELLOW, "Starting full analysis (this may take a while)...");
-            runAllAnalyses(sender, DEFAULT_SAMPLES, BiomeDimensionMapper.getDefaultExtendedCount(), BiomeDimensionMapper.getDefaultNumGrids());
+            runAllAnalyses(sender, DEFAULT_SAMPLES, BiomeDimensionMapper.getDefaultExtendedCount(),
+                BiomeDimensionMapper.getDefaultNumGrids());
 
             return;
         }
@@ -355,7 +363,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
         // Write noNativeBiomes mobs to file (don't spawn naturally)
         if (!noNativeBiomeMobs.isEmpty()) {
             // Sort alphabetically for this list since timing is irrelevant
-            noNativeBiomeMobs.sort((a, b) -> a.entityId.compareTo(b.entityId));
+            noNativeBiomeMobs.sort(Comparator.comparing(a -> a.entityId));
             writePerformanceReport(
                 "no_native_biomes_" + samples + "samples_" + timestamp + ".txt",
                 "No Native Biomes - Mob Analysis Report",
@@ -581,7 +589,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
 
         // Write no drops mobs to file
         if (!noDropsMobs.isEmpty()) {
-            noDropsMobs.sort((a, b) -> a.entityId.compareTo(b.entityId));
+            noDropsMobs.sort(Comparator.comparing(a -> a.entityId));
             writePerformanceReport(
                 "loot_no_drops_" + samples + "samples_" + simulationCount + "sims_" + timestamp + ".txt",
                 "No Drops - Loot Analysis Report",
@@ -596,7 +604,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
 
         // Write invalid entity mobs to file
         if (!invalidEntityMobs.isEmpty()) {
-            invalidEntityMobs.sort((a, b) -> a.entityId.compareTo(b.entityId));
+            invalidEntityMobs.sort(Comparator.comparing(a -> a.entityId));
             writePerformanceReport(
                 "loot_invalid_entity_" + samples + "samples_" + simulationCount + "sims_" + timestamp + ".txt",
                 "Invalid Entity - Loot Analysis Report",

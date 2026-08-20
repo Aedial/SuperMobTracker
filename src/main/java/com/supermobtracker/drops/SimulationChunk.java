@@ -8,6 +8,8 @@ import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 
+import javax.annotation.Nonnull;
+
 
 /**
  * A minimal empty chunk for simulation worlds.
@@ -26,52 +28,54 @@ public class SimulationChunk extends Chunk {
     }
 
     @Override
-    public IBlockState getBlockState(BlockPos pos) {
+    @Nonnull
+    public IBlockState getBlockState(@Nonnull BlockPos pos) {
         return Blocks.AIR.getDefaultState();
     }
 
     @Override
+    @Nonnull
     public IBlockState getBlockState(int x, int y, int z) {
         return Blocks.AIR.getDefaultState();
     }
 
     @Override
-    public IBlockState setBlockState(BlockPos pos, IBlockState state) {
+    public IBlockState setBlockState(@Nonnull BlockPos pos, @Nonnull IBlockState state) {
         return null; // Don't allow block changes
     }
 
     @Override
-    public int getLightFor(EnumSkyBlock type, BlockPos pos) {
+    public int getLightFor(@Nonnull EnumSkyBlock type, @Nonnull BlockPos pos) {
         return type == EnumSkyBlock.SKY ? 15 : 0;
     }
 
     @Override
-    public void setLightFor(EnumSkyBlock type, BlockPos pos, int value) {
+    public void setLightFor(@Nonnull EnumSkyBlock type, @Nonnull BlockPos pos, int value) {
         // Ignore light changes
     }
 
     @Override
-    public int getLightSubtracted(BlockPos pos, int amount) {
+    public int getLightSubtracted(@Nonnull BlockPos pos, int amount) {
         return 15 - amount; // Full light minus subtraction
     }
 
     @Override
-    public TileEntity getTileEntity(BlockPos pos, Chunk.EnumCreateEntityType type) {
+    public TileEntity getTileEntity(@Nonnull BlockPos pos, @Nonnull Chunk.EnumCreateEntityType type) {
         return null; // No tile entities
     }
 
     @Override
-    public void addTileEntity(TileEntity tileEntityIn) {
+    public void addTileEntity(@Nonnull TileEntity tileEntityIn) {
         // Don't add tile entities
     }
 
     @Override
-    public void addTileEntity(BlockPos pos, TileEntity tileEntityIn) {
+    public void addTileEntity(@Nonnull BlockPos pos, @Nonnull TileEntity tileEntityIn) {
         // Don't add tile entities
     }
 
     @Override
-    public void removeTileEntity(BlockPos pos) {
+    public void removeTileEntity(@Nonnull BlockPos pos) {
         // Nothing to remove
     }
 

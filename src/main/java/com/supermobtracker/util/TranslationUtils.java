@@ -28,7 +28,7 @@ public final class TranslationUtils {
         if (blk != null) {
             // In 1.12, many mods set a custom translation key based on a display-name-like identifier
             String transKey = blk.getTranslationKey();
-            if (transKey != null && !transKey.isEmpty()) {
+            if (!transKey.isEmpty()) {
                 String k1 = transKey.endsWith(".name") ? transKey : (transKey + ".name");
                 if (I18n.hasKey(k1)) return I18n.format(k1);
 
@@ -40,7 +40,7 @@ public final class TranslationUtils {
             // getLocalizedName() triggers I18n lookup using the block's unlocalized key
             try {
                 String localized = blk.getLocalizedName();
-                if (localized != null && !localized.isEmpty()) return localized;
+                if (!localized.isEmpty()) return localized;
             } catch (Throwable ignored) {
                 // Some blocks may throw during early GUI contexts; ignore and continue with fallbacks
             }
@@ -120,7 +120,7 @@ public final class TranslationUtils {
         // Try the biome's internal name - works for most mods which set display names directly in BiomeProperties
         // It will, however, not be "localized"
         String biomeName = biome.getBiomeName();
-        if (biomeName != null && !biomeName.isEmpty() && !biomeName.equals(biomeRegistryName) && !biomeName.contains(":") && !biomeName.contains("_")) {
+        if (!biomeName.isEmpty() && !biomeName.equals(biomeRegistryName) && !biomeName.contains(":") && !biomeName.contains("_")) {
             return biomeName;
         }
 

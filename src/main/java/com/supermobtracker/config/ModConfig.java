@@ -410,7 +410,7 @@ public class ModConfig {
     }
 
     private static boolean matchesConfiguredId(String[] configuredIds, String id) {
-        if (id == null || configuredIds == null || configuredIds.length == 0) return false;
+        if (id == null || configuredIds == null) return false;
 
         for (String entry : configuredIds) {
             if (id.contains(entry)) return true;

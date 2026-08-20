@@ -45,7 +45,7 @@ public class GuiMobTracker extends GuiScreen {
     private GuiTextField filterField;
     private MobListWidget listWidget;
     private ResourceLocation selected;
-    private SpawnConditionAnalyzer analyzer = new SpawnConditionAnalyzer();
+    private final SpawnConditionAnalyzer analyzer = new SpawnConditionAnalyzer();
     private SpawnConditionAnalyzer.SpawnConditions spawnConditions;
     private long lastClickTime = 0L;
     private ResourceLocation lastClickId = null;
@@ -99,7 +99,7 @@ public class GuiMobTracker extends GuiScreen {
     private static final int hintColor = 0xFFAAAA;
 
     private String getI18nButtonString() {
-        return ClientSettings.i18nNames ? I18n.format("gui.supermobtracker.i18nIDs.on") : I18n.format("gui.supermobtracker.i18nIDs.off");
+        return I18n.format("gui.supermobtracker.i18nIDs." + (ClientSettings.i18nNames ? "on" : "off"));
     }
 
     @Override
@@ -141,7 +141,7 @@ public class GuiMobTracker extends GuiScreen {
                     cachedEntityId = lastId;
                     cachedSpawnConditions = this.spawnConditions;
 
-                    if (lastId != null) DropSimulator.getOrStartSimulation(lastId);
+                    DropSimulator.getOrStartSimulation(lastId);
                 }
 
                 listWidget.ensureVisible(lastId);
@@ -170,15 +170,11 @@ public class GuiMobTracker extends GuiScreen {
     }
 
     @Override
-    protected void actionPerformed(GuiButton button) throws IOException {
+    protected void actionPerformed(GuiButton button) {
         if (button.id == 1) {
             ClientSettings.toggleI18n();
             button.displayString = getI18nButtonString();
-
-            return;
-        }
-
-        if (button.id == 2) {
+        } else if (button.id == 2) {
             if (galleryView != null) {
                 // close all other views (they should have closed with the button click already)
                 if (previewModal != null && previewModal.isVisible()) {
@@ -190,8 +186,6 @@ public class GuiMobTracker extends GuiScreen {
 
                 galleryView.show(width, height);
             }
-
-            return;
         }
     }
 
@@ -662,7 +656,7 @@ public class GuiMobTracker extends GuiScreen {
                     groundBlocksList.add("...");
                 }
 
-                String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", groundBlocksList.stream().collect(Collectors.joining(sep)));
+                String groundBlocks = I18n.format("gui.mobtracker.groundBlocks", String.join(sep, groundBlocksList));
                 textY = drawWrappedString(fontRenderer, groundBlocks, condsX, textY, 12, textW, groundColor);
             }
 
@@ -775,7 +769,8 @@ public class GuiMobTracker extends GuiScreen {
         } else if (isAnyBiome) {
             biomesLabel = I18n.format("gui.mobtracker.biomes.any");
         } else if (uniqueBiomesCount == 1) {
-            biomesLabel = I18n.format("gui.mobtracker.biomes", TranslationUtils.translateBiomeName(uniqueBiomes.get(0)));
+            String biomeName = TranslationUtils.translateBiomeName(uniqueBiomes.get(0));
+            biomesLabel = I18n.format("gui.mobtracker.biomes", biomeName);
         } else {
             biomesLabel = I18n.format("gui.mobtracker.biomes", uniqueBiomesCount);
         }
@@ -786,9 +781,12 @@ public class GuiMobTracker extends GuiScreen {
         List<String> hints = spawnConditions.hints;
         if (!hints.isEmpty()) {
             textY += 10;
-            textY = drawWrappedString(fontRenderer, I18n.format("gui.mobtracker.hintsHeader"), textX, textY, 10, textW, color);
+            String header = I18n.format("gui.mobtracker.hintsHeader");
+            textY = drawWrappedString(fontRenderer, header, textX, textY, 10, textW, color);
 
-            for (String hint : hints) textY = drawWrappedString(fontRenderer, "- " + I18n.format(hint), textX + 6, textY, 12, textW, hintColor);
+            for (String hint : hints) {
+                textY = drawWrappedString(fontRenderer, "- " + I18n.format(hint), textX + 6, textY, 12, textW, hintColor);
+            }
         }
 
         // Store biome tooltip data for later rendering (after buttons are drawn)
@@ -801,14 +799,17 @@ public class GuiMobTracker extends GuiScreen {
                 boolean bMinecraft = b.startsWith("minecraft:");
                 if (aMinecraft != bMinecraft) return aMinecraft ? -1 : 1;
 
-                return TranslationUtils.translateBiomeName(a).compareToIgnoreCase(TranslationUtils.translateBiomeName(b));
+                String biomeB = TranslationUtils.translateBiomeName(b);
+                return TranslationUtils.translateBiomeName(a).compareToIgnoreCase(biomeB);
             });
 
             // Remove REID warning biome if present
-            sortedBiomes = sortedBiomes.stream().filter(b -> !b.contains("jeid:error_biome")).collect(Collectors.toList());
+            sortedBiomes = sortedBiomes.stream().filter(b -> !b.contains("jeid:error_biome"))
+                                                .collect(Collectors.toList());
 
             // Translate biome names for display
-            List<String> translatedBiomes = sortedBiomes.stream().map(TranslationUtils::translateBiomeName).collect(Collectors.toList());
+            List<String> translatedBiomes = sortedBiomes.stream().map(TranslationUtils::translateBiomeName)
+                                                                 .collect(Collectors.toList());
 
             // Deduplicate biomes for tooltip
             translatedBiomes = new ArrayList<>(new LinkedHashSet<>(translatedBiomes));
@@ -859,16 +860,16 @@ public class GuiMobTracker extends GuiScreen {
         private final int y;
         private final int w;
         private final int h;
-        private FontRenderer fontRenderer;
-        private GuiMobTracker tracker;
+        private final FontRenderer fontRenderer;
+        private final GuiMobTracker tracker;
         private int blacklistTooltipX = 0;
         private int blacklistTooltipY = 0;
         private String blacklistTooltipText = null;
 
-        private List<ResourceLocation> all = new ArrayList<>();
+        private final List<ResourceLocation> all = new ArrayList<>();
         // Store entries as (displayName, id) pairs to handle duplicate names
-        private List<MobEntry> filteredSortedRaw = new ArrayList<>();
-        private List<MobEntry> filteredSortedI18n = new ArrayList<>();
+        private final List<MobEntry> filteredSortedRaw = new ArrayList<>();
+        private final List<MobEntry> filteredSortedI18n = new ArrayList<>();
         private int scrollOffset = 0;
         private String filter = "";
         private boolean draggingScrollbar = false;
@@ -922,8 +923,10 @@ public class GuiMobTracker extends GuiScreen {
                 })
                 .collect(Collectors.toList());
 
-            List<ResourceLocation> trackedTop = base.stream().filter(SpawnTrackerManager::isTracked).collect(Collectors.toList());
-            List<ResourceLocation> rest = base.stream().filter(id -> !SpawnTrackerManager.isTracked(id)).collect(Collectors.toList());
+            List<ResourceLocation> trackedTop = base.stream().filter(SpawnTrackerManager::isTracked)
+                                                             .collect(Collectors.toList());
+            List<ResourceLocation> rest = base.stream().filter(id -> !SpawnTrackerManager.isTracked(id))
+                                                       .collect(Collectors.toList());
 
             // Build entries with unique display names
             filteredSortedRaw.clear();
@@ -1157,9 +1160,8 @@ public class GuiMobTracker extends GuiScreen {
 
             int barX1 = x + w - 4;
             int barX2 = x + w - 2;
-            int trackY1 = y;
             int trackY2 = y + h;
-            Gui.drawRect(barX1, trackY1, barX2, trackY2, 0x40000000);
+            Gui.drawRect(barX1, y, barX2, trackY2, 0x40000000);
 
             float ratio = (float) visible / (float) total;
             int barH = Math.max(8, (int) (h * ratio));

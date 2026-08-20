@@ -3,12 +3,9 @@ package com.supermobtracker.drops;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,9 +26,6 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.WorldServer;
-import net.minecraft.world.storage.loot.LootContext;
-import net.minecraft.world.storage.loot.LootTable;
-import net.minecraft.world.storage.loot.LootTableManager;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.event.entity.living.LivingDropsEvent;
@@ -46,6 +40,7 @@ import com.supermobtracker.network.PacketDropSimulationProgress;
 import com.supermobtracker.network.PacketDropSimulationResult;
 import com.supermobtracker.network.PacketRequestDropSimulation;
 import com.supermobtracker.util.LogMuter;
+import com.supermobtracker.util.ReflectionUtils;
 
 
 /**
@@ -71,18 +66,6 @@ public class DropSimulator {
     // Timeout for server requests (10 seconds - if server doesn't respond, mod is likely not installed)
     // 4s => 80s for 20 progress updates
     private static final long SERVER_REQUEST_TIMEOUT_MS = 4000;
-
-    // Reflection cache for dropLoot method
-    private static Method dropLootMethod = null;
-    private static boolean dropLootMethodSearched = false;
-
-    // Reflection cache for getLootTable method
-    private static Method getLootTableMethod = null;
-    private static boolean getLootTableMethodSearched = false;
-
-    // Reflection cache for attackingPlayer field (needed for killed_by_player loot condition)
-    private static Field attackingPlayerField = null;
-    private static boolean attackingPlayerFieldSearched = false;
 
     // Reflection cache for SpellBook check
     private static boolean isSpellBookChecked = false;
@@ -273,13 +256,12 @@ public class DropSimulator {
      * Called when the server receives PacketRequestDropSimulation.
      * Returns a task that will send results back to the player when complete.
      */
-    public static ServerSimulationTask runServerSimulation(ResourceLocation entityId, int simulationCount, EntityPlayerMP player) {
+    public static ServerSimulationTask runServerSimulation(ResourceLocation entityId, int simulationCount,
+                                                           EntityPlayerMP player) {
         ServerSimulationTask task = new ServerSimulationTask(entityId, simulationCount, player);
 
         // Run in a separate thread to avoid blocking the server tick
-        Thread simulationThread = new Thread(() -> {
-            task.run();
-        }, "DropSimulator-Server-" + entityId + "-" + player.getName());
+        Thread simulationThread = new Thread(task::run, "DropSimulator-Server-" + entityId + "-" + player.getName());
         simulationThread.setDaemon(true);
         simulationThread.start();
 
@@ -318,18 +300,8 @@ public class DropSimulator {
             }
 
             WorldServer realWorld = player.getServerWorld();
-            if (realWorld == null || realWorld.getLootTableManager() == null) {
-                sendError("gui.mobtracker.drops.worldAccessFailed");
-
-                return;
-            }
 
             EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
-            if (entry == null || !EntityLiving.class.isAssignableFrom(entry.getEntityClass())) {
-                sendError("gui.mobtracker.drops.invalidEntity");
-
-                return;
-            }
 
             // Check if entity is unstable for simulation
             if (ModConfig.isUnstableSimulationEntity(entityId.toString())) {
@@ -343,7 +315,7 @@ public class DropSimulator {
             try {
                 simWorld = DropSimulationWorld.createInstance(realWorld);
             } catch (Exception e) {
-                SuperMobTracker.LOGGER.error("Failed to create simulation world for " + entityId, e);
+                SuperMobTracker.LOGGER.error("Failed to create simulation world for {}", entityId, e);
                 sendError("gui.mobtracker.drops.worldCreationFailed");
 
                 return;
@@ -368,7 +340,7 @@ public class DropSimulator {
                     return;
                 }
             } catch (Exception e) {
-                SuperMobTracker.LOGGER.warn("Cannot simulate drops for " + entityId + " - entity construction failed", e);
+                SuperMobTracker.LOGGER.warn("Cannot simulate drops for {} - entity construction failed", entityId, e);
                 sendError("gui.mobtracker.drops.entityConstructionFailed");
 
                 return;
@@ -426,20 +398,22 @@ public class DropSimulator {
                             ItemStack stack = entityItem.getItem();
                             if (!stack.isEmpty()) {
                                 DropKey key = new DropKey(stack);
-                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack)).addDrop(stack.getCount());
+                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack))
+                                       .addDrop(stack.getCount());
                             }
                         }
 
                         for (ItemStack stack : spawnedDuringEvent) {
                             if (!stack.isEmpty()) {
                                 DropKey key = new DropKey(stack);
-                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack)).addDrop(stack.getCount());
+                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack))
+                                       .addDrop(stack.getCount());
                             }
                         }
                     }
                 }
             } catch (Exception e) {
-                SuperMobTracker.LOGGER.warn("Error during server drop simulation for " + entityId, e);
+                SuperMobTracker.LOGGER.warn("Error during server drop simulation for {}", entityId, e);
                 sendError("gui.mobtracker.drops.simulationFailed");
 
                 return;
@@ -468,29 +442,10 @@ public class DropSimulator {
      * Get the dropLoot method via reflection.
      */
     private static Method getDropLootMethod() {
-        if (dropLootMethodSearched) return dropLootMethod;
-
-        dropLootMethodSearched = true;
-
-        try {
-            // Try obfuscated name first (func_184610_a in 1.12.2)
-            dropLootMethod = EntityLiving.class.getDeclaredMethod("func_184610_a", boolean.class, int.class, DamageSource.class);
-            dropLootMethod.setAccessible(true);
-
-            return dropLootMethod;
-        } catch (NoSuchMethodException e) {
-            // Try deobfuscated name
-            try {
-                dropLootMethod = EntityLiving.class.getDeclaredMethod("dropLoot", boolean.class, int.class, DamageSource.class);
-                dropLootMethod.setAccessible(true);
-
-                return dropLootMethod;
-            } catch (NoSuchMethodException e2) {
-                SuperMobTracker.LOGGER.error("Could not find dropLoot method", e2);
-
-                return null;
-            }
-        }
+        return ReflectionUtils.getDeclaredMethod(EntityLiving.class,
+            () -> SuperMobTracker.LOGGER.warn("Could not find dropLoot method"),
+            new String[] {"func_184610_a", "dropLoot"},
+            boolean.class, int.class, DamageSource.class);
     }
 
     /**
@@ -498,58 +453,9 @@ public class DropSimulator {
      * This field must be set for killed_by_player loot conditions to work.
      */
     private static Field getAttackingPlayerField() {
-        if (attackingPlayerFieldSearched) return attackingPlayerField;
-
-        attackingPlayerFieldSearched = true;
-
-        try {
-            // Try obfuscated name first (field_70717_bb in 1.12.2)
-            attackingPlayerField = EntityLivingBase.class.getDeclaredField("field_70717_bb");
-            attackingPlayerField.setAccessible(true);
-
-            return attackingPlayerField;
-        } catch (NoSuchFieldException e) {
-            // Try deobfuscated name
-            try {
-                attackingPlayerField = EntityLivingBase.class.getDeclaredField("attackingPlayer");
-                attackingPlayerField.setAccessible(true);
-
-                return attackingPlayerField;
-            } catch (NoSuchFieldException e2) {
-                SuperMobTracker.LOGGER.error("Could not find attackingPlayer field", e2);
-
-                return null;
-            }
-        }
-    }
-
-    /**
-     * Get the getLootTable method via reflection.
-     */
-    private static Method getLootTableMethod() {
-        if (getLootTableMethodSearched) return getLootTableMethod;
-
-        getLootTableMethodSearched = true;
-
-        try {
-            // Try obfuscated name first (func_184647_J in 1.12.2)
-            getLootTableMethod = EntityLiving.class.getDeclaredMethod("func_184647_J");
-            getLootTableMethod.setAccessible(true);
-
-            return getLootTableMethod;
-        } catch (NoSuchMethodException e) {
-            // Try deobfuscated name
-            try {
-                getLootTableMethod = EntityLiving.class.getDeclaredMethod("getLootTable");
-                getLootTableMethod.setAccessible(true);
-
-                return getLootTableMethod;
-            } catch (NoSuchMethodException e2) {
-                SuperMobTracker.LOGGER.error("Could not find getLootTable method", e2);
-
-                return null;
-            }
-        }
+        return ReflectionUtils.getDeclaredField(EntityLivingBase.class,
+            () -> SuperMobTracker.LOGGER.warn("Could not find attackingPlayer field"),
+            "field_70717_bb", "attackingPlayer");
     }
 
     /**
@@ -623,20 +529,8 @@ public class DropSimulator {
             // Get the real server world to extract loot table manager
             int dimension = mc.world != null ? mc.world.provider.getDimension() : 0;
             WorldServer realWorld = server.getWorld(dimension);
-            if (realWorld == null || realWorld.getLootTableManager() == null) {
-                errorMessage = "gui.mobtracker.drops.serverSideOnly";
-                completed = true;
-
-                return;
-            }
 
             EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
-            if (entry == null || !EntityLiving.class.isAssignableFrom(entry.getEntityClass())) {
-                errorMessage = "gui.mobtracker.drops.invalidEntity";
-                completed = true;
-
-                return;
-            }
 
             // Check if entity is unstable for simulation (corrupts global state)
             if (ModConfig.isUnstableSimulationEntity(entityId.toString())) {
@@ -651,7 +545,7 @@ public class DropSimulator {
             try {
                 simWorld = DropSimulationWorld.createInstance(realWorld);
             } catch (Exception e) {
-                SuperMobTracker.LOGGER.error("Failed to create simulation world for " + entityId, e);
+                SuperMobTracker.LOGGER.error("Failed to create simulation world for {}", entityId, e);
                 errorMessage = "gui.mobtracker.drops.worldCreationFailed";
                 completed = true;
 
@@ -691,7 +585,7 @@ public class DropSimulator {
                     return;
                 }
             } catch (Exception e) {
-                SuperMobTracker.LOGGER.warn("Cannot simulate drops for " + entityId + " - entity construction failed", e);
+                SuperMobTracker.LOGGER.warn("Cannot simulate drops for {} - entity construction failed", entityId, e);
                 errorMessage = "gui.mobtracker.drops.entityConstructionFailed";
                 completed = true;
 
@@ -711,7 +605,9 @@ public class DropSimulator {
 
                     // Set attackingPlayer field for killed_by_player loot conditions
                     // This is the field that loot table conditions actually check
-                    Field attackingPlayerField = getAttackingPlayerField();
+                    Field attackingPlayerField = ReflectionUtils.getDeclaredField(EntityLivingBase.class,
+                        () -> SuperMobTracker.LOGGER.warn("Could not find attackingPlayer field"),
+                        "field_70717_bb", "attackingPlayer");
                     if (attackingPlayerField != null) {
                         try {
                             attackingPlayerField.set(entity, fakePlayer);
@@ -756,7 +652,8 @@ public class DropSimulator {
                             ItemStack stack = entityItem.getItem();
                             if (!stack.isEmpty()) {
                                 DropKey key = new DropKey(stack);
-                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack)).addDrop(stack.getCount());
+                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack))
+                                       .addDrop(stack.getCount());
                             }
                         }
 
@@ -764,14 +661,15 @@ public class DropSimulator {
                         for (ItemStack stack : spawnedDuringEvent) {
                             if (!stack.isEmpty()) {
                                 DropKey key = new DropKey(stack);
-                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack)).addDrop(stack.getCount());
+                                dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack))
+                                       .addDrop(stack.getCount());
                             }
                         }
                     }
                 } catch (Exception e) {
                     // If we get here after the pre-test passed, something else is wrong
                     // Log once and abort
-                    SuperMobTracker.LOGGER.warn("Error during drop simulation for " + entityId, e);
+                    SuperMobTracker.LOGGER.warn("Error during drop simulation for {}", entityId, e);
                     errorMessage = "gui.mobtracker.drops.simulationFailed";
                     completed = true;
 
@@ -785,7 +683,9 @@ public class DropSimulator {
 
             // Build result
             List<DropEntry> entries = new ArrayList<>();
-            for (DropAccumulator acc : dropMap.values()) entries.add(new DropEntry(acc.representativeStack, acc.totalCount, total));
+            for (DropAccumulator acc : dropMap.values()) {
+                entries.add(new DropEntry(acc.representativeStack, acc.totalCount, total));
+            }
 
             // Sort by drops per kill (descending)
             entries.sort((a, b) -> Double.compare(b.dropsPerKill, a.dropsPerKill));
@@ -815,8 +715,6 @@ public class DropSimulator {
             SuperMobTracker.LOGGER.warn("Wizardry mod detected but ItemSpellBook class not found", e);
             return false;
         }
-
-        if (spellBookClass == null) return false;
 
         return spellBookClass.isInstance(item);
     }
@@ -1031,7 +929,6 @@ public class DropSimulator {
     private static EntityPlayer cachedProfilePlayer = null;
     private static DamageSource cachedProfileDamage = null;
     private static int cachedProfileDimension = Integer.MIN_VALUE;
-    private static int profileEntityCount = 0;
 
     // Recreate resources every N entities to prevent accumulation of state from mods
     private static final int PROFILE_CACHE_REFRESH_INTERVAL = 50;
@@ -1064,7 +961,6 @@ public class DropSimulator {
         cachedProfilePlayer = null;
         cachedProfileDamage = null;
         cachedProfileDimension = Integer.MIN_VALUE;
-        profileEntityCount = 0;
     }
 
     /**
@@ -1098,7 +994,7 @@ public class DropSimulator {
                 null, "Could not access dropLoot method", System.nanoTime() - startTime);
         }
 
-        if (realWorld == null || realWorld.getLootTableManager() == null) {
+        if (realWorld == null) {
             return new ProfileResult(entityId, ProfileResult.Status.WORLD_CREATION_FAILED,
                 null, "World or loot table manager is null", System.nanoTime() - startTime);
         }
@@ -1122,7 +1018,7 @@ public class DropSimulator {
                 cachedProfileWorld = DropSimulationWorld.createInstance(realWorld);
                 cachedProfileDimension = dimension;
             } catch (Exception e) {
-                SuperMobTracker.LOGGER.error("Failed to create simulation world for " + entityId, e);
+                SuperMobTracker.LOGGER.error("Failed to create simulation world for {}", entityId, e);
                 return new ProfileResult(entityId, ProfileResult.Status.WORLD_CREATION_FAILED,
                     null, "Failed to create simulation world: " + e.getMessage(), System.nanoTime() - startTime);
             }
@@ -1151,7 +1047,7 @@ public class DropSimulator {
                     null, "Entity is not a living entity", System.nanoTime() - startTime);
             }
         } catch (Exception e) {
-            SuperMobTracker.LOGGER.warn("Cannot simulate drops for " + entityId + " - entity construction failed", e);
+            SuperMobTracker.LOGGER.warn("Cannot simulate drops for {} - entity construction failed", entityId, e);
             return new ProfileResult(entityId, ProfileResult.Status.ENTITY_CONSTRUCTION_FAILED,
                 null, "Entity construction failed: " + e.getMessage(), System.nanoTime() - startTime);
         }
@@ -1194,7 +1090,7 @@ public class DropSimulator {
                     List<EntityItem> eventDrops = new ArrayList<>(event.getDrops());
                     for (EntityItem entityItem : eventDrops) {
                         ItemStack stack = entityItem.getItem();
-                        if (stack != null && !stack.isEmpty()) {
+                        if (!stack.isEmpty()) {
                             DropKey key = new DropKey(stack);
                             dropMap.computeIfAbsent(key, k -> new DropAccumulator(stack)).addDrop(stack.getCount());
                         }
@@ -1209,20 +1105,24 @@ public class DropSimulator {
                 }
             }
         } catch (Exception e) {
-            SuperMobTracker.LOGGER.warn("Error during drop simulation for " + entityId, e);
+            SuperMobTracker.LOGGER.warn("Error during drop simulation for {}", entityId, e);
             return new ProfileResult(entityId, ProfileResult.Status.CRASHED,
                 null, e.getClass().getSimpleName() + ": " + e.getMessage(), System.nanoTime() - startTime);
         }
 
         List<DropEntry> entries = new ArrayList<>();
-        for (DropAccumulator acc : dropMap.values()) entries.add(new DropEntry(acc.representativeStack, acc.totalCount, simulationCount));
+        for (DropAccumulator acc : dropMap.values()) {
+            entries.add(new DropEntry(acc.representativeStack, acc.totalCount, simulationCount));
+        }
 
         entries.sort((a, b) -> Double.compare(b.dropsPerKill, a.dropsPerKill));
 
         DropSimulationResult simResult = new DropSimulationResult(entityId, entries, simulationCount);
         long duration = System.nanoTime() - startTime;
 
-        if (entries.isEmpty()) return new ProfileResult(entityId, ProfileResult.Status.NO_DROPS, simResult, null, duration);
+        if (entries.isEmpty()) {
+            return new ProfileResult(entityId, ProfileResult.Status.NO_DROPS, simResult, null, duration);
+        }
 
         return new ProfileResult(entityId, ProfileResult.Status.SUCCESS, simResult, null, duration);
     }
@@ -1248,16 +1148,8 @@ public class DropSimulator {
 
         int dimension = mc.world != null ? mc.world.provider.getDimension() : 0;
         WorldServer realWorld = server.getWorld(dimension);
-        if (realWorld == null || realWorld.getLootTableManager() == null) {
-            return new ProfileResult(entityId, ProfileResult.Status.SERVER_SIDE_ONLY,
-                null, "gui.mobtracker.drops.serverSideOnly", System.nanoTime() - startTime);
-        }
 
         EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
-        if (entry == null || !EntityLiving.class.isAssignableFrom(entry.getEntityClass())) {
-            return new ProfileResult(entityId, ProfileResult.Status.INVALID_ENTITY,
-                null, "Invalid entity", System.nanoTime() - startTime);
-        }
 
         // Check if entity is unstable for simulation (corrupts global state)
         if (ModConfig.isUnstableSimulationEntity(entityId.toString())) {
@@ -1272,7 +1164,7 @@ public class DropSimulator {
                 cachedProfileWorld = DropSimulationWorld.createInstance(realWorld);
                 cachedProfileDimension = dimension;
             } catch (Exception e) {
-                SuperMobTracker.LOGGER.error("Failed to create simulation world for " + entityId, e);
+                SuperMobTracker.LOGGER.error("Failed to create simulation world for {}", entityId, e);
                 return new ProfileResult(entityId, ProfileResult.Status.WORLD_CREATION_FAILED,
                     null, "Failed to create simulation world: " + e.getMessage(), System.nanoTime() - startTime);
             }
@@ -1305,7 +1197,7 @@ public class DropSimulator {
                     null, "Entity is not a living entity", System.nanoTime() - startTime);
             }
         } catch (Exception e) {
-            SuperMobTracker.LOGGER.warn("Cannot simulate drops for " + entityId + " - entity construction failed", e);
+            SuperMobTracker.LOGGER.warn("Cannot simulate drops for {} - entity construction failed", entityId, e);
             return new ProfileResult(entityId, ProfileResult.Status.ENTITY_CONSTRUCTION_FAILED,
                 null, "Entity construction failed: " + e.getMessage(), System.nanoTime() - startTime);
         }
@@ -1374,7 +1266,7 @@ public class DropSimulator {
                 }
             }
         } catch (Exception e) {
-            SuperMobTracker.LOGGER.warn("Error during drop simulation for " + entityId, e);
+            SuperMobTracker.LOGGER.warn("Error during drop simulation for {}", entityId, e);
             return new ProfileResult(entityId, ProfileResult.Status.CRASHED,
                 null, e.getClass().getSimpleName() + ": " + e.getMessage(), System.nanoTime() - startTime);
         }
@@ -1383,14 +1275,18 @@ public class DropSimulator {
 
         // Build result
         List<DropEntry> entries = new ArrayList<>();
-        for (DropAccumulator acc : dropMap.values()) entries.add(new DropEntry(acc.representativeStack, acc.totalCount, simulationCount));
+        for (DropAccumulator acc : dropMap.values()) {
+            entries.add(new DropEntry(acc.representativeStack, acc.totalCount, simulationCount));
+        }
 
         entries.sort((a, b) -> Double.compare(b.dropsPerKill, a.dropsPerKill));
 
         DropSimulationResult simResult = new DropSimulationResult(entityId, entries, simulationCount);
         long duration = System.nanoTime() - startTime;
 
-        if (entries.isEmpty()) return new ProfileResult(entityId, ProfileResult.Status.NO_DROPS, simResult, null, duration);
+        if (entries.isEmpty()) {
+            return new ProfileResult(entityId, ProfileResult.Status.NO_DROPS, simResult, null, duration);
+        }
 
         return new ProfileResult(entityId, ProfileResult.Status.SUCCESS, simResult, null, duration);
     }

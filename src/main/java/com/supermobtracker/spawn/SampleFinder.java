@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.supermobtracker.SuperMobTracker;
-
 import net.minecraft.entity.EntityLiving;
 
 import static com.supermobtracker.spawn.ConditionUtils.*;
@@ -93,7 +91,7 @@ public class SampleFinder {
 
         int min = Collections.min(passing);
         int max = Collections.max(passing);
-        if (min == max) return Arrays.asList(min);
+        if (min == max) return Collections.singletonList(min);
 
         return Arrays.asList(min, max);
     }
@@ -298,12 +296,12 @@ public class SampleFinder {
      * Build a failure result with hints based on queried conditions.
      */
     public SpawnConditionAnalyzer.SpawnConditions buildFailureResult(List<Integer> lightProbe) {
-        List<String> failBiomes = Arrays.asList("unknown");
-        List<String> failGround = Arrays.asList("unknown");
+        List<String> failBiomes = Collections.singletonList("unknown");
+        List<String> failGround = Collections.singletonList("unknown");
         List<Integer> narrowedLight = new ArrayList<>();
         List<Integer> emptyY = new ArrayList<>();
         List<int[]> time = null;  // null indicates unknown/not determined
-        List<String> weather = Arrays.asList("unknown");
+        List<String> weather = Collections.singletonList("unknown");
         List<String> hints = new ArrayList<>();
 
         if (lastQueriedConditions != null) {

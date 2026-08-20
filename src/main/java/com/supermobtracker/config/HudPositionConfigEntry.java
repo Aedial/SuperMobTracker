@@ -18,7 +18,8 @@ public class HudPositionConfigEntry extends ButtonEntry {
     }
 
     private void updateButtonText() {
-        String currentPos = I18n.format("gui.supermobtracker.hudPosition." + ModConfig.getClientHudPosition().name().toLowerCase());
+        String posName = ModConfig.getClientHudPosition().name().toLowerCase();
+        String currentPos = I18n.format("gui.supermobtracker.hudPosition." + posName);
         this.btnValue.displayString = I18n.format("gui.supermobtracker.hudPosition.button", currentPos);
     }
 

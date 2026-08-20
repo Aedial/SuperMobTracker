@@ -21,6 +21,7 @@ import mezz.jei.api.recipe.IRecipeCategory;
 import mezz.jei.api.recipe.IRecipeWrapper;
 
 import com.supermobtracker.SuperMobTracker;
+import com.supermobtracker.util.ReflectionUtils;
 
 
 /**
@@ -125,7 +126,8 @@ public class JEIHelper {
             }
 
             long elapsed = System.currentTimeMillis() - startTime;
-            SuperMobTracker.LOGGER.info("Built JER mob index cache with {} entries in {}ms", mobIndexCache.size(), elapsed);
+            SuperMobTracker.LOGGER.info(
+                "Built JER mob index cache with {} entries in {}ms", mobIndexCache.size(), elapsed);
         } catch (Exception e) {
             SuperMobTracker.LOGGER.warn("Failed to build JER mob index cache", e);
         }
@@ -138,8 +140,7 @@ public class JEIHelper {
     private static EntityLivingBase extractEntityFromWrapper(IRecipeWrapper wrapper) {
         try {
             // MobWrapper.mob is a MobEntry
-            Field mobField = wrapper.getClass().getDeclaredField("mob");
-            mobField.setAccessible(true);
+            Field mobField = ReflectionUtils.getDeclaredField(wrapper.getClass(), "mob");
             Object mobEntry = mobField.get(wrapper);
 
             // MobEntry.getEntity() returns EntityLivingBase
@@ -154,19 +155,17 @@ public class JEIHelper {
     /**
      * Sets the recipe index in JEI's RecipesGui using reflection.
      * JEI doesn't expose this through the API, but we need it to jump to a specific mob.
-     *
+     * <p>
      * Path: RecipesGui.logic (IRecipeGuiLogic) -> RecipeGuiLogic.state (IngredientLookupState) -> setRecipeIndex(int)
      */
     private static void setRecipeIndex(IRecipesGui recipesGui, int index) {
         try {
             // RecipesGui has a "logic" field of type IRecipeGuiLogic (actually RecipeGuiLogic)
-            Field logicField = recipesGui.getClass().getDeclaredField("logic");
-            logicField.setAccessible(true);
+            Field logicField = ReflectionUtils.getDeclaredField(recipesGui.getClass(), "logic");
             Object logic = logicField.get(recipesGui);
 
             // RecipeGuiLogic has a "state" field of type IngredientLookupState
-            Field stateField = logic.getClass().getDeclaredField("state");
-            stateField.setAccessible(true);
+            Field stateField = ReflectionUtils.getDeclaredField(logic.getClass(), "state");
             Object state = stateField.get(logic);
 
             // IngredientLookupState has setRecipeIndex method
@@ -174,8 +173,7 @@ public class JEIHelper {
             setRecipeIndexMethod.invoke(state, index);
 
             // RecipeGuiLogic has a "stateListener" field of type IRecipeLogicStateListener
-            Field stateListenerField = logic.getClass().getDeclaredField("stateListener");
-            stateListenerField.setAccessible(true);
+            Field stateListenerField = ReflectionUtils.getDeclaredField(logic.getClass(), "stateListener");
             Object stateListener = stateListenerField.get(logic);
 
             // IRecipeLogicStateListener has onStateChange() method

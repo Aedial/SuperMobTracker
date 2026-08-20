@@ -2,6 +2,7 @@ package com.supermobtracker.drops;
 
 import java.lang.reflect.Field;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import net.minecraft.util.math.BlockPos;
@@ -13,13 +14,14 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.IChunkGenerator;
 
 import com.supermobtracker.SuperMobTracker;
+import com.supermobtracker.util.ReflectionUtils;
 
 
 /**
  * A wrapper around a WorldProvider that delegates most calls to the wrapped provider.
  * This wrapper isolates the simulation world from the real world's provider state,
  * preventing issues like the DragonFightManager being modified during simulation.
- *
+ * <p>
  * Key difference from the real provider:
  * - DragonFightManager is never initialized (prevents simulated Ender Dragons from
  *   registering with the real fight manager)
@@ -37,27 +39,9 @@ public class SimulationProviderWrapper extends WorldProvider {
     private static boolean worldFieldSearched = false;
 
     private static Field getWorldField() {
-        if (worldFieldSearched) return worldField;
-
-        worldFieldSearched = true;
-
-        try {
-            worldField = WorldProvider.class.getDeclaredField("field_76579_a"); // world
-            worldField.setAccessible(true);
-
-            return worldField;
-        } catch (NoSuchFieldException e) {
-            try {
-                worldField = WorldProvider.class.getDeclaredField("world");
-                worldField.setAccessible(true);
-
-                return worldField;
-            } catch (NoSuchFieldException e2) {
-                SuperMobTracker.LOGGER.warn("Could not find WorldProvider.world field");
-
-                return null;
-            }
-        }
+        return ReflectionUtils.getDeclaredField(WorldProvider.class,
+            () -> SuperMobTracker.LOGGER.warn("Could not find WorldProvider.world field"),
+             "field_76579_a", "world");
     }
 
     public SimulationProviderWrapper(WorldProvider wrapped) {
@@ -93,6 +77,7 @@ public class SimulationProviderWrapper extends WorldProvider {
     // === Core dimension info - delegate to wrapped ===
 
     @Override
+    @Nonnull
     public DimensionType getDimensionType() {
         return wrapped.getDimensionType();
     }
@@ -106,12 +91,14 @@ public class SimulationProviderWrapper extends WorldProvider {
     // === Biome and terrain - delegate to wrapped ===
 
     @Override
+    @Nonnull
     public BiomeProvider getBiomeProvider() {
         return wrapped.getBiomeProvider();
     }
 
     @Override
-    public Biome getBiomeForCoords(BlockPos pos) {
+    @Nonnull
+    public Biome getBiomeForCoords(@Nonnull BlockPos pos) {
         return wrapped.getBiomeForCoords(pos);
     }
 
@@ -191,28 +178,31 @@ public class SimulationProviderWrapper extends WorldProvider {
     }
 
     @Override
-    public boolean canDoLightning(Chunk chunk) {
+    public boolean canDoLightning(@Nonnull Chunk chunk) {
         return false;
     }
 
     @Override
-    public boolean canDoRainSnowIce(Chunk chunk) {
+    public boolean canDoRainSnowIce(@Nonnull Chunk chunk) {
         return false;
     }
 
     @Override
+    @Nonnull
     public BlockPos getRandomizedSpawnPoint() {
         // Return a safe default spawn point to avoid NPE when world fields are not fully initialized
         return BlockPos.ORIGIN;
     }
 
     @Override
+    @Nonnull
     public BlockPos getSpawnPoint() {
         // Return a safe default spawn point
         return BlockPos.ORIGIN;
     }
 
     @Override
+    @Nonnull
     public BlockPos getSpawnCoordinate() {
         // Return a safe spawn coordinate for dimensions that use it (like the End)
         return BlockPos.ORIGIN;

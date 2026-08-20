@@ -170,7 +170,7 @@ public class LootAnalysisRunner {
 
         // Write no drops mobs
         if (!noDropsMobs.isEmpty()) {
-            noDropsMobs.sort((a, b) -> a.entityId.compareTo(b.entityId));
+            noDropsMobs.sort(Comparator.comparing(a -> a.entityId));
             File noDropsFile = new File(outputDir, "loot_no_drops_" + samples + "samples_" + simulationCount + "sims_" + timestamp + ".txt");
             writePerformanceReport(noDropsFile, "No Drops - Loot Analysis Report",
                 "These mobs have no loot drops (may not have a loot table or drops are conditional).",
@@ -181,7 +181,7 @@ public class LootAnalysisRunner {
 
         // Write invalid entity mobs
         if (!invalidEntityMobs.isEmpty()) {
-            invalidEntityMobs.sort((a, b) -> a.entityId.compareTo(b.entityId));
+            invalidEntityMobs.sort(Comparator.comparing(a -> a.entityId));
             File invalidFile = new File(outputDir, "loot_invalid_entity_" + samples + "samples_" + simulationCount + "sims_" + timestamp + ".txt");
             writePerformanceReport(invalidFile, "Invalid Entity - Loot Analysis Report",
                 "These entities are not valid living entities.",
@@ -236,12 +236,12 @@ public class LootAnalysisRunner {
 
             for (LootPerformanceEntry entry : entries) writer.write(out, entry);
         } catch (IOException e) {
-            SuperMobTracker.LOGGER.error("Failed to write performance report: " + file.getName(), e);
+            SuperMobTracker.LOGGER.error("Failed to write performance report: {}", file.getName(), e);
         }
     }
 
     private static void sendProgress(EntityPlayerMP player, int current, int total, String currentEntity) {
-        SuperMobTracker.LOGGER.info(String.format("Loot Analysis Progress: %d/%d - %s", current, total, currentEntity));
+        SuperMobTracker.LOGGER.info("Loot Analysis Progress: {}/{} - {}", current, total, currentEntity);
 
         // FIXME: I think sometimes player.connection is null here in multiplayer?
         //        It doesn't seem to send the progress updates.
