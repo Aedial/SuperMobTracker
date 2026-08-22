@@ -1,6 +1,5 @@
 package com.supermobtracker.tracking;
 
-import com.supermobtracker.tracking.SpawnTrackerManager;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;

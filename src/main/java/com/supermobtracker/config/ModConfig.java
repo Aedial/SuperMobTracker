@@ -125,6 +125,12 @@ public class ModConfig {
     @Config.RangeInt(min = 100, max = 100000)
     public static int clientDropSimulationCount = 10000;
 
+    @Config.Name("jeiMobLootRows")
+    @Config.LangKey(PREFIX + "jeiMobLootRows")
+    @Config.Comment("Number of loot rows shown per page in the JEI mob loot view. Requires restarting Minecraft to resize JEI recipes.")
+    @Config.RangeInt(min = 1, max = 14)
+    public static int clientJeiMobLootRows = 7;
+
     @Config.Name("unstableSimulationEntities")
     @Config.LangKey(PREFIX + "unstableSimulationEntities")
     @Config.Comment({

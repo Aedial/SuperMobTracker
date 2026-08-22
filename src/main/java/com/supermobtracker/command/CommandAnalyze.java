@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nonnull;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
@@ -36,8 +38,6 @@ import com.supermobtracker.network.PacketRequestLootAnalysis;
 import com.supermobtracker.spawn.BiomeDimensionMapper;
 import com.supermobtracker.spawn.ConditionUtils;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
-
-import javax.annotation.Nonnull;
 
 
 /**

@@ -7,16 +7,20 @@ A client-side Minecraft 1.12.2 mod that lets you select mobs to view spawn condi
 - Filterable scrolling list of mobs on the left; right panel shows details and spawn conditions.
 - Live tracking on the main screen for selected mob. Double-click a mob in the list to toggle tracking.
 - Click on the biomes list to copy biome names to clipboard.
-- Support for Just Enough Resources and custom loot tables integrated with JEI.
-  - Custom loot tables viewer cannot be used without server-side installation (if you play singleplayer, you can ignore this).
+- Support for Just Enough Resources, custom drops viewer, and full drops tables integrated with JEI.
+  - Custom drops viewer cannot be used without server-side installation (if you play singleplayer, you can ignore this). However, the JEI integration of drops tables will work without server-side installation, as long as you have the loot dump file in config.
   - The custom viewer can use mouse or keys to open JEI: U/Left-click for uses, R/Right-click for recipes.
-- Configs:
-  - enableTracking: Globally disable tracking (requires restart).
-  - detectionRange: Set radius for considering spawn attempts.
-  - spawnCheckRetries: Set maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time on selection. This can lead to some high delays when selecting some mobs with tricky spawn conditions.
-  - whitelist/blacklist: Configure which mobs are allowed/disallowed for tracking. Whitelist takes priority over blacklist. Partial matches are supported (e.g., `zomb` matches all mobs with "zombie" in their ID or `minecraft` matches all mobs from the Minecraft namespace). To avoid matching too broadly, keep the `:` separator for namespace matching (e.g., `aoa:`). As it is a purely client-side mod, there is no way to enforce server-side mob restrictions.
-  - dropSimulationCount: Number of loot table simulations to run when estimating drops. Higher values yield more accurate results but increase analysis time. The process is done asynchronously to avoid blocking the UI, so increasing this value should not cause issues.
-  - external spawn hints: Add non-natural or spawn-table-less mobs in `config/supermobtracker/spawn_hints.json`. This is intended for worldgen, structures, scripted spawns, spawners, and similar sources that do not appear in normal biome spawn lists.
+
+
+### Configs
+- **enableTracking**: Globally disable tracking (requires restart).
+- **detectionRange**: Set radius for considering spawn attempts.
+- **spawnCheckRetries**: Set maximum retries for spawn condition checks. Higher values handle random spawn conditions better but increase analysis time on selection. This can lead to some high delays when selecting some mobs with tricky spawn conditions.
+- **whitelist/blacklist**: Configure which mobs are allowed/disallowed for tracking. Whitelist takes priority over blacklist. Partial matches are supported (e.g., `zomb` matches all mobs with "zombie" in their ID or `minecraft` matches all mobs from the Minecraft namespace). To avoid matching too broadly, keep the `:` separator for namespace matching (e.g., `aoa:`). As it is a purely client-side mod, there is no way to enforce server-side mob restrictions.
+- **dropSimulationCount**: Number of loot table simulations to run when estimating drops. Higher values yield more accurate results but increase analysis time. The process is done asynchronously to avoid blocking the UI, so increasing this value should not cause issues.
+- **useModelXRay**: Enable X-ray rendering for the entity preview, instead of the default glowing outline.
+- **external spawn hints**: Add non-natural or spawn-table-less mobs in `config/supermobtracker/spawn_hints.json`. This is intended for worldgen, structures, scripted spawns, spawners, and similar sources that do not appear in normal biome spawn lists.
+- **loot dump**: Required for the JEI integration of loot tables to work. See the `/smtlootdump` command section below, for more details.
 
 ## External Spawn Hints
 Some mobs do not use normal biome spawn tables at all, so the analyzer has nothing native to sample from. For those cases, Super Mob Tracker can load fallback spawn metadata from `config/supermobtracker/spawn_hints.json`.
@@ -77,6 +81,11 @@ The drop simulation system uses a fake player and initializes the entity in a mi
 On top of that, due to statistical randomness in loot tables, most drops will have some variance unless they are guaranteed drops. Increasing the `dropSimulationCount` config can help reduce variance, but some randomness will always remain. If a drop is very rare, it may not show up at all in the simulation.
 
 ## Commands
+
+### /smtlootdump
+Dumps all loot tables into a single zipped JSON file, in the `config/supermobtracker/` folder. This is required for the JEI integration of loot tables to work, and will need to be re-run whenever loot tables change (e.g., after adding/removing mods or changing mod configs). Of course, an un-updated loot dump will not break anything, but the loot information may be outdated.
+
+You may provide the number of iterations to simulate for each loot table, which will be used to estimate drop chances. The default uses the `dropSimulationCount` config value.
 
 ### /smtanalyze
 Analyzes all registered mobs and exports results to the `supermobtracker/` folder. This is useful to identify spawn condition issues or benchmark performance. If a lot of mobs fail to analyze, even at high `spawnCheckRetries`, consider opening an issue with the exported data.

@@ -21,6 +21,7 @@ import mezz.jei.api.recipe.IRecipeCategory;
 import mezz.jei.api.recipe.IRecipeWrapper;
 
 import com.supermobtracker.SuperMobTracker;
+import com.supermobtracker.drops.LootDump;
 import com.supermobtracker.util.ReflectionUtils;
 
 
@@ -48,10 +49,10 @@ public class JEIHelper {
     }
 
     /**
-     * Opens JEI to show the mob drops page for a specific entity.
+     * Opens JER to show the mob drops page for a specific entity.
      * Returns true if successfully opened, false otherwise.
      */
-    public static boolean showMobPage(ResourceLocation entityId) {
+    public static boolean showJERMobPage(ResourceLocation entityId) {
         int mobIndex = getMobIndex(entityId);
         if (mobIndex < 0) return false;
 
@@ -74,13 +75,41 @@ public class JEIHelper {
     }
 
     /**
-     * Checks if JEI can show information for a specific mob.
+     * Checks if JEI can show JER information for a specific mob.
      */
-    public static boolean canShowMobPage(ResourceLocation entityId) {
+    public static boolean canShowJERMobPage(ResourceLocation entityId) {
         if (!isJEILoaded() || !isJERLoaded()) return false;
         if (!JEIIntegration.isRuntimeAvailable()) return false;
 
         return getMobIndex(entityId) >= 0;
+    }
+
+    /**
+     * Opens the JEI page for this mob.
+     */
+    public static boolean showMobLootPage(ResourceLocation entityId) {
+        if (!isJEILoaded() || !JEIIntegration.isRuntimeAvailable() || entityId == null) return false;
+        if (LootDump.getMob(entityId) == null) return false;
+
+        try {
+            IJeiRuntime runtime = JEIIntegration.getRuntime();
+            ItemStack anchor = MobLootJeiRecipe.createAnchorStack(entityId);
+            IFocus<ItemStack> focus = runtime.getRecipeRegistry().createFocus(IFocus.Mode.INPUT, anchor);
+            runtime.getRecipesGui().show(focus);
+
+            return true;
+        } catch (Exception e) {
+            SuperMobTracker.LOGGER.warn("Failed to open dumped JEI loot page for {}", entityId, e);
+            return false;
+        }
+    }
+
+    /**
+     * Checks whether the mob has a JEI loot page to show.
+     */
+    public static boolean canShowMobLootPage(ResourceLocation entityId) {
+        return isJEILoaded() && JEIIntegration.isRuntimeAvailable() && entityId != null
+            && LootDump.getMob(entityId) != null;
     }
 
     /**

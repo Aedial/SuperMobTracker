@@ -34,10 +34,6 @@ public class SimulationProviderWrapper extends WorldProvider {
 
     private final WorldProvider wrapped;
 
-    // Reflection cache for world field
-    private static Field worldField = null;
-    private static boolean worldFieldSearched = false;
-
     private static Field getWorldField() {
         return ReflectionUtils.getDeclaredField(WorldProvider.class,
             () -> SuperMobTracker.LOGGER.warn("Could not find WorldProvider.world field"),

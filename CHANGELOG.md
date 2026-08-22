@@ -8,6 +8,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.5.0] - 2026-08-21
+### Added
+- Register the complete loot tables of every mob into JEI, via a static drops file. This file needs to be generated first, using the `/smtlootdump` command, which will create a zipped JSON file containing all the loot tables.
+
+
 ## [1.4.2] - 2026-08-14
 ### Added
 - Add spawn conditions for (most) mobs of Ice and Fire, Erebus, Twilight Forest, and The Betweenlands, which didn't have any native biome spawn conditions before (due to custom spawn logic). Some may still be missing, you can PR them to the bundled spawn_hints.defaults.json file, or add them to your own spawn_hints.json file (in config).

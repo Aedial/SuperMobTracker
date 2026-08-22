@@ -21,6 +21,7 @@ config.supermobtracker.client.hudEnabled=HUD Enabled
 config.supermobtracker.client.mobWhitelist=Mob Whitelist
 config.supermobtracker.client.mobBlacklist=Mob Blacklist
 config.supermobtracker.client.dropSimulationCount=Drop Simulation Count
+config.supermobtracker.client.jeiMobLootRows=JEI Mob Loot Rows
 config.supermobtracker.client.unstableSimulationEntities=Unstable Simulation Entities
 config.supermobtracker.client.shouldRenderEntities=Should Render Entities
 
@@ -42,6 +43,7 @@ config.supermobtracker.client.hudEnabled.tooltip=Whether to show the tracking ov
 config.supermobtracker.client.mobWhitelist.tooltip=List of entity IDs that are whitelisted for tracking (takes precedence over blacklist).
 config.supermobtracker.client.mobBlacklist.tooltip=List of entity IDs that are blacklisted from tracking.
 config.supermobtracker.client.dropSimulationCount.tooltip=Number of simulated kills for calculating drop rates.
+config.supermobtracker.client.jeiMobLootRows.tooltip=Number of loot rows shown per page in the JEI mob loot view. Requires restarting Minecraft to resize JEI recipes.
 config.supermobtracker.client.unstableSimulationEntities.tooltip=Entity IDs that corrupt global state during drop simulation and should be excluded from simulation. They can be identified by severe performance degradation for every entity after simulating their drops.
 config.supermobtracker.client.shouldRenderEntities.tooltip=Entity IDs that crash or spam errors when rendered. These entities will not render at all in the preview/gallery.
 
@@ -65,9 +67,21 @@ gui.mobtracker.entityId=ID: %s
 gui.mobtracker.entitySize=Size: %s x %s x %s
 gui.mobtracker.attributes=Attributes: %s
 gui.mobtracker.dropsButton=[View Drops]
-gui.mobtracker.jeiButton=[View in JEI]
+gui.mobtracker.jerButton=[JER]
+gui.mobtracker.lootJeiButton=[JEI]
 gui.mobtracker.blacklisted=This entity is blacklisted
 gui.mobtracker.whitelisted=This entity is not whitelisted
+
+# JEI Mob Loot
+jei.category.supermobtracker.mob_loot=Mob Loot
+jei.supermobtracker.loot.missing=Loot dump entry is unavailable
+jei.supermobtracker.loot.chance=~%s%% average drop chance
+jei.supermobtracker.loot.page=%d/%d
+jei.supermobtracker.loot.button.open=Open
+jei.supermobtracker.loot.button.tracker=Open Super Mob Tracker
+jei.supermobtracker.loot.button.previous=Previous loot page
+jei.supermobtracker.loot.button.next=Next loot page
+item.supermobtracker.jei_anchor.name=JEI Anchor
 
 # Drops Window
 gui.mobtracker.drops.title=Drops: %s

@@ -7,11 +7,13 @@ import net.minecraftforge.common.MinecraftForge;
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.IProxy;
 import com.supermobtracker.command.CommandAnalyze;
+import com.supermobtracker.command.CommandLootDump;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.client.event.ClientEvents;
 import com.supermobtracker.client.gui.GuiHandler;
 import com.supermobtracker.client.input.KeyBindings;
 import com.supermobtracker.client.render.TrackedEntityXrayRenderer;
+import com.supermobtracker.ModItems;
 import com.supermobtracker.tracking.SpawnEventHandler;
 import com.supermobtracker.tracking.SpawnTrackerManager;
 
@@ -20,6 +22,7 @@ public class ClientProxy implements IProxy {
     @Override
     public void preInit() {
         KeyBindings.register();
+        ModItems.registerModels();
         NetworkRegistry.INSTANCE.registerGuiHandler(SuperMobTracker.INSTANCE, new GuiHandler());
     }
 
@@ -36,6 +39,7 @@ public class ClientProxy implements IProxy {
 
         // Register client commands
         ClientCommandHandler.instance.registerCommand(new CommandAnalyze());
+        ClientCommandHandler.instance.registerCommand(new CommandLootDump());
     }
 
     @Override

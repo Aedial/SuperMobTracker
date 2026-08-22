@@ -35,6 +35,7 @@ public class SuperMobTracker {
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         ModConfig.loadConfigs(event.getSuggestedConfigurationFile());
+        ModItems.registerItems();
         NetworkHandler.registerPackets();
         proxy.preInit();
     }

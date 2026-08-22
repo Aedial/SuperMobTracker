@@ -223,22 +223,31 @@ public final class GuiDrawingUtils {
      * @param rotationY Y-axis rotation for the entity
      */
     public static void drawMobPreview(ResourceLocation id, Entity entity, int x, int y, int size, float rotationY) {
-        if (entity == null || size <= 0) return;
+        drawMobPreview(id, entity, x, y, size, size, rotationY);
+    }
+
+    /**
+     * Draws an entity preview in a rectangular box with border.
+     * The square overload remains the normal tracker-GUI entry point.
+     */
+    public static void drawMobPreview(ResourceLocation id, Entity entity, int x, int y, int width, int height,
+                                      float rotationY) {
+        if (entity == null || width <= 0 || height <= 0) return;
 
         // Draw background with border
-        Gui.drawRect(x - 1, y - 1, x + size + 1, y + size + 1, ENTITY_BORDER_COLOR);
-        Gui.drawRect(x, y, x + size, y + size, ENTITY_BG_COLOR);
+        Gui.drawRect(x - 1, y - 1, x + width + 1, y + height + 1, ENTITY_BORDER_COLOR);
+        Gui.drawRect(x, y, x + width, y + height, ENTITY_BG_COLOR);
 
         // Calculate scale based on entity's visual model size (via shadow size or collision box)
         // FIXME: both render scale methods have issues with certain entities, find a middle ground?
         // float scale = EntityRenderHelper.getVisualRenderScale(entity, (float) size);  // issues with tall/big entities
         // float scale = EntityRenderHelper.getShadowBasedRenderScale(entity, (float) size);    // issues with wide entities
         float maxDimension = Math.max(1.0f, Math.max(entity.height, entity.width));
-        float scale = size / maxDimension / 1.5f;
+        float scale = Math.min(width, height) / maxDimension / 1.5f;
 
         // Center position of the preview box
-        int centerX = x + size / 2;
-        int centerY = y + size / 2;
+        int centerX = x + width / 2;
+        int centerY = y + height / 2;
 
         GlStateManager.pushMatrix();
         GlStateManager.color(1f, 1f, 1f);
