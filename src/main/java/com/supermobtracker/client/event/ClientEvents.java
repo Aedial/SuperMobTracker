@@ -1,6 +1,5 @@
 package com.supermobtracker.client.event;
 
-import java.lang.reflect.Field;
 import java.util.*;
 
 import net.minecraft.client.Minecraft;
@@ -29,7 +28,6 @@ import com.supermobtracker.client.gui.GuiMobTracker;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.config.ModConfig.HudPosition;
 import com.supermobtracker.tracking.SpawnTrackerManager;
-import com.supermobtracker.util.ReflectionUtils;
 
 
 public class ClientEvents {
@@ -44,23 +42,8 @@ public class ClientEvents {
     private static int trackerW = 0;
     private static int trackerH = 0;
 
-    // Reflection fields for accessing guiLeft/guiTop
-    private static Field guiLeftField;
-    private static Field guiTopField;
-
     // Whether we already cleared the temporary glow for switching to model xray mode, to avoid re-clearing every tick
     private boolean clearedOutlineGlowForXray = false;
-
-    static {
-        // Try to find guiLeft and guiTop fields (they may have different names due to obfuscation)
-        for (Field field : GuiContainer.class.getDeclaredFields()) {
-            if (field.getType() == int.class) field.setAccessible(true);
-        }
-
-        guiLeftField = ReflectionUtils.getDeclaredField(GuiContainer.class, "guiLeft", "field_147003_i");
-        guiTopField = ReflectionUtils.getDeclaredField(GuiContainer.class, "guiTop", "field_147009_r");
-        // If not found, leave as null, will use fallback positioning
-    }
 
     @SubscribeEvent
     public void onKeyInput(InputEvent.KeyInputEvent event) {
@@ -123,20 +106,9 @@ public class ClientEvents {
     public void onGuiInit(GuiScreenEvent.InitGuiEvent.Post event) {
         if (!(event.getGui() instanceof GuiInventory) && !(event.getGui() instanceof GuiContainerCreative)) return;
 
-        int guiLeft = 0;
-        int guiTop = 0;
-
-        // Get the GUI position using reflection
-        try {
-            if (guiLeftField != null && guiTopField != null) {
-                guiLeft = guiLeftField.getInt(event.getGui());
-                guiTop = guiTopField.getInt(event.getGui());
-            }
-        } catch (IllegalAccessException e) {
-            // Use fallback: center of screen minus half standard inventory size
-            guiLeft = (event.getGui().width - 176) / 2;
-            guiTop = (event.getGui().height - 166) / 2;
-        }
+        GuiContainer gui = (GuiContainer) event.getGui();
+        int guiLeft = gui.getGuiLeft();
+        int guiTop = gui.getGuiTop();
 
         // Starting position: top of the inventory GUI, right of the player preview
         int startX = guiLeft + 77;

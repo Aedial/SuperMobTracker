@@ -231,7 +231,9 @@ public class TrackedEntityXrayRenderer {
     }
 
     private static Float suppressShadow(RenderLivingBase renderer) throws IllegalAccessException {
-        Field shadowSizeField = ReflectionUtils.getDeclaredField(Render.class, "shadowSize", "field_76989_e");
+        if (shadowSizeField == null) {
+            shadowSizeField = ReflectionUtils.getDeclaredField(Render.class, "shadowSize", "field_76989_e");
+        }
         if (shadowSizeField == null) return null;
 
         float original = shadowSizeField.getFloat(renderer);

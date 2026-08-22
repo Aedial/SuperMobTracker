@@ -93,6 +93,7 @@ public final class EntityRenderHelper {
     /**
      * Gets the entity's model from its renderer.
      */
+    @SuppressWarnings("rawtypes")
     private static ModelBase getEntityModel(Entity entity) {
         if (!(entity instanceof EntityLivingBase)) return null;
 
@@ -101,9 +102,7 @@ public final class EntityRenderHelper {
             Render<Entity> renderer = renderManager.getEntityRenderObject(entity);
             if (!(renderer instanceof RenderLivingBase)) return null;
 
-            
-            Field mainModelField = ReflectionUtils.getDeclaredField(RenderLivingBase.class, "mainModel", "field_77045_g");
-            if (mainModelField != null) return (ModelBase) mainModelField.get(renderer);
+            return ((RenderLivingBase) renderer).getMainModel();
         } catch (Exception e) {
             // Fall through to return null
         }

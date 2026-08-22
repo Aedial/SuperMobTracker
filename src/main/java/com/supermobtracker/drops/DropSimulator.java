@@ -347,6 +347,8 @@ public class DropSimulator {
             }
 
             try {
+                Field attackingPlayerField = getAttackingPlayerField();
+
                 // Send progress back to client roughly every 5% of completion
                 int progressInterval = Math.max(1, simulationCount / 20);
 
@@ -365,7 +367,6 @@ public class DropSimulator {
                     EntityLiving entity = (EntityLiving) rawEntity;
 
                     // Set attackingPlayer field
-                    Field attackingPlayerField = getAttackingPlayerField();
                     if (attackingPlayerField != null) {
                         try {
                             attackingPlayerField.set(entity, fakePlayer);
@@ -592,6 +593,7 @@ public class DropSimulator {
                 return;
             }
 
+            Field attackingPlayerField = getAttackingPlayerField();
             for (int i = progress.get(); i < total && !cancelled; i++) {
                 try {
                     // Create entity in our fake world
@@ -605,9 +607,6 @@ public class DropSimulator {
 
                     // Set attackingPlayer field for killed_by_player loot conditions
                     // This is the field that loot table conditions actually check
-                    Field attackingPlayerField = ReflectionUtils.getDeclaredField(EntityLivingBase.class,
-                        () -> SuperMobTracker.LOGGER.warn("Could not find attackingPlayer field"),
-                        "field_70717_bb", "attackingPlayer");
                     if (attackingPlayerField != null) {
                         try {
                             attackingPlayerField.set(entity, fakePlayer);
@@ -1052,6 +1051,7 @@ public class DropSimulator {
                 null, "Entity construction failed: " + e.getMessage(), System.nanoTime() - startTime);
         }
 
+        Field attackingPlayerField = getAttackingPlayerField();
         try {
             for (int i = 0; i < simulationCount; i++) {
                 Entity rawEntity = EntityList.createEntityByIDFromName(entry.getRegistryName(), simWorld);
@@ -1059,7 +1059,6 @@ public class DropSimulator {
 
                 EntityLiving entity = (EntityLiving) rawEntity;
 
-                Field attackingPlayerField = getAttackingPlayerField();
                 if (attackingPlayerField != null) {
                     try {
                         attackingPlayerField.set(entity, fakePlayer);
@@ -1204,6 +1203,7 @@ public class DropSimulator {
 
         long iterationStart = System.nanoTime();
 
+        Field attackingPlayerField = getAttackingPlayerField();
         try {
             for (int i = 0; i < simulationCount; i++) {
                 Entity rawEntity = EntityList.createEntityByIDFromName(entry.getRegistryName(), simWorld);
@@ -1212,7 +1212,6 @@ public class DropSimulator {
                 EntityLiving entity = (EntityLiving) rawEntity;
 
                 // Set attackingPlayer field for killed_by_player loot conditions
-                Field attackingPlayerField = getAttackingPlayerField();
                 if (attackingPlayerField != null) {
                     try {
                         attackingPlayerField.set(entity, fakePlayer);
