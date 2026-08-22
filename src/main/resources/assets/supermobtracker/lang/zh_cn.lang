@@ -4,24 +4,24 @@ key.supermobtracker.open=打开生物追踪器
 key.categories.supermobtracker=超级生物追踪器
 
 # Config descriptions
-config.supermobtracker.client.enableTracking.desc=启用生物追踪（需要重启客户端）。
-config.supermobtracker.client.detectionRange.desc=被追踪生物的检测范围（以格为单位），用于触发透视或发光高亮效果。
-config.supermobtracker.client.useModelXRay.desc=穿过墙壁渲染被追踪生物时，使用正常模型，而非原版的发光轮廓。
-config.supermobtracker.client.i18nNames.desc=在追踪器GUI中使用本地化名称。
-config.supermobtracker.client.spawnCheckRetries.desc=检查生成条件的最大重试次数。数值越高，越能有效处理随机生成条件，但会增加分析耗时。
-config.supermobtracker.client.trackedEntityIds.desc=当前正在追踪的生物ID列表。
-config.supermobtracker.client.lastSelectedEntity.desc=生物追踪器GUI中最后选中的实体。
-config.supermobtracker.client.filterText.desc=生物追踪器GUI中最后使用的过滤文本。
-config.supermobtracker.client.hudPosition.desc=追踪叠加层在屏幕上的显示位置。
-config.supermobtracker.client.hudPaddingExternal.desc=追踪叠加层与屏幕边缘的边距。
-config.supermobtracker.client.hudPaddingInternal.desc=追踪叠加层框体内部的边距。
-config.supermobtracker.client.hudLineSpacing.desc=追踪叠加层中文本的行间距。
-config.supermobtracker.client.hudEnabled.desc=是否在屏幕上显示追踪叠加层。
-config.supermobtracker.client.mobWhitelist.desc=允许追踪的实体ID白名单列表（优先级高于黑名单）。
-config.supermobtracker.client.mobBlacklist.desc=禁止追踪的实体ID黑名单列表。
-config.supermobtracker.client.dropSimulationCount.desc=用于计算掉落率的模拟击杀次数。
-config.supermobtracker.client.unstableSimulationEntities.desc=在掉落物模拟过程中会破坏全局状态，因此应从模拟中排除的实体ID。它们的特征是，在模拟其掉落物后，所有实体的模拟性能都会严重下降。
-config.supermobtracker.client.shouldRenderEntities.desc=渲染时会崩溃或大量报错的实体ID。这些实体在预览/画廊中完全不会渲染。
+config.supermobtracker.client.enableTracking.tooltip=启用生物追踪（需要重启客户端）。
+config.supermobtracker.client.detectionRange.tooltip=被追踪生物的检测范围（以格为单位），用于触发透视或发光高亮效果。
+config.supermobtracker.client.useModelXRay.tooltip=穿过墙壁渲染被追踪生物时，使用正常模型，而非原版的发光轮廓。
+config.supermobtracker.client.i18nNames.tooltip=在追踪器GUI中使用本地化名称。
+config.supermobtracker.client.spawnCheckRetries.tooltip=检查生成条件的最大重试次数。数值越高，越能有效处理随机生成条件，但会增加分析耗时。
+config.supermobtracker.client.trackedEntityIds.tooltip=当前正在追踪的生物ID列表。
+config.supermobtracker.client.lastSelectedEntity.tooltip=生物追踪器GUI中最后选中的实体。
+config.supermobtracker.client.filterText.tooltip=生物追踪器GUI中最后使用的过滤文本。
+config.supermobtracker.client.hudPosition.tooltip=追踪叠加层在屏幕上的显示位置。
+config.supermobtracker.client.hudPaddingExternal.tooltip=追踪叠加层与屏幕边缘的边距。
+config.supermobtracker.client.hudPaddingInternal.tooltip=追踪叠加层框体内部的边距。
+config.supermobtracker.client.hudLineSpacing.tooltip=追踪叠加层中文本的行间距。
+config.supermobtracker.client.hudEnabled.tooltip=是否在屏幕上显示追踪叠加层。
+config.supermobtracker.client.mobWhitelist.tooltip=允许追踪的实体ID白名单列表（优先级高于黑名单）。
+config.supermobtracker.client.mobBlacklist.tooltip=禁止追踪的实体ID黑名单列表。
+config.supermobtracker.client.dropSimulationCount.tooltip=用于计算掉落率的模拟击杀次数。
+config.supermobtracker.client.unstableSimulationEntities.tooltip=在掉落物模拟过程中会破坏全局状态，因此应从模拟中排除的实体ID。它们的特征是，在模拟其掉落物后，所有实体的模拟性能都会严重下降。
+config.supermobtracker.client.shouldRenderEntities.tooltip=渲染时会崩溃或大量报错的实体ID。这些实体在预览/画廊中完全不会渲染。
 
 # Config names (displayed in config GUI)
 config.supermobtracker.client.enableTracking=启用追踪

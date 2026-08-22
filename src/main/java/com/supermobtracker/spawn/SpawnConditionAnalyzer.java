@@ -1,14 +1,16 @@
 package com.supermobtracker.spawn;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
@@ -50,13 +52,7 @@ import com.supermobtracker.util.Utils;
 public class SpawnConditionAnalyzer {
 
     // All biomes from Forge registry
-    private static final List<Biome> ALL_BIOMES = ForgeRegistries.BIOMES
-        .getValuesCollection().stream().collect(Collectors.toList());
-
-    // All biome names from Forge registry
-    private static final List<String> ALL_BIOME_NAMES = ALL_BIOMES.stream()
-        .map(b -> b.getRegistryName().toString())
-        .collect(Collectors.toList());
+    private static final List<Biome> ALL_BIOMES = new ArrayList<>(ForgeRegistries.BIOMES.getValuesCollection());
 
     // Ground blocks list to be sampled (full registry names)
     private static final List<String> GROUND_BLOCKS = Arrays.asList(
@@ -74,11 +70,11 @@ public class SpawnConditionAnalyzer {
     private static Map<ResourceLocation, EnumCreatureType> buildCreatureTypeCache() {
         Map<ResourceLocation, EnumCreatureType> cache = new HashMap<>();
         for (EntityEntry entry : ForgeRegistries.ENTITIES.getValuesCollection()) {
-            EnumCreatureType type = Arrays.stream(EnumCreatureType.values())
-                    .filter(t -> t.getCreatureClass().isAssignableFrom(entry.getEntityClass()))
-                    .findFirst()
-                    .orElse(null);
-            if (type != null) cache.put(entry.getRegistryName(), type);
+            Arrays.stream(EnumCreatureType.values()).filter(
+                    t -> t.getCreatureClass()
+                          .isAssignableFrom(entry.getEntityClass()))
+                          .findFirst()
+                          .ifPresent(type -> cache.put(entry.getRegistryName(), type));
         }
 
         return cache;
@@ -95,13 +91,13 @@ public class SpawnConditionAnalyzer {
     private static final Map<ResourceLocation, List<String>> NATIVE_BIOME_CACHE = new HashMap<>();
 
     // Entity instance cache
-    private Map<ResourceLocation, EntityLiving> entityInstanceCache = new HashMap<>();
+    private final Map<ResourceLocation, EntityLiving> entityInstanceCache = new HashMap<>();
 
     // Lazily initialized entity instances for display helpers.
-    private Map<ResourceLocation, EntityLiving> initializedEntityInstanceCache = new HashMap<>();
+    private final Map<ResourceLocation, EntityLiving> initializedEntityInstanceCache = new HashMap<>();
 
     // SimulatedWorld cache per dimension ID (avoids initializing a new world each time)
-    private static Map<Integer, SimulatedWorld> simulatedWorldCache = new HashMap<>();
+    private static final Map<Integer, SimulatedWorld> simulatedWorldCache = new HashMap<>();
 
     // Last computed result for GUI helpers
     private SpawnConditions lastResult;
@@ -151,51 +147,51 @@ public class SpawnConditionAnalyzer {
         public final int dimensionId;
         public final String spawnReason;
 
-        public SpawnConditions(List<String> biomes,
-                               List<String> groundBlocks,
-                               List<Integer> lightLevels,
-                               List<Integer> yLevels,
-                               List<int[]> timeOfDay,
-                               List<String> weather,
-                               List<String> hints,
-                               Boolean requiresSky,
-                               String dimension,
+        public SpawnConditions(@Nonnull List<String> biomes,
+                               @Nullable List<String> groundBlocks,
+                               @Nonnull List<Integer> lightLevels,
+                               @Nonnull List<Integer> yLevels,
+                               @Nullable List<int[]> timeOfDay,
+                               @Nullable List<String> weather,
+                               @Nonnull List<String> hints,
+                               @Nullable Boolean requiresSky,
+                               @Nullable String dimension,
                                int dimensionId) {
             this(biomes, groundBlocks, lightLevels, yLevels, timeOfDay, weather, hints,
                  requiresSky, null, null, null, dimension, dimensionId, NATURAL_SPAWN_REASON);
         }
 
-        public SpawnConditions(List<String> biomes,
-                               List<String> groundBlocks,
-                               List<Integer> lightLevels,
-                               List<Integer> yLevels,
-                               List<int[]> timeOfDay,
-                               List<String> weather,
-                               List<String> hints,
-                               Boolean requiresSky,
-                               List<Integer> moonPhases,
-                               Boolean requiresSlimeChunk,
-                               Boolean requiresNether,
-                               String dimension,
+        public SpawnConditions(@Nonnull List<String> biomes,
+                               @Nullable List<String> groundBlocks,
+                               @Nonnull List<Integer> lightLevels,
+                               @Nonnull List<Integer> yLevels,
+                               @Nullable List<int[]> timeOfDay,
+                               @Nullable List<String> weather,
+                               @Nonnull List<String> hints,
+                               @Nullable Boolean requiresSky,
+                               @Nullable List<Integer> moonPhases,
+                               @Nullable Boolean requiresSlimeChunk,
+                               @Nullable Boolean requiresNether,
+                               @Nullable String dimension,
                                int dimensionId) {
               this(biomes, groundBlocks, lightLevels, yLevels, timeOfDay, weather, hints,
                   requiresSky, moonPhases, requiresSlimeChunk, requiresNether, dimension, dimensionId, NATURAL_SPAWN_REASON);
            }
 
-           public SpawnConditions(List<String> biomes,
-                             List<String> groundBlocks,
-                             List<Integer> lightLevels,
-                             List<Integer> yLevels,
-                             List<int[]> timeOfDay,
-                             List<String> weather,
-                             List<String> hints,
-                             Boolean requiresSky,
-                             List<Integer> moonPhases,
-                             Boolean requiresSlimeChunk,
-                             Boolean requiresNether,
-                             String dimension,
-                             int dimensionId,
-                             String spawnReason) {
+           public SpawnConditions(@Nonnull List<String> biomes,
+                                  @Nullable List<String> groundBlocks,
+                                  @Nonnull List<Integer> lightLevels,
+                                  @Nonnull List<Integer> yLevels,
+                                  @Nullable List<int[]> timeOfDay,
+                                  @Nullable List<String> weather,
+                                  @Nonnull List<String> hints,
+                                  @Nullable Boolean requiresSky,
+                                  @Nullable List<Integer> moonPhases,
+                                  @Nullable Boolean requiresSlimeChunk,
+                                  @Nullable Boolean requiresNether,
+                                  @Nullable String dimension,
+                                  int dimensionId,
+                                  @Nullable String spawnReason) {
             this.biomes = biomes;
             this.groundBlocks = groundBlocks;
             this.lightLevels = lightLevels;
@@ -255,6 +251,8 @@ public class SpawnConditionAnalyzer {
      * A fake world used to simulate spawn condition checks.
      */
     public static class SimulatedWorld extends World {
+        private static final ResourceLocation PLAINS = new ResourceLocation("minecraft", "plains");
+
         public int lightLevel = 15;
         public String groundBlock = "minecraft:grass";
         public String biomeId = "minecraft:plains";
@@ -266,13 +264,13 @@ public class SpawnConditionAnalyzer {
         public boolean isSlimeChunk = true;   // Whether the chunk is a slime chunk
         public boolean isNether = false;      // Whether the world is Nether-like (doesWaterVaporize)
 
-        private Map<String, Boolean> queriedConditions = new HashMap<>();
+        private final Map<String, Boolean> queriedConditions = new HashMap<>();
 
         static class SimulatedProvider extends WorldProvider {
-            private WorldProvider baseProvider;
+            private final WorldProvider baseProvider;
             private Map<String, Boolean> queriedConditions;
             private SimulatedWorld simulatedWorld;
-            String dimension;
+            private final String dimension;
 
             private SimulatedProvider(WorldProvider provider) {
                 this.baseProvider = provider;
@@ -287,6 +285,7 @@ public class SpawnConditionAnalyzer {
             }
 
             @Override
+            @Nonnull
             public DimensionType getDimensionType() {
                 if (this.queriedConditions != null) this.queriedConditions.put("dimension", true);
                 return baseProvider.getDimensionType();
@@ -336,7 +335,8 @@ public class SpawnConditionAnalyzer {
             this.queriedConditions.clear();
         }
 
-        private SimulatedWorld(ISaveHandler saveHandler, WorldInfo info, WorldProvider provider, Profiler profiler, boolean isClient) {
+        private SimulatedWorld(ISaveHandler saveHandler, WorldInfo info, WorldProvider provider,
+                Profiler profiler, boolean isClient) {
             super(saveHandler, info, provider, profiler, isClient);
             this.provider.setWorld(this);
             ((SimulatedProvider) provider).bindQueryTracker(queriedConditions, this);
@@ -364,29 +364,31 @@ public class SpawnConditionAnalyzer {
         }
 
         @Override
-        public int getLight(BlockPos pos) {
+        public int getLight(@Nonnull BlockPos pos) {
             queriedConditions.put("lightLevel", true);
             return lightLevel;
         }
 
         @Override
-        public int getLightFromNeighbors(BlockPos pos) {
+        public int getLightFromNeighbors(@Nonnull BlockPos pos) {
             queriedConditions.put("lightLevel", true);
             return lightLevel;
         }
 
         @Override
+        @Nonnull
         public EnumDifficulty getDifficulty() {
             return EnumDifficulty.NORMAL;
         }
 
         @Override
-        public Biome getBiome(BlockPos pos) {
+        @Nonnull
+        public Biome getBiome(@Nonnull BlockPos pos) {
             queriedConditions.put("biome", true);
             Biome biome = ForgeRegistries.BIOMES.getValue(new ResourceLocation(biomeId));
 
             // Fall back to plains if biome not found (should not happen with valid biomeId)
-            return biome != null ? biome : ForgeRegistries.BIOMES.getValue(new ResourceLocation("minecraft", "plains"));
+            return biome != null ? biome : ForgeRegistries.BIOMES.getValue(PLAINS);
         }
 
         @Override
@@ -433,19 +435,20 @@ public class SpawnConditionAnalyzer {
         }
 
         @Override
-        public boolean containsAnyLiquid(AxisAlignedBB bb) {
+        public boolean containsAnyLiquid(@Nonnull AxisAlignedBB bb) {
             // Simulates no liquid in the entity's bounding box
             return false;
         }
 
         @Override
-        public boolean checkNoEntityCollision(AxisAlignedBB aabb) {
+        public boolean checkNoEntityCollision(@Nonnull AxisAlignedBB aabb) {
             // Simulates no entity collision
             return true;
         }
 
         @Override
-        public IBlockState getBlockState(BlockPos pos) {
+        @Nonnull
+        public IBlockState getBlockState(@Nonnull BlockPos pos) {
             queriedConditions.put("groundBlock", true);
 
             // If groundBlock contains ":", it's a full registry name; otherwise assume minecraft: namespace
@@ -471,52 +474,58 @@ public class SpawnConditionAnalyzer {
         }
 
         @Override
-        public BlockPos getTopSolidOrLiquidBlock(BlockPos pos) {
+        @Nonnull
+        public BlockPos getTopSolidOrLiquidBlock(@Nonnull BlockPos pos) {
             queriedConditions.put("pos", true);
             return pos;
         }
 
         @Override
-        public boolean canSeeSky(BlockPos pos) {
+        public boolean canSeeSky(@Nonnull BlockPos pos) {
             queriedConditions.put("canSeeSky", true);
             return canSeeSky;
         }
 
         @Override
-        public boolean canBlockSeeSky(BlockPos pos) {
+        public boolean canBlockSeeSky(@Nonnull BlockPos pos) {
             queriedConditions.put("canSeeSky", true);
             return canSeeSky;
         }
 
         @Override
-        public boolean isSideSolid(BlockPos pos, EnumFacing side) {
+        public boolean isSideSolid(@Nonnull BlockPos pos, @Nonnull EnumFacing side) {
             queriedConditions.put("groundBlock", true);
             return !groundBlock.equals("minecraft:air") && !groundBlock.equals("air");
         }
 
         @Override
-        public boolean isSideSolid(BlockPos pos, EnumFacing side, boolean _default) {
+        public boolean isSideSolid(@Nonnull BlockPos pos, @Nonnull EnumFacing side, boolean _default) {
             queriedConditions.put("groundBlock", true);
             return !groundBlock.equals("minecraft:air") && !groundBlock.equals("air");
         }
 
         @Override
-        public List<AxisAlignedBB> getCollisionBoxes(Entity entityIn, AxisAlignedBB aabb) {
+        @Nonnull
+        public List<AxisAlignedBB> getCollisionBoxes(Entity entityIn, @Nonnull AxisAlignedBB aabb) {
             return new ArrayList<>();
         }
 
         @Override
-        public boolean collidesWithAnyBlock(AxisAlignedBB bbox) {
+        public boolean collidesWithAnyBlock(@Nonnull AxisAlignedBB bbox) {
             return false;
         }
 
         @Override
-        public <T extends Entity> List<T> getEntitiesWithinAABB(Class<? extends T> clazz, AxisAlignedBB aabb) {
+        @Nonnull
+        public <T extends Entity> List<T> getEntitiesWithinAABB(
+                @Nonnull Class<? extends T> clazz, @Nonnull AxisAlignedBB aabb) {
             return new ArrayList<>();
         }
 
         @Override
-        public <T extends Entity> List<T> getEntitiesWithinAABB(Class<? extends T> classEntity, AxisAlignedBB bb, com.google.common.base.Predicate<? super T> filter) {
+        @Nonnull
+        public <T extends Entity> List<T> getEntitiesWithinAABB(
+                @Nonnull Class<? extends T> classEntity, @Nonnull AxisAlignedBB bb, com.google.common.base.Predicate<? super T> filter) {
             return new ArrayList<>();
         }
 
@@ -526,36 +535,37 @@ public class SpawnConditionAnalyzer {
         }
 
         @Override
-        public boolean isBlockLoaded(BlockPos pos) {
+        public boolean isBlockLoaded(@Nonnull BlockPos pos) {
             return true;
         }
 
         @Override
-        public boolean isBlockLoaded(BlockPos pos, boolean allowEmpty) {
+        public boolean isBlockLoaded(@Nonnull BlockPos pos, boolean allowEmpty) {
             return true;
         }
 
         @Override
-        public boolean isAreaLoaded(BlockPos center, int radius) {
+        public boolean isAreaLoaded(@Nonnull BlockPos center, int radius) {
             return true;
         }
 
         @Override
-        public boolean isAreaLoaded(BlockPos center, int radius, boolean allowEmpty) {
+        public boolean isAreaLoaded(@Nonnull BlockPos center, int radius, boolean allowEmpty) {
             return true;
         }
 
         @Override
-        public boolean isAreaLoaded(BlockPos from, BlockPos to) {
+        public boolean isAreaLoaded(@Nonnull BlockPos from, @Nonnull BlockPos to) {
             return true;
         }
 
         @Override
-        public boolean isAreaLoaded(BlockPos from, BlockPos to, boolean allowEmpty) {
+        public boolean isAreaLoaded(@Nonnull BlockPos from, @Nonnull BlockPos to, boolean allowEmpty) {
             return true;
         }
 
         @Override
+        @Nonnull
         protected IChunkProvider createChunkProvider() {
             SimulatedWorld outerWorld = this;
 
@@ -568,6 +578,7 @@ public class SpawnConditionAnalyzer {
                 }
 
                 @Override
+                @Nonnull
                 public Chunk provideChunk(int x, int z) {
                     if (simulatedChunk == null) {
                         simulatedChunk = new SimulatedChunk(outerWorld, x, z);
@@ -582,6 +593,7 @@ public class SpawnConditionAnalyzer {
                 public boolean tick() { return false; }
 
                 @Override
+                @Nonnull
                 public String makeString() { return "SimulatedChunkProvider"; }
 
                 @Override
@@ -599,6 +611,7 @@ public class SpawnConditionAnalyzer {
             }
 
             @Override
+            @Nonnull
             public Random getRandomWithSeed(long seed) {
                 queriedConditions.put("isSlimeChunk", true);
 
@@ -655,7 +668,7 @@ public class SpawnConditionAnalyzer {
             }
         } catch (Exception e) {
             if (ConditionUtils.shouldShowCrashes()) {
-                SuperMobTracker.LOGGER.error("Error creating entity instance for " + entityId, e);
+                SuperMobTracker.LOGGER.error("Error creating entity instance for {}", entityId, e);
             }
         }
 
@@ -687,17 +700,17 @@ public class SpawnConditionAnalyzer {
             entity.onInitialSpawn(world.getDifficultyForLocation(new BlockPos(entity)), null);
         } catch (Throwable t) {
             if (ConditionUtils.shouldShowCrashes()) {
-                SuperMobTracker.LOGGER.error("Error initializing display entity for " + entityId, t);
+                SuperMobTracker.LOGGER.error("Error initializing display entity for {}", entityId, t);
             }
         }
 
         if (!(entity instanceof EntityAgeable)) return;
 
         try {
-            ((EntityAgeable) entity).setScaleForAge(((EntityAgeable) entity).isChild());
+            ((EntityAgeable) entity).setScaleForAge(entity.isChild());
         } catch (Throwable t) {
             if (ConditionUtils.shouldShowCrashes()) {
-                SuperMobTracker.LOGGER.error("Error applying age scale for display entity " + entityId, t);
+                SuperMobTracker.LOGGER.error("Error applying age scale for display entity {}", entityId, t);
             }
         }
     }
@@ -774,7 +787,7 @@ public class SpawnConditionAnalyzer {
 
             // Get native biomes from the entity spawn tables
             List<String> nativeBiomes = getNativeBiomes(entityId, entry.getEntityClass());
-            lastHadNativeBiomes = nativeBiomes != null && !nativeBiomes.isEmpty();
+            lastHadNativeBiomes = !nativeBiomes.isEmpty();
             if (!lastHadNativeBiomes) {
                 SpawnConditions fallback = ExternalSpawnHints.getSpawnConditions(entityId, entity, isAquatic(entityId), isFlying(entityId));
                 if (fallback == null) return null;
@@ -792,10 +805,10 @@ public class SpawnConditionAnalyzer {
             List<String> groundBlocks;
             List<String> biomeGroundBlocks = new ArrayList<>();
             if (isFlying(entityId)) {
-                groundBlocks = Arrays.asList("air");
+                groundBlocks = Collections.singletonList("air");
                 biomeGroundBlocks.add("air");
             } else if (isAquatic(entityId)) {
-                groundBlocks = Arrays.asList("water");
+                groundBlocks = Collections.singletonList("water");
                 biomeGroundBlocks.add("water");
             } else {
                 // Start with standard ground blocks
@@ -817,7 +830,9 @@ public class SpawnConditionAnalyzer {
 
                     return positions.getOrDefault(a, 0) - positions.getOrDefault(b, 0);
                 });
-                if (biomeGroundBlocks.size() > 20) biomeGroundBlocks = new ArrayList<>(biomeGroundBlocks.subList(0, 20));
+                if (biomeGroundBlocks.size() > 20) {
+                    biomeGroundBlocks = new ArrayList<>(biomeGroundBlocks.subList(0, 20));
+                }
 
                 // Build combined list for expansion (standard + all biome ground blocks without limit)
                 for (String blockId : biomeGroundBlocksSet) {
@@ -826,29 +841,15 @@ public class SpawnConditionAnalyzer {
             }
 
             SpawnConditions result = computeSpawnConditions(entity, nativeBiomes, groundBlocks, biomeGroundBlocks, PROBE_LIGHT_LEVELS);
-            if (result == null) {
-                List<Integer> yLevels = Arrays.asList(PROBE_Y_LEVELS.get(0), PROBE_Y_LEVELS.get(PROBE_Y_LEVELS.size() - 1));
-                // Use tick-based time ranges: day = 0-12000, night = 12000-24000
-                List<int[]> timeOfDay = isHostile(entityId)
-                    ? Arrays.asList(new int[]{12000, 23999})
-                    : Arrays.asList(new int[]{0, 11999});
-                List<String> weather = Arrays.asList("clear");
-
-                // Fall back to current dimension
-                String dimensionName = BiomeDimensionMapper.getDimensionName(currentDimId);
-
-                result = new SpawnConditions(
-                    nativeBiomes, groundBlocks, PROBE_LIGHT_LEVELS, yLevels, timeOfDay, weather, null, null, dimensionName, currentDimId
-                );
-            }
 
             lastResult = result;
 
             if (ConditionUtils.isProfilingEnabled()) {
                 double elapsed = ((double) System.nanoTime() - startTime) / 1_000_000.0;
-                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " took " + Math.round(elapsed * 100) / 100.0 + "ms");
+                SuperMobTracker.LOGGER.info("Analysis of {} took {}ms", entityId, Math.round(elapsed * 100) / 100.0);
 
-                if (result.failed()) SuperMobTracker.LOGGER.info("  Spawn conditions could not be determined, as no valid samples were found.");
+                if (result.failed()) SuperMobTracker.LOGGER.info(
+                    "  Spawn conditions could not be determined, as no valid samples were found.");
             }
 
             return result;
@@ -857,15 +858,32 @@ public class SpawnConditionAnalyzer {
 
             if (ConditionUtils.isProfilingEnabled()) {
                 double elapsed = (System.nanoTime() - startTime) / 1_000_000.0;
-                SuperMobTracker.LOGGER.info("Analysis of " + entityId + " crashed after " + Math.round(elapsed * 100) / 100.0 + "ms");
+                SuperMobTracker.LOGGER.info(
+                    "Analysis of {} crashed after {}ms", entityId, Math.round(elapsed * 100) / 100.0);
             }
 
-            if (ConditionUtils.shouldShowCrashes()) {
-                SuperMobTracker.LOGGER.error("Error analyzing spawn conditions for " + entityId, t);
-            }
+            logAnalysisFailure(entityId, t);
 
             return null;
         }
+    }
+
+    private void logAnalysisFailure(ResourceLocation entityId, Throwable error) {
+        if (ConditionUtils.shouldShowCrashes()) {
+            SuperMobTracker.LOGGER.error("Error analyzing spawn conditions for {}", entityId, error);
+            return;
+        }
+
+        String message = error.getMessage();
+        String summary = error.getClass().getSimpleName();
+
+        if (message != null && !message.trim().isEmpty()) summary += ": " + message;
+
+        SuperMobTracker.LOGGER.warn(
+            "Spawn analysis failed for {}: {}. Launch with -Dsupermobtracker.showcrashes=true for stack traces.",
+            entityId,
+            summary
+        );
     }
 
     private void createNativeBiomesCache() {
@@ -955,11 +973,11 @@ public class SpawnConditionAnalyzer {
             );
         }
 
-        List<String> groundBlocks = Arrays.asList("unknown");
+        List<String> groundBlocks = Collections.singletonList("unknown");
         List<Integer> narrowedLight = new ArrayList<>();
         List<Integer> yLevels = new ArrayList<>();
         List<int[]> timeOfDay = null;  // null indicates unknown/not determined
-        List<String> weather = Arrays.asList("unknown");
+        List<String> weather = Collections.singletonList("unknown");
 
         return new SpawnConditions(biomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null, null, dimensionName, targetDimId);
     }

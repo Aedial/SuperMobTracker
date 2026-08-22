@@ -10,11 +10,15 @@ import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+
+import sun.reflect.ReflectionFactory;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
@@ -39,9 +43,8 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.gen.ChunkProviderServer;
 import net.minecraft.world.storage.loot.LootTableManager;
 
-import sun.reflect.ReflectionFactory;
-
 import com.supermobtracker.SuperMobTracker;
+import com.supermobtracker.util.ReflectionUtils;
 
 
 /**
@@ -82,44 +85,35 @@ public class DropSimulationWorld extends WorldServer {
             // Initialize our custom fields
             instance.lootTableManager = realWorld.getLootTableManager();
 
-            // Initialize the collectedDrops list (it's final so we need reflection)
-            // Field dropsField = DropSimulationWorld.class.getDeclaredField("collectedDrops");
-            // dropsField.setAccessible(true);
-            // dropsField.set(instance, new ArrayList<ItemStack>());
             instance.collectedDrops = new ArrayList<>();
 
             // Set essential World fields that dropLoot and entity construction need
 
             // Set the rand field (used for loot randomization)
-            Field randField = World.class.getDeclaredField("field_73012_v"); // rand
-            randField.setAccessible(true);
+            Field randField = ReflectionUtils.getDeclaredField(World.class, "field_73012_v", "rand");
             randField.set(instance, new Random());
 
             // Set the provider field using a wrapper to isolate from real world state.
             // This prevents issues like simulated Ender Dragons registering with the
             // real DragonFightManager during an actual dragon fight.
-            Field providerField = World.class.getDeclaredField("field_73011_w"); // provider
-            providerField.setAccessible(true);
+            Field providerField = ReflectionUtils.getDeclaredField(World.class, "field_73011_w", "provider");
             SimulationProviderWrapper providerWrapper = new SimulationProviderWrapper(realWorld.provider);
             providerField.set(instance, providerWrapper);
             providerWrapper.attachToWorld(instance);
 
             // Set profiler (may be accessed during entity construction)
-            Field profilerField = World.class.getDeclaredField("field_72984_F"); // profiler
-            profilerField.setAccessible(true);
+            Field profilerField = ReflectionUtils.getDeclaredField(World.class, "field_72984_F", "profiler");
             profilerField.set(instance, realWorld.profiler);
 
             // Set worldInfo (may be accessed for game rules, difficulty, etc.)
-            Field worldInfoField = World.class.getDeclaredField("field_72986_A"); // worldInfo
-            worldInfoField.setAccessible(true);
+            Field worldInfoField = ReflectionUtils.getDeclaredField(World.class, "field_72986_A", "worldInfo");
             worldInfoField.set(instance, realWorld.getWorldInfo());
 
             // Set scoreboard (accessed by EntityWither and others for team display)
             instance.scoreboard = realWorld.getScoreboard();
 
             // Set isRemote to false (server-side behavior for loot generation)
-            Field isRemoteField = World.class.getDeclaredField("field_72995_K"); // isRemote
-            isRemoteField.setAccessible(true);
+            Field isRemoteField = ReflectionUtils.getDeclaredField(World.class, "field_72995_K", "isRemote");
             isRemoteField.set(instance, false);
 
             // Optional Alfheim compatibility: constructor-bypassed worlds skip mixin field
@@ -135,73 +129,30 @@ public class DropSimulationWorld extends WorldServer {
             instance.worldBorder = new WorldBorder();
 
             // Initialize playerEntities to empty list to prevent NPE when entities look for players
-            try {
-                Field playerEntitiesField = World.class.getDeclaredField("field_73010_i"); // playerEntities
-                playerEntitiesField.setAccessible(true);
-                playerEntitiesField.set(instance, new ArrayList<EntityPlayer>());
-            } catch (NoSuchFieldException e) {
-                try {
-                    Field playerEntitiesField = World.class.getDeclaredField("playerEntities");
-                    playerEntitiesField.setAccessible(true);
-                    playerEntitiesField.set(instance, new ArrayList<EntityPlayer>());
-                } catch (NoSuchFieldException e2) {
-                    SuperMobTracker.LOGGER.warn("Could not find World.playerEntities field");
-                }
-            }
+            Field playerEntitiesField = ReflectionUtils.getDeclaredField(World.class,
+                () -> SuperMobTracker.LOGGER.warn("Could not find World.playerEntities field"),
+                "field_73010_i", "playerEntities");
+            playerEntitiesField.set(instance, new ArrayList<EntityPlayer>());
 
             // Initialize loadedEntityList to empty list to prevent iteration issues
-            try {
-                Field loadedEntityListField = World.class.getDeclaredField("field_72996_f"); // loadedEntityList
-                loadedEntityListField.setAccessible(true);
-                loadedEntityListField.set(instance, new ArrayList<Entity>());
-            } catch (NoSuchFieldException e) {
-                try {
-                    Field loadedEntityListField = World.class.getDeclaredField("loadedEntityList");
-                    loadedEntityListField.setAccessible(true);
-                    loadedEntityListField.set(instance, new ArrayList<Entity>());
-                } catch (NoSuchFieldException e2) {
-                    SuperMobTracker.LOGGER.warn("Could not find World.loadedEntityList field");
-                }
-            }
+            Field loadedEntityListField = ReflectionUtils.getDeclaredField(World.class,
+                () -> SuperMobTracker.LOGGER.warn("Could not find World.loadedEntityList field"),
+                "field_72996_f", "loadedEntityList");
+            loadedEntityListField.set(instance, new ArrayList<Entity>());
 
             // Initialize eventListeners to empty list (used by sound/event notification systems)
-            try {
-                Field eventListenersField = World.class.getDeclaredField("field_73021_x"); // eventListeners
-                eventListenersField.setAccessible(true);
-                eventListenersField.set(instance, new ArrayList<>());
-            } catch (NoSuchFieldException e) {
-                try {
-                    Field eventListenersField = World.class.getDeclaredField("eventListeners");
-                    eventListenersField.setAccessible(true);
-                    eventListenersField.set(instance, new ArrayList<>());
-                } catch (NoSuchFieldException e2) {
-                    SuperMobTracker.LOGGER.warn("Could not find World.eventListeners field");
-                }
-            }
+            Field eventListenersField = ReflectionUtils.getDeclaredField(World.class,
+                () -> SuperMobTracker.LOGGER.warn("Could not find World.eventListeners field"),
+                "field_73021_x", "eventListeners");
+            eventListenersField.set(instance, new ArrayList<>());
 
             // Initialize capturedBlockSnapshots (Forge field used during world modifications)
-            try {
-                Field capturedField = World.class.getDeclaredField("capturedBlockSnapshots");
-                capturedField.setAccessible(true);
-                capturedField.set(instance, new ArrayList<>());
-            } catch (NoSuchFieldException e) {
-                // May not exist in all versions
-            }
+            Field capturedField = ReflectionUtils.getDeclaredField(World.class, "field_147484_aC", "capturedBlockSnapshots");
+            if (capturedField != null) capturedField.set(instance, new ArrayList<>());
 
             // Initialize loadedTileEntityList to empty list
-            try {
-                Field tileEntityListField = World.class.getDeclaredField("field_147482_g"); // loadedTileEntityList
-                tileEntityListField.setAccessible(true);
-                tileEntityListField.set(instance, new ArrayList<>());
-            } catch (NoSuchFieldException e) {
-                try {
-                    Field tileEntityListField = World.class.getDeclaredField("loadedTileEntityList");
-                    tileEntityListField.setAccessible(true);
-                    tileEntityListField.set(instance, new ArrayList<>());
-                } catch (NoSuchFieldException e2) {
-                    // May not exist
-                }
-            }
+            Field tileEntityListField = ReflectionUtils.getDeclaredField(World.class, "field_147482_g", "loadedTileEntityList");
+            if (tileEntityListField != null) tileEntityListField.set(instance, new ArrayList<>());
 
             return instance;
         } catch (Exception e) {
@@ -306,7 +257,7 @@ public class DropSimulationWorld extends WorldServer {
     // === Override methods that dropLoot and entity spawning might call ===
 
     @Override
-    public boolean spawnEntity(Entity entityIn) {
+    public boolean spawnEntity(@Nonnull Entity entityIn) {
         // Intercept EntityItem spawns and collect their ItemStacks
         if (entityIn instanceof EntityItem) {
             EntityItem itemEntity = (EntityItem) entityIn;
@@ -319,17 +270,18 @@ public class DropSimulationWorld extends WorldServer {
     }
 
     @Override
+    @Nonnull
     public LootTableManager getLootTableManager() {
         return lootTableManager;
     }
 
     @Override
-    public boolean isBlockLoaded(BlockPos pos) {
+    public boolean isBlockLoaded(@Nonnull BlockPos pos) {
         return true;
     }
 
     @Override
-    public boolean isBlockLoaded(BlockPos pos, boolean allowEmpty) {
+    public boolean isBlockLoaded(@Nonnull BlockPos pos, boolean allowEmpty) {
         return true;
     }
 
@@ -339,89 +291,96 @@ public class DropSimulationWorld extends WorldServer {
     }
 
     @Override
-    public boolean isAreaLoaded(BlockPos from, BlockPos to, boolean allowEmpty) {
+    public boolean isAreaLoaded(@Nonnull BlockPos from, @Nonnull BlockPos to, boolean allowEmpty) {
         return true;
     }
 
     @Override
+    @Nonnull
     public Scoreboard getScoreboard() {
         return scoreboard;
     }
 
     @Override
+    @Nonnull
     public WorldBorder getWorldBorder() {
         return worldBorder;
     }
 
     @Override
-    public IBlockState getBlockState(BlockPos pos) {
+    @Nonnull
+    public IBlockState getBlockState(@Nonnull BlockPos pos) {
         // Return air for all block queries - entities aren't in the real world
         return Blocks.AIR.getDefaultState();
     }
 
     @Override
+    @Nonnull
     public Chunk getChunk(int chunkX, int chunkZ) {
         // Return a fake empty chunk to prevent NPE in World.getEntitiesWithinAABB
         return fakeChunk;
     }
 
     @Override
-    public Chunk getChunk(BlockPos pos) {
+    @Nonnull
+    public Chunk getChunk(@Nonnull BlockPos pos) {
         return fakeChunk;
     }
 
     @Override
-    public boolean handleMaterialAcceleration(AxisAlignedBB bb, Material material, Entity entity) {
+    public boolean handleMaterialAcceleration(@Nonnull AxisAlignedBB bb, @Nonnull Material material,
+                                              @Nonnull Entity entity) {
         // Entity is never in water/lava/etc in our fake world
         return false;
     }
 
     @Override
-    public List<AxisAlignedBB> getCollisionBoxes(@Nullable Entity entityIn, AxisAlignedBB aabb) {
+    @Nonnull
+    public List<AxisAlignedBB> getCollisionBoxes(@Nullable Entity entityIn, @Nonnull AxisAlignedBB aabb) {
         // Return empty list - no collision in simulation world
         return Collections.emptyList();
     }
 
     @Override
-    public boolean containsAnyLiquid(AxisAlignedBB bb) {
+    public boolean containsAnyLiquid(@Nonnull AxisAlignedBB bb) {
         return false;
     }
 
     @Override
-    public boolean isAirBlock(BlockPos pos) {
+    public boolean isAirBlock(@Nonnull BlockPos pos) {
         return true;
     }
 
     // === Light-related overrides (needed by some entity AI classes) ===
 
     @Override
-    public int getLightFor(EnumSkyBlock type, BlockPos pos) {
+    public int getLightFor(@Nonnull EnumSkyBlock type, @Nonnull BlockPos pos) {
         // Return daylight level (max sky light, no block light)
         return type == EnumSkyBlock.SKY ? 15 : 0;
     }
 
     @Override
-    public int getLightFromNeighbors(BlockPos pos) {
+    public int getLightFromNeighbors(@Nonnull BlockPos pos) {
         return 15; // Full daylight
     }
 
     @Override
-    public int getLight(BlockPos pos) {
+    public int getLight(@Nonnull BlockPos pos) {
         return 15; // Full light
     }
 
     @Override
-    public int getLight(BlockPos pos, boolean checkNeighbors) {
+    public int getLight(@Nonnull BlockPos pos, boolean checkNeighbors) {
         return 15;
     }
 
     @Override
-    public float getLightBrightness(BlockPos pos) {
+    public float getLightBrightness(@Nonnull BlockPos pos) {
         return 1.0f; // Full brightness
     }
 
     @Override
-    public int getLightFromNeighborsFor(EnumSkyBlock type, BlockPos pos) {
+    public int getLightFromNeighborsFor(@Nonnull EnumSkyBlock type, @Nonnull BlockPos pos) {
         return type == EnumSkyBlock.SKY ? 15 : 0;
     }
 
@@ -433,33 +392,42 @@ public class DropSimulationWorld extends WorldServer {
     // === Entity query overrides (needed by some dropFewItems implementations) ===
 
     @Override
-    public <T extends Entity> List<T> getEntitiesWithinAABB(Class<? extends T> classEntity, AxisAlignedBB bb) {
+    @Nonnull
+    public <T extends Entity> List<T> getEntitiesWithinAABB(
+            @Nonnull Class<? extends T> classEntity, @Nonnull AxisAlignedBB bb) {
         // Return empty list - no other entities exist in our simulation world
         return Collections.emptyList();
     }
 
     @Override
-    public <T extends Entity> List<T> getEntitiesWithinAABB(Class<? extends T> clazz, AxisAlignedBB aabb, @Nullable Predicate<? super T> filter) {
+    @Nonnull
+    public <T extends Entity> List<T> getEntitiesWithinAABB(
+            @Nonnull Class<? extends T> clazz, @Nonnull AxisAlignedBB aabb, @Nullable Predicate<? super T> filter) {
         return Collections.emptyList();
     }
 
     @Override
-    public List<Entity> getEntitiesInAABBexcluding(@Nullable Entity entityIn, AxisAlignedBB bb, @Nullable Predicate<? super Entity> predicate) {
+    @Nonnull
+    public List<Entity> getEntitiesInAABBexcluding(
+            @Nullable Entity entityIn, @Nonnull AxisAlignedBB bb, @Nullable Predicate<? super Entity> predicate) {
         return Collections.emptyList();
     }
 
     @Override
-    public <T extends Entity> List<T> getEntities(Class<? extends T> entityType, Predicate<? super T> filter) {
+    @Nonnull
+    public <T extends Entity> List<T> getEntities(
+            @Nonnull Class<? extends T> entityType, @Nonnull Predicate<? super T> filter) {
         return Collections.emptyList();
     }
 
     @Override
+    @Nonnull
     public List<Entity> getLoadedEntityList() {
         return Collections.emptyList();
     }
 
     @Override
-    public void setEntityState(Entity entityIn, byte state) {
+    public void setEntityState(@Nonnull Entity entityIn, byte state) {
         // Ignore entity state changes - prevents particles and sounds in fake world
     }
 
@@ -478,17 +446,17 @@ public class DropSimulationWorld extends WorldServer {
     }
 
     @Override
-    public void onEntityAdded(Entity entityIn) {
+    public void onEntityAdded(@Nonnull Entity entityIn) {
         // No-op - prevents entityTracker.track() which would send spawn packets
     }
 
     @Override
-    public void onEntityRemoved(Entity entityIn) {
+    public void onEntityRemoved(@Nonnull Entity entityIn) {
         // No-op - prevents entityTracker.untrack() which would send despawn packets
     }
 
     @Override
-    public void updateEntityWithOptionalForce(Entity entityIn, boolean forceUpdate) {
+    public void updateEntityWithOptionalForce(@Nonnull Entity entityIn, boolean forceUpdate) {
         // No-op - prevents entity tracking updates
     }
 
@@ -502,25 +470,25 @@ public class DropSimulationWorld extends WorldServer {
 
     @Override
     @Nullable
-    public EntityPlayer getClosestPlayerToEntity(Entity entityIn, double distance) {
+    public EntityPlayer getClosestPlayerToEntity(@Nonnull Entity entityIn, double distance) {
         return null;
     }
 
     @Override
     @Nullable
-    public EntityPlayer getNearestPlayerNotCreative(Entity entityIn, double distance) {
+    public EntityPlayer getNearestPlayerNotCreative(@Nonnull Entity entityIn, double distance) {
         return null;
     }
 
     @Override
     @Nullable
-    public EntityPlayer getPlayerEntityByUUID(UUID uuid) {
+    public EntityPlayer getPlayerEntityByUUID(@Nonnull UUID uuid) {
         return null;
     }
 
     @Override
     @Nullable
-    public EntityPlayer getPlayerEntityByName(String name) {
+    public EntityPlayer getPlayerEntityByName(@Nonnull String name) {
         return null;
     }
 
@@ -531,26 +499,30 @@ public class DropSimulationWorld extends WorldServer {
 
     @Override
     @Nullable
-    public EntityPlayer getNearestAttackablePlayer(double posX, double posY, double posZ, double maxXZDistance, double maxYDistance, @Nullable com.google.common.base.Function<EntityPlayer, Double> playerToDouble, @Nullable Predicate<EntityPlayer> predicate) {
+    public EntityPlayer getNearestAttackablePlayer(double posX, double posY, double posZ, double maxXZDistance,
+            double maxYDistance, @Nullable Function<EntityPlayer, Double> playerToDouble,
+            @Nullable Predicate<EntityPlayer> predicate) {
         return null;
     }
 
     @Override
     @Nullable
-    public EntityPlayer getNearestAttackablePlayer(Entity entityIn, double maxXZDistance, double maxYDistance) {
+    public EntityPlayer getNearestAttackablePlayer(@Nonnull Entity entityIn, double maxXZDistance,
+                                                   double maxYDistance) {
         return null;
     }
 
     @Override
     @Nullable
-    public EntityPlayer getNearestAttackablePlayer(BlockPos pos, double maxXZDistance, double maxYDistance) {
+    public EntityPlayer getNearestAttackablePlayer(@Nonnull BlockPos pos, double maxXZDistance, double maxYDistance) {
         return null;
     }
 
     // === Task scheduling isolation ===
 
     @Override
-    public ListenableFuture<Object> addScheduledTask(Runnable task) {
+    @Nonnull
+    public ListenableFuture<Object> addScheduledTask(@Nonnull Runnable task) {
         // Don't execute the task, return an already-completed future
         return Futures.immediateFuture(null);
     }
@@ -565,42 +537,46 @@ public class DropSimulationWorld extends WorldServer {
 
     @Override
     public void playSound(@Nullable EntityPlayer player, double x, double y, double z,
-                          SoundEvent sound, SoundCategory category, float volume, float pitch) {
+                          @Nonnull SoundEvent sound, @Nonnull SoundCategory category, float volume, float pitch) {
         // No-op - don't send sound packets
     }
 
     @Override
-    public void playSound(double x, double y, double z, SoundEvent sound,
-                          SoundCategory category, float volume, float pitch, boolean distanceDelay) {
+    public void playSound(double x, double y, double z, @Nonnull SoundEvent sound,
+                          @Nonnull SoundCategory category, float volume, float pitch, boolean distanceDelay) {
         // No-op - don't send sound packets
     }
 
     @Override
-    public void playEvent(@Nullable EntityPlayer player, int type, BlockPos pos, int data) {
+    public void playEvent(@Nullable EntityPlayer player, int type, @Nonnull BlockPos pos, int data) {
         // No-op - don't send event packets
     }
 
     @Override
-    public void playEvent(int type, BlockPos pos, int data) {
+    public void playEvent(int type, @Nonnull BlockPos pos, int data) {
         // No-op - don't send event packets
     }
 
     @Override
-    public void spawnParticle(EnumParticleTypes particleType, double xCoord, double yCoord, double zCoord,
-                              int numberOfParticles, double xOffset, double yOffset, double zOffset, double particleSpeed, int... particleArguments) {
+    public void spawnParticle(@Nonnull EnumParticleTypes particleType, double xCoord, double yCoord, double zCoord,
+                              int numberOfParticles, double xOffset, double yOffset, double zOffset,
+                              double particleSpeed, @Nonnull int... particleArguments) {
         // No-op - don't send particle packets
     }
 
     @Override
-    public void spawnParticle(EnumParticleTypes particleType, boolean longDistance, double xCoord, double yCoord, double zCoord,
-                              int numberOfParticles, double xOffset, double yOffset, double zOffset, double particleSpeed, int... particleArguments) {
+    public void spawnParticle(@Nonnull EnumParticleTypes particleType, boolean longDistance,
+                              double xCoord, double yCoord, double zCoord, int numberOfParticles,
+                              double xOffset, double yOffset, double zOffset, double particleSpeed,
+                              @Nonnull int... particleArguments) {
         // No-op - don't send particle packets
     }
 
     // === Block update isolation - prevents block update packets ===
 
     @Override
-    public void notifyBlockUpdate(BlockPos pos, IBlockState oldState, IBlockState newState, int flags) {
+    public void notifyBlockUpdate(@Nonnull BlockPos pos, @Nonnull IBlockState oldState,
+                                  @Nonnull IBlockState newState, int flags) {
         // No-op - don't send block update packets
     }
 
@@ -610,12 +586,13 @@ public class DropSimulationWorld extends WorldServer {
     }
 
     @Override
-    public void notifyNeighborsRespectDebug(BlockPos pos, Block blockType, boolean updateObservers) {
+    public void notifyNeighborsRespectDebug(@Nonnull BlockPos pos, @Nonnull Block blockType, boolean updateObservers) {
         // No-op - don't notify neighbors
     }
 
     @Override
-    public void notifyNeighborsOfStateChange(BlockPos pos, Block blockType, boolean updateObservers) {
+    public void notifyNeighborsOfStateChange(@Nonnull BlockPos pos, @Nonnull Block blockType,
+                                             boolean updateObservers) {
         // No-op - don't notify neighbors
     }
 }

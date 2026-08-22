@@ -29,6 +29,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.tracking.SpawnTrackerManager;
+import com.supermobtracker.util.ReflectionUtils;
 
 
 /**
@@ -42,7 +43,6 @@ public class TrackedEntityXrayRenderer {
     private static final int PASS_COLOR = 2;
 
     private static Field shadowSizeField;
-    private static boolean shadowFieldInitialized;
 
     private final Set<String> renderErrorIds = new HashSet<>();
     private int stencilMask = -1;
@@ -148,7 +148,9 @@ public class TrackedEntityXrayRenderer {
             } catch (Throwable t) {
                 String idString = entry.entityId.toString();
                 if (renderErrorIds.add(idString)) {
-                    SuperMobTracker.LOGGER.warn("Disabled xray rendering for {} after render failure: {}", idString, t.getMessage());
+                    SuperMobTracker.LOGGER.warn(
+                        "Disabled xray rendering for {} after render failure: {}",
+                        idString, t.getMessage());
                 }
             }
         }
@@ -180,7 +182,7 @@ public class TrackedEntityXrayRenderer {
 
     private boolean ensureStencilBuffer(Minecraft minecraft) {
         Framebuffer framebuffer = minecraft.getFramebuffer();
-        if (framebuffer == null || !framebuffer.isStencilEnabled() && !framebuffer.enableStencil()) {
+        if (!framebuffer.isStencilEnabled() && !framebuffer.enableStencil()) {
             return false;
         }
 
@@ -229,7 +231,9 @@ public class TrackedEntityXrayRenderer {
     }
 
     private static Float suppressShadow(RenderLivingBase renderer) throws IllegalAccessException {
-        if (!shadowFieldInitialized) initShadowField();
+        if (shadowSizeField == null) {
+            shadowSizeField = ReflectionUtils.getDeclaredField(Render.class, "shadowSize", "field_76989_e");
+        }
         if (shadowSizeField == null) return null;
 
         float original = shadowSizeField.getFloat(renderer);
@@ -244,25 +248,6 @@ public class TrackedEntityXrayRenderer {
             shadowSizeField.setFloat(renderer, originalShadowSize);
         } catch (IllegalAccessException ignored) {
             // Rendering can continue; the field is restored on the next renderer instance.
-        }
-    }
-
-    private static void initShadowField() {
-        shadowFieldInitialized = true;
-
-        try {
-            shadowSizeField = Render.class.getDeclaredField("shadowSize");
-            shadowSizeField.setAccessible(true);
-            return;
-        } catch (NoSuchFieldException ignored) {
-            // Try obfuscated name below.
-        }
-
-        try {
-            shadowSizeField = Render.class.getDeclaredField("field_76989_e");
-            shadowSizeField.setAccessible(true);
-        } catch (NoSuchFieldException ignored) {
-            shadowSizeField = null;
         }
     }
 

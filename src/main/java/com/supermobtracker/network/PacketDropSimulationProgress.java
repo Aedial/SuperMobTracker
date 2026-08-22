@@ -1,6 +1,8 @@
 package com.supermobtracker.network;
 
 import io.netty.buffer.ByteBuf;
+
+import net.minecraft.client.Minecraft;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.network.ByteBufUtils;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
@@ -62,9 +64,7 @@ public class PacketDropSimulationProgress implements IMessage {
         @Override
         public IMessage onMessage(PacketDropSimulationProgress message, MessageContext ctx) {
             // Handle on client main thread
-            net.minecraft.client.Minecraft.getMinecraft().addScheduledTask(() -> {
-                DropSimulator.handleServerProgress(message);
-            });
+            Minecraft.getMinecraft().addScheduledTask(() -> DropSimulator.handleServerProgress(message));
 
             return null;
         }

@@ -1,7 +1,5 @@
 package com.supermobtracker.client.gui;
 
-import java.util.Collections;
-
 import org.lwjgl.input.Keyboard;
 
 import net.minecraft.client.gui.FontRenderer;

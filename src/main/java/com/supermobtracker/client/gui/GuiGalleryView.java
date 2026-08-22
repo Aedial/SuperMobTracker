@@ -1,11 +1,9 @@
 package com.supermobtracker.client.gui;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.lwjgl.input.Keyboard;
@@ -23,7 +21,6 @@ import com.supermobtracker.client.ClientSettings;
 import com.supermobtracker.client.util.GuiDrawingUtils;
 import com.supermobtracker.config.ModConfig;
 import com.supermobtracker.spawn.SpawnConditionAnalyzer;
-import com.supermobtracker.tracking.SpawnTrackerManager;
 import com.supermobtracker.util.TranslationUtils;
 
 
@@ -50,12 +47,12 @@ public class GuiGalleryView {
     private int tileSize;
     private int columns;
     private int rows;
-    private int gridX, gridY, gridW, gridH;
+    private int gridX, gridY;
     private int scrollRow = 0;
     private int totalRows;
 
     // Entity list (filtered and sorted same as MobListWidget)
-    private List<GalleryEntry> entries = new ArrayList<>();
+    private final List<GalleryEntry> entries = new ArrayList<>();
     private boolean lastI18n = ClientSettings.i18nNames;
 
     // Selected entity to return to the caller
@@ -295,7 +292,7 @@ public class GuiGalleryView {
 
         GlStateManager.pushMatrix();
         GlStateManager.translate(0.0F, 0.0F, 400.0F);
-        ((GuiScreen) parent).drawHoveringText(lines, tooltipMouseX, tooltipMouseY);
+        parent.drawHoveringText(lines, tooltipMouseX, tooltipMouseY);
         GlStateManager.popMatrix();
     }
 
@@ -363,8 +360,8 @@ public class GuiGalleryView {
         totalRows = (entries.size() + columns - 1) / columns;
 
         // Center the grid horizontally
-        gridW = columns * tileSize + (columns - 1) * TILE_PADDING;
-        gridH = rows * tileSize + (rows - 1) * TILE_PADDING;
+        int gridW = columns * tileSize + (columns - 1) * TILE_PADDING;
+        int gridH = rows * tileSize + (rows - 1) * TILE_PADDING;
         gridX = (screenWidth - gridW) / 2;
         gridY = MARGIN * 2;
 

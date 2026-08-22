@@ -15,14 +15,13 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 
 import com.supermobtracker.drops.DropSimulator;
 import com.supermobtracker.drops.DropSimulator.DropEntry;
 import com.supermobtracker.drops.DropSimulator.DropSimulationResult;
 import com.supermobtracker.drops.DropSimulator.SimulationTask;
-import com.supermobtracker.util.JEIHelper;
+import com.supermobtracker.integration.jei.JEIHelper;
 import com.supermobtracker.util.Utils;
 
 
@@ -163,7 +162,7 @@ public class GuiDropsWindow {
             int rowCount = (int) Math.ceil((double) itemCount / itemsPerRow);
 
             // Ensure reasonable bounds
-            itemsPerRow = Math.max(1, Math.min(itemsPerRow, 16));
+            itemsPerRow = Math.min(itemsPerRow, 16);
             rowCount = Math.max(1, Math.min(rowCount, 12));
 
             columns = itemsPerRow;

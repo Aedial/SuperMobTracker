@@ -1,7 +1,6 @@
 package com.supermobtracker.config;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.resources.I18n;
 import net.minecraftforge.fml.client.config.GuiConfig;
 import net.minecraftforge.fml.client.config.GuiConfigEntries;
@@ -19,7 +18,8 @@ public class HudPositionConfigEntry extends ButtonEntry {
     }
 
     private void updateButtonText() {
-        String currentPos = I18n.format("gui.supermobtracker.hudPosition." + ModConfig.getClientHudPosition().name().toLowerCase());
+        String posName = ModConfig.getClientHudPosition().name().toLowerCase();
+        String currentPos = I18n.format("gui.supermobtracker.hudPosition." + posName);
         this.btnValue.displayString = I18n.format("gui.supermobtracker.hudPosition.button", currentPos);
     }
 

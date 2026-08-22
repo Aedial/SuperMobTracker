@@ -1,5 +1,8 @@
 package com.supermobtracker.client.util;
 
+import java.lang.reflect.Field;
+import java.util.List;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.model.ModelBox;
@@ -11,25 +14,18 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.util.math.Vec3d;
 
-import java.lang.reflect.Field;
-import java.util.List;
+import com.supermobtracker.util.ReflectionUtils;
 
 
 /**
  * Client-side utility for getting visual rendering information about entities.
  * This is used to improve entity preview rendering in the mob tracker GUI.
- * 
+ * <p>
  * Provides two methods for estimating entity visual size:
  * 1. Shadow-based: Uses the renderer's shadowSize field (fast, but may be inaccurate)
  * 2. Model-based: Traverses model boxes to calculate actual bounding box (accurate, but slower)
  */
 public final class EntityRenderHelper {
-
-    private static Field shadowSizeField;
-    private static boolean shadowFieldInitialized = false;
-
-    private static Field mainModelField;
-    private static boolean modelFieldsInitialized = false;
 
     private EntityRenderHelper() {}
 
@@ -97,19 +93,16 @@ public final class EntityRenderHelper {
     /**
      * Gets the entity's model from its renderer.
      */
+    @SuppressWarnings("rawtypes")
     private static ModelBase getEntityModel(Entity entity) {
         if (!(entity instanceof EntityLivingBase)) return null;
 
         try {
             RenderManager renderManager = Minecraft.getMinecraft().getRenderManager();
-            if (renderManager == null) return null;
-
             Render<Entity> renderer = renderManager.getEntityRenderObject(entity);
             if (!(renderer instanceof RenderLivingBase)) return null;
 
-            if (!modelFieldsInitialized) initModelFields();
-
-            if (mainModelField != null) return (ModelBase) mainModelField.get(renderer);
+            return ((RenderLivingBase) renderer).getMainModel();
         } catch (Exception e) {
             // Fall through to return null
         }
@@ -193,7 +186,9 @@ public final class EntityRenderHelper {
 
         // Process child renderers recursively
         if (renderer.childModels != null) {
-            for (ModelRenderer child : renderer.childModels) accumulateRendererBounds(child, bounds, offsetX, offsetY, offsetZ);
+            for (ModelRenderer child : renderer.childModels) {
+                accumulateRendererBounds(child, bounds, offsetX, offsetY, offsetZ);
+            }
         }
     }
 
@@ -237,60 +232,17 @@ public final class EntityRenderHelper {
     private static float getShadowSize(Entity entity) {
         try {
             RenderManager renderManager = Minecraft.getMinecraft().getRenderManager();
-            if (renderManager == null) return 0;
 
             Render<Entity> renderer = renderManager.getEntityRenderObject(entity);
             if (renderer == null) return 0;
 
-            if (!shadowFieldInitialized) initShadowField();
-
+            Field shadowSizeField = ReflectionUtils.getDeclaredField(Render.class, "shadowSize", "field_76989_e");
             if (shadowSizeField != null) return shadowSizeField.getFloat(renderer);
         } catch (Exception e) {
             // Silently fail
         }
 
         return 0;
-    }
-
-    /**
-     * Initialize the reflection field for shadowSize.
-     */
-    private static void initShadowField() {
-        shadowFieldInitialized = true;
-
-        try {
-            shadowSizeField = Render.class.getDeclaredField("shadowSize");
-            shadowSizeField.setAccessible(true);
-            return;
-        } catch (NoSuchFieldException e) {
-            // Try obfuscated name
-        }
-
-        try {
-            shadowSizeField = Render.class.getDeclaredField("field_76989_e");
-            shadowSizeField.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            shadowSizeField = null;
-        }
-    }
-
-    /**
-     * Initialize reflection fields for model access.
-     */
-    private static void initModelFields() {
-        modelFieldsInitialized = true;
-
-        try {
-            mainModelField = RenderLivingBase.class.getDeclaredField("mainModel");
-            mainModelField.setAccessible(true);
-        } catch (NoSuchFieldException e) {
-            try {
-                mainModelField = RenderLivingBase.class.getDeclaredField("field_77045_g");
-                mainModelField.setAccessible(true);
-            } catch (NoSuchFieldException e2) {
-                mainModelField = null;
-            }
-        }
     }
 
     /**

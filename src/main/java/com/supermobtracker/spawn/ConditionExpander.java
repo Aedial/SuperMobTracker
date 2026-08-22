@@ -1,12 +1,12 @@
 package com.supermobtracker.spawn;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Consumer;
 
 import net.minecraft.entity.EntityLiving;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import static com.supermobtracker.spawn.ConditionUtils.DEFAULT_WEATHERS;
 import static com.supermobtracker.spawn.ConditionUtils.canSpawnWithSeed;
@@ -30,21 +30,21 @@ public class ConditionExpander {
     }
 
     public static class ExpandedConditions {
-        public List<String> biomes = new ArrayList<>();
-        public List<Integer> lightLevels = new ArrayList<>();
-        public List<Integer> yLevels = new ArrayList<>();
-        public String dimension = null;
-        public int dimensionId = 0;
+        @Nonnull public final List<String> biomes = new ArrayList<>();
+        @Nonnull public final List<Integer> lightLevels = new ArrayList<>();
+        @Nonnull public final List<Integer> yLevels = new ArrayList<>();
+        @Nullable public final String dimension = null;
+        public final int dimensionId = 0;
 
-        public List<String> hints = new ArrayList<>();
+        public final List<String> hints = new ArrayList<>();
 
-        public List<String> groundBlocks = null;    // null = doesn't matter, else list of valid ground blocks
-        public List<int[]> timeRanges = null;       // null = doesn't matter, else list of valid time ranges [start, end] in ticks
-        public List<String> weathers = null;        // null = doesn't matter, else list of valid weathers
-        public Boolean requiresSky = null;          // null = doesn't matter, true = requires sky, false = requires no sky
-        public List<Integer> moonPhases = null;     // null = doesn't matter, else list of valid moon phases (0-7)
-        public Boolean requiresSlimeChunk = null;   // null = doesn't matter, true = requires slime chunk, false = excludes slime chunk
-        public Boolean requiresNether = null;       // null = doesn't matter, true = requires nether-like, false = excludes nether-like
+        @Nullable public List<String> groundBlocks = null;    // null = doesn't matter, else list of valid ground blocks
+        @Nullable public List<int[]> timeRanges = null;       // null = doesn't matter, else list of valid time ranges [start, end] in ticks
+        @Nullable public List<String> weathers = null;        // null = doesn't matter, else list of valid weathers
+        @Nullable public Boolean requiresSky = null;          // null = doesn't matter, true = requires sky, false = requires no sky
+        @Nullable public List<Integer> moonPhases = null;     // null = doesn't matter, else list of valid moon phases (0-7)
+        @Nullable public Boolean requiresSlimeChunk = null;   // null = doesn't matter, true = requires slime chunk, false = excludes slime chunk
+        @Nullable public Boolean requiresNether = null;       // null = doesn't matter, true = requires nether-like, false = excludes nether-like
     }
 
     /**
@@ -67,9 +67,9 @@ public class ConditionExpander {
         world.isNether = sample.isNether;
         world.worldTime = sample.worldTime;
 
-        result.yLevels = expandYLevels(sample.y);
-        result.lightLevels = expandLightLevels(sample);
-        result.biomes = new ArrayList<>(candidateBiomes);
+        result.yLevels.addAll(expandYLevels(sample.y));
+        result.lightLevels.addAll(expandLightLevels(sample));
+        result.biomes.addAll(candidateBiomes);
 
         // Only expand these conditions if they were queried during spawn checks
         if (queried != null && queried.getOrDefault("groundBlock", false)) result.groundBlocks = expandGroundBlocks(sample, candidateGroundBlocks);
@@ -122,8 +122,9 @@ public class ConditionExpander {
      * @param values All possible values to test
      * @param setter Function to set the condition value in the world
      * @param sampleValue The value from the successful sample (to restore after testing)
-     * @return null if all values work, else list of valid values
+     * @return list of valid values
      */
+    @Nonnull
     private <T> List<T> expandListCondition(int y, List<T> values, Consumer<T> setter, T sampleValue) {
         List<T> validValues = new ArrayList<>();
 
@@ -135,9 +136,9 @@ public class ConditionExpander {
         setter.accept(sampleValue);
 
         // Sometimes, mods query the condition, but do not actually use it (to centralize logic)
-        if (validValues.size() == values.size()) return null;
+        if (validValues.size() == values.size()) return Collections.emptyList();
         // Should not happen, but may be the case for high randomness and bad luck
-        if (validValues.isEmpty()) return Arrays.asList(sampleValue);
+        if (validValues.isEmpty()) return Collections.singletonList(sampleValue);
 
         return validValues;
     }
@@ -174,7 +175,7 @@ public class ConditionExpander {
             }
         }
 
-        if (rangesToTest.isEmpty()) return Arrays.asList(sampleY);
+        if (rangesToTest.isEmpty()) return Collections.singletonList(sampleY);
 
         List<Integer> allValid = new ArrayList<>();
         for (int[] range : rangesToTest) {
@@ -183,7 +184,7 @@ public class ConditionExpander {
             }
         }
 
-        if (allValid.isEmpty()) return Arrays.asList(sampleY);
+        if (allValid.isEmpty()) return Collections.singletonList(sampleY);
 
         return allValid;
     }
@@ -196,9 +197,16 @@ public class ConditionExpander {
             sample.light
         );
 
-        return result != null ? result : levels;
+        return result;
     }
 
+    @Nullable
+    private <T> List<T> normalizeOptionalListCondition(List<T> result) {
+        // Optional list conditions use null to mean "unrestricted".
+        return result.isEmpty() ? null : result;
+    }
+
+    @Nullable
     private List<String> expandGroundBlocks(SampleFinder.ValidSample sample, List<String> candidateGroundBlocks) {
         world.groundBlock = "sky";
         if (testSpawn(sample.y)) {
@@ -206,11 +214,11 @@ public class ConditionExpander {
             return null;
         }
 
-        return expandListCondition(
+        return normalizeOptionalListCondition(expandListCondition(
             sample.y, candidateGroundBlocks,
             v -> world.groundBlock = v,
             sample.ground
-        );
+        ));
     }
 
     /**
@@ -236,7 +244,7 @@ public class ConditionExpander {
         // If all times are valid, return null (doesn't matter)
         if (validTimes.size() == 40) return null;
         // If no times work, return the sample time as a single-tick range
-        if (validTimes.isEmpty()) return Arrays.asList(new int[]{(int) originalTime, (int) originalTime});
+        if (validTimes.isEmpty()) return Collections.singletonList(new int[]{ (int) originalTime, (int) originalTime });
 
         // Convert list of valid times into consecutive ranges
         return buildTimeRanges(validTimes);
@@ -257,14 +265,13 @@ public class ConditionExpander {
             int currentTime = validTimes.get(i).intValue();
 
             // If this time is consecutive (within 600 ticks of the end), extend the range
-            if (currentTime <= rangeEnd + 1) {
-                rangeEnd = currentTime + 599;
-            } else {
+            if (currentTime > rangeEnd + 1) {
                 // Save the current range and start a new one
                 ranges.add(new int[]{rangeStart, Math.min(rangeEnd, 23999)});
                 rangeStart = currentTime;
-                rangeEnd = currentTime + 599;
             }
+
+            rangeEnd = currentTime + 599;
         }
 
         // Add the last range
@@ -286,6 +293,7 @@ public class ConditionExpander {
         return ranges;
     }
 
+    @Nullable
     private List<String> expandWeathers(SampleFinder.ValidSample sample) {
         List<String> result = expandListCondition(
             sample.y, DEFAULT_WEATHERS,
@@ -293,23 +301,22 @@ public class ConditionExpander {
             sample.weather
         );
 
-        if (result != null && result.isEmpty()) return Arrays.asList("unknown");
-
-        return result;
+        return normalizeOptionalListCondition(result);
     }
 
     private Boolean expandCanSeeSky(SampleFinder.ValidSample sample) {
         return expandBooleanCondition(sample.y, v -> world.canSeeSky = v, sample.canSeeSky);
     }
 
+    @Nullable
     private List<Integer> expandMoonPhases(SampleFinder.ValidSample sample) {
         List<Integer> phases = Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7);
 
-        return expandListCondition(
+        return normalizeOptionalListCondition(expandListCondition(
             sample.y, phases,
             v -> world.moonPhase = v,
             sample.moonPhase
-        );
+        ));
     }
 
     private Boolean expandSlimeChunk(SampleFinder.ValidSample sample) {

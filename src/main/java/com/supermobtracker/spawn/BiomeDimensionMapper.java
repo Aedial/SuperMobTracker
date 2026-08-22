@@ -1,14 +1,6 @@
 package com.supermobtracker.spawn;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -20,7 +12,6 @@ import net.minecraft.profiler.Profiler;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.DimensionType;
-import net.minecraft.world.EnumDifficulty;
 import net.minecraft.world.GameType;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
@@ -31,7 +22,6 @@ import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.BiomeProvider;
 import net.minecraft.world.biome.BiomeProviderSingle;
 import net.minecraft.world.chunk.IChunkProvider;
-import net.minecraft.world.storage.ISaveHandler;
 import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.common.DimensionManager;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
@@ -41,7 +31,7 @@ import com.supermobtracker.SuperMobTracker;
 /**
  * Maps biomes to their available dimensions.
  * Used to determine which dimension a mob can spawn in based on its native biomes.
- * 
+ * <p>
  * Strategy per dimension:
  * 1. Create a minimal fake world to properly initialize the WorldProvider and BiomeProvider
  * 2. If BiomeProviderSingle: use that single biome, then sample to verify/expand
@@ -77,7 +67,7 @@ public class BiomeDimensionMapper {
 
     // Background sampling state
     private static ScheduledExecutorService backgroundSampler = null;
-    private static Map<Integer, BackgroundSampleTask> activeBackgroundTasks = new ConcurrentHashMap<>();
+    private static final Map<Integer, BackgroundSampleTask> activeBackgroundTasks = new ConcurrentHashMap<>();
 
     /** Get default extended sample count (legacy, background sampling now used) */
     public static int getDefaultExtendedCount() { return DEFAULT_SAMPLE_COUNT_EXTENDED; }
@@ -88,22 +78,20 @@ public class BiomeDimensionMapper {
     /**
      * A minimal fake world used solely to initialize WorldProviders and get their BiomeProviders.
      * This is necessary because WorldProvider.getBiomeProvider() returns null until setWorld() is called.
-     * 
+     * <p>
      * IMPORTANT: We use a cloned WorldInfo to prevent any modifications from affecting the real world.
      * Some mods (like BiomesOPlenty + Lost Cities) check/modify the terrain type during initialization.
      */
     private static class MinimalWorld extends World {
-        private final WorldProvider targetProvider;
         private BiomeProvider cachedBiomeProvider = null;
         private Exception initException = null;
 
         public MinimalWorld(WorldInfo info, WorldProvider provider) {
             super(null, info, provider, new Profiler(), true);
-            this.targetProvider = provider;
 
             try {
                 this.provider.setWorld(this);
-                this.cachedBiomeProvider = targetProvider.getBiomeProvider();
+                this.cachedBiomeProvider = provider.getBiomeProvider();
             } catch (Exception e) {
                 // Provider initialization failed - likely due to WorldType mismatch
                 // Store the exception for logging but don't rethrow
@@ -170,7 +158,7 @@ public class BiomeDimensionMapper {
         buildBiomeGroundBlocksMapping();
 
         Integer[] registeredDimensions = DimensionManager.getStaticDimensionIDs();
-        for (Integer dimId : registeredDimensions) sortedDimensionIds.add(dimId);
+        sortedDimensionIds.addAll(Arrays.asList(registeredDimensions));
 
         // Sort by abs(id): 0, -1, 1, -2, 2, etc.
         sortedDimensionIds.sort(Comparator.comparingInt(Math::abs));
@@ -190,7 +178,9 @@ public class BiomeDimensionMapper {
 
             if (ConditionUtils.isProfilingEnabled()) {
                 String dimName = getDimensionName(dimId);
-                SuperMobTracker.LOGGER.info("  Dimension " + dimId + " (" + dimName + "): " + biomes.size() + " biomes in " + (dimElapsed / 1_000_000.0) + "ms");
+                SuperMobTracker.LOGGER.info(
+                    "  Dimension {} ({}): {} biomes in {}ms",
+                    dimId, dimName, biomes.size(), dimElapsed / 1_000_000.0);
             }
         }
 
@@ -198,8 +188,11 @@ public class BiomeDimensionMapper {
 
         if (ConditionUtils.isProfilingEnabled()) {
             long totalElapsed = System.nanoTime() - totalStartTime;
-            SuperMobTracker.LOGGER.info("BiomeDimensionMapper init took " + (totalElapsed / 1_000_000.0) + "ms total");
-            SuperMobTracker.LOGGER.info("Found " + sortedDimensionIds.size() + " dimensions, mapped " + biomeToDimensions.size() + " biomes");
+            SuperMobTracker.LOGGER.info(
+                "BiomeDimensionMapper init took {}ms total", totalElapsed / 1_000_000.0);
+            SuperMobTracker.LOGGER.info(
+                "Found {} dimensions, mapped {} biomes",
+                sortedDimensionIds.size(), biomeToDimensions.size());
         }
     }
 
@@ -212,7 +205,7 @@ public class BiomeDimensionMapper {
 
     /**
      * Get base WorldInfo from current loaded world, or create a minimal one.
-     * 
+     * <p>
      * IMPORTANT: We clone the WorldInfo instead of returning the original to prevent
      * any potential modifications from affecting the actual world. Some mod providers
      * may inadvertently modify the WorldInfo during initialization.
@@ -243,9 +236,8 @@ public class BiomeDimensionMapper {
             original.getTerrainType()
         );
         settings.setGeneratorOptions(original.getGeneratorOptions());
-        WorldInfo cloned = new WorldInfo(settings, original.getWorldName());
 
-        return cloned;
+        return new WorldInfo(settings, original.getWorldName());
     }
 
     /**
@@ -286,8 +278,9 @@ public class BiomeDimensionMapper {
 
         if (ConditionUtils.isProfilingEnabled()) {
             long elapsed = System.nanoTime() - startTime;
-            SuperMobTracker.LOGGER.info("Built biome ground blocks mapping: " + biomeToGroundBlocks.size() +
-                " biomes, " + totalBlocks + " total block entries in " + (elapsed / 1_000_000.0) + "ms");
+            SuperMobTracker.LOGGER.info(
+                "Built biome ground blocks mapping: {} biomes, {} total block entries in {}ms",
+                biomeToGroundBlocks.size(), totalBlocks, elapsed / 1_000_000.0);
         }
     }
 
@@ -309,20 +302,13 @@ public class BiomeDimensionMapper {
                 DimensionType dimType = DimensionManager.getProviderType(dimId);
                 if (dimType == null) {
                     if (ConditionUtils.isProfilingEnabled()) {
-                        SuperMobTracker.LOGGER.info("    No DimensionType for dimension " + dimId);
+                        SuperMobTracker.LOGGER.info("    No DimensionType for dimension {}", dimId);
                     }
 
                     return biomes;
                 }
 
                 WorldProvider provider = dimType.createDimension();
-                if (provider == null) {
-                    if (ConditionUtils.isProfilingEnabled()) {
-                        SuperMobTracker.LOGGER.info("    Could not create WorldProvider for dimension " + dimId);
-                    }
-
-                    return biomes;
-                }
 
                 // Create minimal world to initialize the provider
                 // baseWorldInfo is already cloned with the correct WorldType from the overworld
@@ -335,7 +321,8 @@ public class BiomeDimensionMapper {
                 Exception initException = minimalWorld.getInitException();
                 if (initException != null) {
                     if (ConditionUtils.isProfilingEnabled()) {
-                        SuperMobTracker.LOGGER.info("    Provider init failed with current WorldType, trying DEFAULT: " +
+                        SuperMobTracker.LOGGER.info(
+                            "    Provider init failed with current WorldType, trying DEFAULT: {}",
                             initException.getMessage());
                     }
 
@@ -351,20 +338,20 @@ public class BiomeDimensionMapper {
 
                     // Need a fresh provider instance
                     provider = dimType.createDimension();
-                    if (provider != null) {
-                        minimalWorld = new MinimalWorld(defaultWorldInfo, provider);
-                        biomeProvider = minimalWorld.getInitializedBiomeProvider();
+                    minimalWorld = new MinimalWorld(defaultWorldInfo, provider);
+                    biomeProvider = minimalWorld.getInitializedBiomeProvider();
 
-                        if (minimalWorld.getInitException() != null && ConditionUtils.isProfilingEnabled()) {
-                            SuperMobTracker.LOGGER.info("    Provider init also failed with DEFAULT WorldType: " +
-                                minimalWorld.getInitException().getMessage());
-                        }
+                    if (minimalWorld.getInitException() != null && ConditionUtils.isProfilingEnabled()) {
+                        SuperMobTracker.LOGGER.info(
+                            "    Provider init also failed with DEFAULT WorldType: {}",
+                            minimalWorld.getInitException().getMessage());
                     }
                 }
             }
 
             if (biomeProvider == null) {
-                if (ConditionUtils.isProfilingEnabled()) SuperMobTracker.LOGGER.info("    No BiomeProvider available for dimension " + dimId);
+                if (ConditionUtils.isProfilingEnabled())
+                    SuperMobTracker.LOGGER.info("    No BiomeProvider available for dimension {}", dimId);
 
                 return biomes;
             }
@@ -375,12 +362,13 @@ public class BiomeDimensionMapper {
             // Strategy 1: BiomeProviderSingle - single biome dimension
             if (biomeProvider instanceof BiomeProviderSingle) {
                 Biome singleBiome = biomeProvider.getBiome(BlockPos.ORIGIN);
-                if (singleBiome != null && singleBiome.getRegistryName() != null) {
+                if (singleBiome.getRegistryName() != null) {
                     biomes.add(singleBiome.getRegistryName().toString());
                     initialCount = biomes.size();
                 }
 
-                if (ConditionUtils.isProfilingEnabled()) SuperMobTracker.LOGGER.info("    BiomeProviderSingle: " + biomes);
+                if (ConditionUtils.isProfilingEnabled())
+                    SuperMobTracker.LOGGER.info("    BiomeProviderSingle: {}", biomes);
 
                 // Even for single biome, sample to verify
                 int newFound = sampleBiomesMultiGrid(biomeProvider, biomes, SAMPLE_COUNT_INITIAL);
@@ -389,12 +377,13 @@ public class BiomeDimensionMapper {
             } else {
                 // Strategy 2: getBiomesToSpawnIn()
                 List<Biome> spawnBiomes = biomeProvider.getBiomesToSpawnIn();
-                if (spawnBiomes != null && !spawnBiomes.isEmpty()) {
+                if (!spawnBiomes.isEmpty()) {
                     for (Biome b : spawnBiomes) {
                         if (b != null && b.getRegistryName() != null) biomes.add(b.getRegistryName().toString());
                     }
 
-                    if (ConditionUtils.isProfilingEnabled()) SuperMobTracker.LOGGER.info("    getBiomesToSpawnIn(): " + biomes.size() + " biomes");
+                    if (ConditionUtils.isProfilingEnabled())
+                        SuperMobTracker.LOGGER.info("    getBiomesToSpawnIn(): {} biomes", biomes.size());
                 }
 
                 initialCount = biomes.size();
@@ -407,18 +396,20 @@ public class BiomeDimensionMapper {
             // Strategy 3: If we found new biomes during initial sample, start background sampling
             if (needsExtendedSample) {
                 if (ConditionUtils.isProfilingEnabled()) {
-                    SuperMobTracker.LOGGER.info("    Found new biomes during initial sample, starting background sampling");
+                    SuperMobTracker.LOGGER.info(
+                        "    Found new biomes during initial sample, starting background sampling");
                 }
                 startBackgroundSampling(dimId, biomeProvider, biomes);
             }
 
             if (ConditionUtils.isProfilingEnabled() && biomes.size() > initialCount) {
-                SuperMobTracker.LOGGER.info("    Sampling found " + (biomes.size() - initialCount) + " additional biomes");
+                SuperMobTracker.LOGGER.info(
+                    "    Sampling found {} additional biomes", biomes.size() - initialCount);
             }
 
         } catch (Exception e) {
             if (ConditionUtils.isProfilingEnabled()) {
-                SuperMobTracker.LOGGER.warn("Failed to get biomes for dimension " + dimId + ": " + e.getMessage());
+                SuperMobTracker.LOGGER.warn("Failed to get biomes for dimension {}: {}", dimId, e.getMessage());
             }
         }
 
@@ -449,16 +440,16 @@ public class BiomeDimensionMapper {
                 try {
                     // Use getBiomesForGeneration for batched retrieval - gets 256 biomes in one call
                     Biome[] batchBiomes = biomeProvider.getBiomesForGeneration(null, batchX, batchZ, BATCH_SIZE, BATCH_SIZE);
-                    if (batchBiomes != null) {
-                        for (Biome biome : batchBiomes) {
-                            if (biome != null && biome.getRegistryName() != null) biomes.add(biome.getRegistryName().toString());
+                    for (Biome biome : batchBiomes) {
+                        if (biome != null && biome.getRegistryName() != null) {
+                            biomes.add(biome.getRegistryName().toString());
                         }
                     }
                 } catch (Exception ignored) {
                     // Some providers may not support getBiomesForGeneration, fall back to single point
                     try {
                         Biome biome = biomeProvider.getBiome(new BlockPos(batchX, 64, batchZ));
-                        if (biome != null && biome.getRegistryName() != null) biomes.add(biome.getRegistryName().toString());
+                        if (biome.getRegistryName() != null) biomes.add(biome.getRegistryName().toString());
                     } catch (Exception ignored2) {
                         // Skip this position
                     }
@@ -686,8 +677,9 @@ public class BiomeDimensionMapper {
                 // Check if we've exceeded the time limit
                 if (System.currentTimeMillis() - startTime > BACKGROUND_SAMPLE_DURATION_MS) {
                     if (ConditionUtils.isProfilingEnabled()) {
-                        SuperMobTracker.LOGGER.info("Background sampling for dimension " + dimId +
-                            " complete after 5 minutes. Found " + biomes.size() + " biomes total.");
+                        SuperMobTracker.LOGGER.info(
+                            "Background sampling for dimension {} complete after 5 minutes. Found {} biomes total.",
+                            dimId, biomes.size());
                     }
                     cancel();
                     activeBackgroundTasks.remove(dimId);
@@ -708,10 +700,11 @@ public class BiomeDimensionMapper {
                         }
                     }
 
-                    /* if (ConditionUtils.isProfilingEnabled()) {
-                        SuperMobTracker.LOGGER.info("Background sampling for dimension " + dimId +
-                            " found " + (biomes.size() - initialSize) + " new biomes in ring " + currentRing);
-                    } */
+                    if (ConditionUtils.isProfilingEnabled()) {
+                        SuperMobTracker.LOGGER.info(
+                            "Background sampling for dimension {} found {} new biomes in ring {}",
+                            dimId, biomes.size() - initialSize, currentRing);
+                    }
                 }
 
                 // Move to next position in ring, or next ring
@@ -723,7 +716,8 @@ public class BiomeDimensionMapper {
                 }
             } catch (Exception e) {
                 if (ConditionUtils.isProfilingEnabled()) {
-                    SuperMobTracker.LOGGER.warn("Error in background sampling for dimension " + dimId + ": " + e.getMessage());
+                    SuperMobTracker.LOGGER.warn(
+                        "Error in background sampling for dimension {}: {}", dimId, e.getMessage());
                 }
             }
         }
@@ -738,7 +732,7 @@ public class BiomeDimensionMapper {
             int samplesPerRing = 8 * currentRing;
             int side = (samplesInCurrentRing * 4) / samplesPerRing;
             int positionOnSide = samplesInCurrentRing % (samplesPerRing / 4);
-            float sideProgress = (float) positionOnSide / (samplesPerRing / 4);
+            float sideProgress = (float) positionOnSide / ((float) samplesPerRing / 4);
 
             int gridCenterX, gridCenterZ;
             switch (side) {
@@ -766,16 +760,16 @@ public class BiomeDimensionMapper {
 
             try {
                 Biome[] batchBiomes = biomeProvider.getBiomesForGeneration(null, batchX, batchZ, BATCH_SIZE, BATCH_SIZE);
-                if (batchBiomes != null) {
-                    for (Biome biome : batchBiomes) {
-                        if (biome != null && biome.getRegistryName() != null) biomes.add(biome.getRegistryName().toString());
+                for (Biome biome : batchBiomes) {
+                    if (biome != null && biome.getRegistryName() != null) {
+                        biomes.add(biome.getRegistryName().toString());
                     }
                 }
             } catch (Exception ignored) {
                 // Fall back to single point sampling
                 try {
                     Biome biome = biomeProvider.getBiome(new BlockPos(batchX, 64, batchZ));
-                    if (biome != null && biome.getRegistryName() != null) biomes.add(biome.getRegistryName().toString());
+                    if (biome.getRegistryName() != null) biomes.add(biome.getRegistryName().toString());
                 } catch (Exception ignored2) {
                     // Skip this position
                 }

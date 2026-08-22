@@ -1,5 +1,10 @@
 package com.supermobtracker.spawn;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.InputStream;
@@ -18,18 +23,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.supermobtracker.SuperMobTracker;
-import com.supermobtracker.config.ModConfig;
+import javax.annotation.Nullable;
 
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.biome.Biome;
 import net.minecraftforge.common.BiomeDictionary;
+import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
+
+import com.supermobtracker.SuperMobTracker;
+import com.supermobtracker.config.ModConfig;
 
 
 /**
@@ -88,7 +92,8 @@ public final class ExternalSpawnHints {
         try (Reader reader = new FileReader(file)) {
             loadEntriesFromReader(reader, file.getAbsolutePath(), entries);
         } catch (Exception e) {
-            SuperMobTracker.LOGGER.error("Failed to load external spawn hints from " + file.getAbsolutePath(), e);
+            SuperMobTracker.LOGGER.error(
+                "Failed to load external spawn hints from {}", file.getAbsolutePath(), e);
         }
 
         return entries;
@@ -104,7 +109,8 @@ public final class ExternalSpawnHints {
                 loadEntriesFromReader(reader, DEFAULT_RESOURCE_PATH, entries);
             }
         } catch (Exception e) {
-            SuperMobTracker.LOGGER.error("Failed to load bundled spawn hints from " + DEFAULT_RESOURCE_PATH, e);
+            SuperMobTracker.LOGGER.error(
+                "Failed to load bundled spawn hints from {}", DEFAULT_RESOURCE_PATH, e);
         }
 
         return entries;
@@ -115,20 +121,23 @@ public final class ExternalSpawnHints {
                                               Map<ResourceLocation, HintEntry> entries) {
         JsonElement rootElement = GSON.fromJson(reader, JsonElement.class);
         if (rootElement == null || !rootElement.isJsonObject()) {
-            SuperMobTracker.LOGGER.warn("Ignoring spawn hints source {} because it does not contain a JSON object.", sourceName);
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring spawn hints source {} because it does not contain a JSON object.", sourceName);
             return;
         }
 
         JsonArray rawEntries = getArray(rootElement.getAsJsonObject(), "entries");
         if (rawEntries == null) {
-            SuperMobTracker.LOGGER.warn("Ignoring spawn hints source {} because it does not contain an 'entries' array.", sourceName);
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring spawn hints source {} because it does not contain an 'entries' array.", sourceName);
             return;
         }
 
         for (int i = 0; i < rawEntries.size(); i++) {
             JsonElement rawEntry = rawEntries.get(i);
             if (!rawEntry.isJsonObject()) {
-                SuperMobTracker.LOGGER.warn("Ignoring spawn hint entry {} in {} because it is not an object.", i, sourceName);
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring spawn hint entry {} in {} because it is not an object.", i, sourceName);
                 continue;
             }
 
@@ -142,7 +151,8 @@ public final class ExternalSpawnHints {
     private static HintEntry parseEntry(JsonObject object, int index, String sourceName) {
         String entityIdText = getString(object, "entityId");
         if (entityIdText == null || entityIdText.trim().isEmpty()) {
-            SuperMobTracker.LOGGER.warn("Ignoring spawn hint entry {} in {} because 'entityId' is missing.", index, sourceName);
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring spawn hint entry {} in {} because 'entityId' is missing.", index, sourceName);
             return null;
         }
 
@@ -150,13 +160,18 @@ public final class ExternalSpawnHints {
         try {
             entityId = new ResourceLocation(entityIdText);
         } catch (Exception e) {
-            SuperMobTracker.LOGGER.warn("Ignoring spawn hint entry {} in {} because '{}' is not a valid entity ID.", index, sourceName, entityIdText);
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring spawn hint entry {} in {} because '{}' is not a valid entity ID.",
+                index, sourceName, entityIdText);
             return null;
         }
 
+        if (!isNamespaceLoaded(entityId.getNamespace())) return null;
+
         String spawnReason = normalizeSpawnReason(getString(object, "spawnReason"));
         if (spawnReason == null) {
-            SuperMobTracker.LOGGER.warn("Ignoring spawn hint entry {} in {} because 'spawnReason' is missing.", index, sourceName);
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring spawn hint entry {} in {} because 'spawnReason' is missing.", index, sourceName);
             return null;
         }
 
@@ -170,13 +185,19 @@ public final class ExternalSpawnHints {
                 try {
                     biomeId = new ResourceLocation(biomeIdText);
                 } catch (Exception e) {
-                    SuperMobTracker.LOGGER.warn("Ignoring invalid biome ID '{}' in spawn hint entry {} from {}.", biomeIdText, index, sourceName);
+                    SuperMobTracker.LOGGER.warn(
+                        "Ignoring invalid biome ID '{}' in spawn hint entry {} from {}.",
+                        biomeIdText, index, sourceName);
                     continue;
                 }
 
+                if (!isNamespaceLoaded(biomeId.getNamespace())) continue;
+
                 Biome biome = ForgeRegistries.BIOMES.getValue(biomeId);
                 if (biome == null) {
-                    SuperMobTracker.LOGGER.warn("Ignoring unknown biome ID '{}' in spawn hint entry {} from {}.", biomeIdText, index, sourceName);
+                    SuperMobTracker.LOGGER.warn(
+                        "Ignoring unknown biome ID '{}' in spawn hint entry {} from {}.",
+                        biomeIdText, index, sourceName);
                     continue;
                 }
 
@@ -186,7 +207,9 @@ public final class ExternalSpawnHints {
             for (String biomeTypeText : getStringList(biomeObject, "types")) {
                 BiomeDictionary.Type biomeType = BIOME_TYPES_BY_NAME.get(biomeTypeText.trim().toUpperCase(Locale.ROOT));
                 if (biomeType == null) {
-                    SuperMobTracker.LOGGER.warn("Ignoring unknown biome type '{}' in spawn hint entry {} from {}.", biomeTypeText, index, sourceName);
+                    SuperMobTracker.LOGGER.warn(
+                        "Ignoring unknown biome type '{}' in spawn hint entry {} from {}.",
+                        biomeTypeText, index, sourceName);
                     continue;
                 }
 
@@ -197,7 +220,9 @@ public final class ExternalSpawnHints {
         entry.dimensionId = getInteger(object, "dimensionId");
         String dimensionName = getString(object, "dimensionName");
         if (dimensionName != null && !isTranslationKey(dimensionName)) {
-            SuperMobTracker.LOGGER.warn("Ignoring non-localized dimensionName '{}' in spawn hint entry {} from {}.", dimensionName, index, sourceName);
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring non-localized dimensionName '{}' in spawn hint entry {} from {}.",
+            dimensionName, index, sourceName);
         } else {
             entry.dimensionName = dimensionName;
         }
@@ -223,7 +248,9 @@ public final class ExternalSpawnHints {
         entry.requiresNether = getBoolean(object, "requiresNether");
         for (String hintKey : getStringList(object, "hints")) {
             if (!isTranslationKey(hintKey)) {
-                SuperMobTracker.LOGGER.warn("Ignoring non-localized hint '{}' in spawn hint entry {} from {}.", hintKey, index, sourceName);
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring non-localized hint '{}' in spawn hint entry {} from {}.",
+                    hintKey, index, sourceName);
                 continue;
             }
 
@@ -242,6 +269,13 @@ public final class ExternalSpawnHints {
 
     private static boolean isTranslationKey(String value) {
         return value != null && TRANSLATION_KEY_PATTERN.matcher(value).matches();
+    }
+
+    private static boolean isNamespaceLoaded(String namespace) {
+        if (namespace == null || namespace.isEmpty()) return true;
+        if ("minecraft".equals(namespace) || "forge".equals(namespace)) return true;
+
+        return Loader.isModLoaded(namespace);
     }
 
     private static JsonObject getObject(JsonObject object, String key) {
@@ -526,12 +560,13 @@ public final class ExternalSpawnHints {
             return BiomeDimensionMapper.getDimensionName(resolvedDimensionId);
         }
 
+        @Nullable
         private List<String> resolveGroundBlocks(boolean aquatic, boolean flying) {
             if (!groundBlocks.isEmpty()) return new ArrayList<>(groundBlocks);
             if (flying) return Collections.singletonList("air");
             if (aquatic) return Collections.singletonList("water");
 
-            return new ArrayList<>();
+            return null;
         }
 
         private List<Integer> resolveRange(Integer min, Integer max) {
