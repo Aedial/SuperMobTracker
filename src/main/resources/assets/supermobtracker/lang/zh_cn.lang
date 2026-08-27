@@ -215,7 +215,7 @@ gui.mobtracker.spawnReason.event=事件/脚本
 gui.mobtracker.spawnReason.command=命令
 gui.mobtracker.spawnReason.other=未知/其他
 gui.mobtracker.summon.using=可通过使用以下物品召唤：
-gui.mobtracker.summon.on=在%s上。
+gui.mobtracker.summon.on=使用目标：%s。
 gui.mobtracker.summon.entity=左键或右键点击可在追踪器中打开此生物
 gui.mobtracker.summon.jei=左键点击查看配方，右键点击查看用途
 
