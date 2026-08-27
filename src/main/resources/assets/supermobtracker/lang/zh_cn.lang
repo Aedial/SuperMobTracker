@@ -151,6 +151,11 @@ dimension.the_end=末地
 dimension.erebus=混沌之地
 dimension.thebetweenlands=交错次元
 dimension.twilightforest=暮色森林
+dimension.aether=天境
+dimension.divinerpg.mortum=死域
+dimension.divinerpg.iceika=冰晶雪原
+dimension.divinerpg.arcana=秘界
+dimension.divinerpg.vethea=梦魇世界
 
 # Biomes
 gui.mobtracker.biomes=生物群系：%s
@@ -200,6 +205,7 @@ gui.mobtracker.hint.chunk_generation=在野外生成，但仅发生在区块生�
 gui.mobtracker.hint.away_from_world_spawn=仅在远离世界出生点的地方生成。
 gui.mobtracker.hint.block_or_item=可由方块或物品释放。
 gui.mobtracker.hint.block_triggered=当特定方块被破坏或激活时释放。
+gui.mobtracker.hint.ritual=可通过仪式召唤。
 gui.mobtracker.spawnReason=生成来源：%s
 gui.mobtracker.spawnReason.natural=自然生成
 gui.mobtracker.spawnReason.worldgen=世界生成
@@ -208,6 +214,10 @@ gui.mobtracker.spawnReason.spawner=刷怪箱
 gui.mobtracker.spawnReason.event=事件/脚本
 gui.mobtracker.spawnReason.command=命令
 gui.mobtracker.spawnReason.other=未知/其他
+gui.mobtracker.summon.using=可通过使用以下物品召唤：
+gui.mobtracker.summon.on=在%s上。
+gui.mobtracker.summon.entity=左键或右键点击可在追踪器中打开此生物
+gui.mobtracker.summon.jei=左键点击查看配方，右键点击查看用途
 
 # HUD Position Selector
 gui.supermobtracker.hudPosition.top_left=顶部左侧
