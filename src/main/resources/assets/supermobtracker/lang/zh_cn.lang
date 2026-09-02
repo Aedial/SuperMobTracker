@@ -24,6 +24,7 @@ config.supermobtracker.client.dropSimulationCount=掉落物模拟次数
 config.supermobtracker.client.jeiMobLootRows=JEI生物战利品行数
 config.supermobtracker.client.unstableSimulationEntities=不稳定的模拟实体
 config.supermobtracker.client.shouldRenderEntities=不应渲染的实体
+config.supermobtracker.client.guiAndLootExcludedEntities=排除的实体
 
 ## Config descriptions
 config.supermobtracker.client=客户端
@@ -46,6 +47,7 @@ config.supermobtracker.client.dropSimulationCount.tooltip=用于计算掉落率�
 config.supermobtracker.client.jeiMobLootRows.tooltip=JEI生物战利品视图中，每页显示的战利品行数。需要重启Minecraft以调整JEI配方大小。
 config.supermobtracker.client.unstableSimulationEntities.tooltip=在掉落物模拟过程中会破坏全局状态，因此应从模拟中排除的实体ID。它们的特征是，在模拟其掉落物后，所有实体的模拟性能都会严重下降。
 config.supermobtracker.client.shouldRenderEntities.tooltip=渲染时会崩溃或大量报错的实体ID。这些实体在预览/画廊中完全不会渲染。
+config.supermobtracker.client.guiAndLootExcludedEntities.tooltip=生物追踪器GUI和战利品转储中应当隐藏的实体ID。支持不完整ID（例如"minecraft:"或"zomb"）。
 
 ## Command: /smtlootdump
 command.supermobtracker.lootdump.usage=/smtlootdump [模拟次数]
@@ -54,6 +56,7 @@ command.supermobtracker.lootdump.start=正在为所有可用生物转储战利�
 command.supermobtracker.lootdump.progress=战利品转储进度：已完成%s/%s种生物的模拟……
 command.supermobtracker.lootdump.complete=战利品转储完成：%s种生物，%s种独特物品，%s种掉落物变体。
 command.supermobtracker.lootdump.skipped=已跳过%s种无法模拟战利品的生物。
+command.supermobtracker.lootdump.excluded=已根据配置文件排除%s种生物。
 command.supermobtracker.lootdump.saved=JEI战利品数据已保存至：%s
 command.supermobtracker.lootdump.failed=写入战利品转储失败：%s
 
@@ -65,14 +68,14 @@ command.supermobtracker.analyze.mobs.start=正在分析所有生物（%s个样�
 command.supermobtracker.analyze.mobs.progress=进度：已完成%s/%s种生物的分析……
 command.supermobtracker.analyze.mobs.failed=生物分析失败：%s
 command.supermobtracker.analyze.mobs.complete=生物分析完成！耗时：%s
-command.supermobtracker.analyze.mobs.summary=成功：%s，失败：%s，零散：%s，无维度：%s，崩溃：%s，无生物群系：%s
+command.supermobtracker.analyze.mobs.summary=成功：%s，失败：%s，排除：%s，零散：%s，无维度：%s，崩溃：%s，无生物群系：%s
 command.supermobtracker.analyze.loot.request=正在向服务器请求战利品分析（%s个样本，%s次模拟）……
 command.supermobtracker.analyze.loot.request_default=正在向服务器请求战利品分析……
 command.supermobtracker.analyze.loot.start=正在分析战利品掉落物（%s个样本，%s次模拟）……
 command.supermobtracker.analyze.loot.progress=战利品进度：已完成%s/%s种生物的分析……
 command.supermobtracker.analyze.loot.failed=战利品分析失败：%s
 command.supermobtracker.analyze.loot.complete=战利品分析完成！耗时：%s
-command.supermobtracker.analyze.loot.summary=成功：%s，无掉落物：%s，无效：%s，构造失败：%s，崩溃：%s
+command.supermobtracker.analyze.loot.summary=成功：%s，无掉落物：%s，排除：%s，无效：%s，构造失败：%s，崩溃：%s
 command.supermobtracker.analyze.dimension.start=正在进行维度映射基准测试（%s个样本，扩展=%s，网格=%s）……
 command.supermobtracker.analyze.dimension.progress=样本：%s/%s，完成：%s
 command.supermobtracker.analyze.dimension.failed=维度基准测试失败：%s
