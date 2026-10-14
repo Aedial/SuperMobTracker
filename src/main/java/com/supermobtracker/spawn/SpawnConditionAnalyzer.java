@@ -15,6 +15,7 @@ import javax.annotation.Nullable;
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityAgeable;
 import net.minecraft.entity.EntityFlying;
@@ -40,6 +41,8 @@ import net.minecraft.world.storage.ISaveHandler;
 import net.minecraft.world.storage.WorldInfo;
 import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.util.Utils;
@@ -79,6 +82,33 @@ public class SpawnConditionAnalyzer {
 
         return cache;
     }
+
+    public enum Attribute {
+        BOSS("boss"),
+        CANNOT_DESPAWN("cannotDespawn"),
+        PASSIVE("passive"),
+        NEUTRAL("neutral"),
+        HOSTILE("hostile"),
+        AQUATIC("aquatic"),
+        FLYING("flying"),
+        TAMEABLE("tameable");
+
+        private final String key;
+
+        Attribute(String key) {
+            this.key = key;
+        }
+
+        public String getTranslationKey() {
+            return "gui.mobtracker.attribute." + key;
+        }
+
+        @SideOnly(Side.CLIENT)
+        public String getTranslated() {
+            return I18n.format(getTranslationKey());
+        }
+    }
+
 
     // Y levels to probe for finding first valid sample
     // Includes 50, 55, 60 for aquatic mobs that require posY > 45 && posY < seaLevel (63)
@@ -757,6 +787,20 @@ public class SpawnConditionAnalyzer {
         return entity != null && EntityTameable.class.isAssignableFrom(entity.getClass());
     }
 
+    public List<Attribute> getAttributes(ResourceLocation entityId) {
+        List<Attribute> attributes = new ArrayList<>();
+        if (isBoss(entityId)) attributes.add(Attribute.BOSS);
+        if (cannotDespawn(entityId)) attributes.add(Attribute.CANNOT_DESPAWN);
+        if (isPassive(entityId)) attributes.add(Attribute.PASSIVE);
+        if (isNeutral(entityId)) attributes.add(Attribute.NEUTRAL);
+        if (isHostile(entityId)) attributes.add(Attribute.HOSTILE);
+        if (isAquatic(entityId)) attributes.add(Attribute.AQUATIC);
+        if (isFlying(entityId)) attributes.add(Attribute.FLYING);
+        if (isTameable(entityId)) attributes.add(Attribute.TAMEABLE);
+
+        return attributes;
+    }
+
     public Vec3d getEntitySize(ResourceLocation entityId) {
         EntityLiving entity = getInitializedEntityInstance(entityId);
         if (entity == null) return new Vec3d(0, 0, 0);
@@ -833,7 +877,6 @@ public class SpawnConditionAnalyzer {
             }
 
             SpawnConditions result = computeSpawnConditions(entity, nativeBiomes, groundBlocks, biomeGroundBlocks, PROBE_LIGHT_LEVELS);
-
             lastResult = result;
 
             if (ConditionUtils.isProfilingEnabled()) {

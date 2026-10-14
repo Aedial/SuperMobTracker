@@ -1,4 +1,4 @@
-package com.supermobtracker.client.gui;
+package com.supermobtracker.client.gui.widgets;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,14 +15,7 @@ import net.minecraft.client.renderer.GlStateManager;
  */
 public class MultiColumnTooltipWidget {
 
-    private static final int labelHeight = 12;
-
     private final FontRenderer fontRenderer;
-
-    // Label bounds (the area that triggers the tooltip)
-    private int labelX;
-    private int labelY;
-    private int labelWidth;
 
     // Lines to display
     private List<String> lines = null;
@@ -38,15 +31,9 @@ public class MultiColumnTooltipWidget {
     /**
      * Sets the data to display in the tooltip.
      * @param lines List of translated names (can be null to hide tooltip)
-     * @param labelX X position of the label that triggers the tooltip
-     * @param labelY Y position of the label
-     * @param labelWidth Width of the label
      */
-    public void setData(List<String> lines, int labelX, int labelY, int labelWidth) {
+    public void setData(List<String> lines) {
         this.lines = lines;
-        this.labelX = labelX;
-        this.labelY = labelY;
-        this.labelWidth = labelWidth;
     }
 
     /**
@@ -66,26 +53,8 @@ public class MultiColumnTooltipWidget {
         this.screenHeight = screenHeight;
     }
 
-    /**
-     * Checks if the tooltip should be shown based on mouse position.
-     * @param mouseX Mouse X position
-     * @param mouseY Mouse Y position
-     * @return true if mouse is hovering over the label
-     */
-    public boolean isHovered(int mouseX, int mouseY) {
-        if (lines == null || lines.isEmpty()) return false;
-
-        return mouseX >= labelX && mouseX <= labelX + labelWidth &&
-               mouseY >= labelY && mouseY <= labelY + labelHeight;
-    }
-
-    /**
-     * Draws the tooltip if the mouse is hovering over the label.
-     * @param mouseX Mouse X position
-     * @param mouseY Mouse Y position
-     */
     public void draw(int mouseX, int mouseY) {
-        if (!isHovered(mouseX, mouseY)) return;
+        if (lines == null || lines.isEmpty()) return;
 
         int panelH = screenHeight - 40;
 
@@ -112,6 +81,7 @@ public class MultiColumnTooltipWidget {
                 int w = fontRenderer.getStringWidth(lines.get(i));
                 if (w > maxWidth) maxWidth = w;
             }
+
             columnWidths.add(maxWidth);
         }
 
@@ -154,8 +124,10 @@ public class MultiColumnTooltipWidget {
                 int row = i - startIdx;
                 fontRenderer.drawString(lines.get(i), xOffset, boxY + 3 + row * lineHeight, 0xDDDDDD);
             }
+
             if (col < columnWidths.size()) xOffset += columnWidths.get(col) + columnPadding;
         }
+
         GlStateManager.popMatrix();
     }
 
