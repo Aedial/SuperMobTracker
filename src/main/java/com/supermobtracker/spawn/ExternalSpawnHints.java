@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -26,7 +27,6 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
-import net.minecraft.entity.EntityLiving;
 import net.minecraft.item.Item;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.biome.Biome;
@@ -39,7 +39,7 @@ import com.supermobtracker.config.ModConfig;
 
 
 /**
- * Loads externally defined spawn hints for entities that do not use normal biome spawn tables.
+ * Loads externally defined spawn hints that replace selected spawn conditions (if any).
  */
 public final class ExternalSpawnHints {
 
@@ -60,16 +60,20 @@ public final class ExternalSpawnHints {
 
     private ExternalSpawnHints() {}
 
-    public static SpawnConditionAnalyzer.SpawnConditions getSpawnConditions(ResourceLocation entityId,
-                                                                            EntityLiving entity,
-                                                                            boolean aquatic,
-                                                                            boolean flying) {
+    @Nullable
+    public static SpawnConditionAnalyzer.SpawnConditions applySpawnHints(ResourceLocation entityId,
+            @Nullable SpawnConditionAnalyzer.SpawnConditions spawnConditions,
+            boolean aquatic, boolean flying) {
         reloadIfNeeded();
 
         HintEntry entry = cachedEntries.get(entityId);
-        if (entry == null) return null;
+        if (entry == null) return spawnConditions;
 
-        return entry.toSpawnConditions(entity, aquatic, flying);
+        if (spawnConditions == null || spawnConditions.analysisFailed) {
+            return entry.toSpawnConditions(aquatic, flying);
+        }
+
+        return entry.applyTo(spawnConditions, aquatic, flying);
     }
 
     private static void reloadIfNeeded() {
@@ -269,6 +273,7 @@ public final class ExternalSpawnHints {
     private static void applyEntryData(HintEntry entry, JsonObject object, int index, String sourceName) {
         JsonObject biomeObject = getObject(object, "biomes");
         if (object.has("biomes")) {
+            entry.providedFields.add(HintField.BIOMES);
             entry.biomeIds.clear();
             entry.biomeTypes.clear();
             entry.requiredBiomeTypes.clear();
@@ -325,7 +330,11 @@ public final class ExternalSpawnHints {
             }
         }
 
-        if (object.has("dimensionId")) entry.dimensionId = getInteger(object, "dimensionId");
+        if (object.has("dimensionId")) {
+            entry.providedFields.add(HintField.DIMENSION_ID);
+            entry.dimensionId = getInteger(object, "dimensionId");
+        }
+
         if (object.has("dimensionName")) {
             String dimensionName = getString(object, "dimensionName");
             if (dimensionName != null && !isTranslationKey(dimensionName)) {
@@ -335,43 +344,71 @@ public final class ExternalSpawnHints {
                     index,
                     sourceName);
             } else {
+                entry.providedFields.add(HintField.DIMENSION_NAME);
                 entry.dimensionName = dimensionName;
             }
         }
+
         if (object.has("groundBlocks")) {
+            entry.providedFields.add(HintField.GROUND_BLOCKS);
             entry.groundBlocks.clear();
             entry.groundBlocks.addAll(getStringList(object, "groundBlocks"));
         }
 
         if (object.has("lightLevels")) {
+            entry.providedFields.add(HintField.LIGHT_LEVELS);
             IntRange lightLevels = parseRange(object, "lightLevels", MIN_LIGHT_LEVEL, MAX_LIGHT_LEVEL, index, sourceName);
             entry.lightMin = lightLevels != null ? lightLevels.min : null;
             entry.lightMax = lightLevels != null ? lightLevels.max : null;
         }
 
         if (object.has("yLevels")) {
+            entry.providedFields.add(HintField.Y_LEVELS);
             IntRange yLevels = parseRange(object, "yLevels");
             entry.yMin = yLevels != null ? yLevels.min : null;
             entry.yMax = yLevels != null ? yLevels.max : null;
         }
 
         if (object.has("timeOfDay")) {
+            entry.providedFields.add(HintField.TIME_OF_DAY);
             entry.timeOfDay.clear();
             entry.timeOfDay.addAll(parseTimeRanges(object, "timeOfDay", index, sourceName));
         }
+
         if (object.has("weather")) {
+            entry.providedFields.add(HintField.WEATHER);
             entry.weather.clear();
             entry.weather.addAll(parseWeatherList(object, "weather", index, sourceName));
         }
-        if (object.has("requiresSky")) entry.requiresSky = getBoolean(object, "requiresSky");
+
+        if (object.has("requiresSky")) {
+            entry.providedFields.add(HintField.REQUIRES_SKY);
+            entry.requiresSky = getBoolean(object, "requiresSky");
+        }
+
         if (object.has("moonPhases")) {
+            entry.providedFields.add(HintField.MOON_PHASES);
             entry.moonPhases.clear();
             entry.moonPhases.addAll(getIntegerList(object, "moonPhases"));
         }
-        if (object.has("requiresSlimeChunk")) entry.requiresSlimeChunk = getBoolean(object, "requiresSlimeChunk");
-        if (object.has("requiresNether")) entry.requiresNether = getBoolean(object, "requiresNether");
-        if (object.has("summon")) entry.summon = parseSummonInfo(object, index, sourceName);
+
+        if (object.has("requiresSlimeChunk")) {
+            entry.providedFields.add(HintField.REQUIRES_SLIME_CHUNK);
+            entry.requiresSlimeChunk = getBoolean(object, "requiresSlimeChunk");
+        }
+
+        if (object.has("requiresNether")) {
+            entry.providedFields.add(HintField.REQUIRES_NETHER);
+            entry.requiresNether = getBoolean(object, "requiresNether");
+        }
+
+        if (object.has("summon")) {
+            entry.providedFields.add(HintField.SUMMON);
+            entry.summon = parseSummonInfo(object, index, sourceName);
+        }
+
         if (object.has("hints")) {
+            entry.providedFields.add(HintField.HINTS);
             entry.hints.clear();
 
             for (String hintKey : getStringList(object, "hints")) {
@@ -702,6 +739,23 @@ public final class ExternalSpawnHints {
         return values;
     }
 
+    private enum HintField {
+        BIOMES,
+        DIMENSION_ID,
+        DIMENSION_NAME,
+        GROUND_BLOCKS,
+        LIGHT_LEVELS,
+        Y_LEVELS,
+        TIME_OF_DAY,
+        WEATHER,
+        REQUIRES_SKY,
+        MOON_PHASES,
+        REQUIRES_SLIME_CHUNK,
+        REQUIRES_NETHER,
+        SUMMON,
+        HINTS
+    }
+
     private static class IntRange {
         final int min;
         final int max;
@@ -727,6 +781,7 @@ public final class ExternalSpawnHints {
     private static class HintEntry {
         final ResourceLocation entityId;
         final String spawnReason;
+        final Set<HintField> providedFields = EnumSet.noneOf(HintField.class);
         final Set<String> biomeIds = new LinkedHashSet<>();
         final Set<BiomeDictionary.Type> biomeTypes = new LinkedHashSet<>();
         final Set<BiomeDictionary.Type> requiredBiomeTypes = new LinkedHashSet<>();
@@ -755,6 +810,7 @@ public final class ExternalSpawnHints {
         HintEntry(HintEntry parentEntry, ResourceLocation entityId, @Nullable String spawnReason) {
             this.entityId = entityId;
             this.spawnReason = spawnReason != null ? spawnReason : parentEntry.spawnReason;
+            this.providedFields.addAll(parentEntry.providedFields);
             this.biomeIds.addAll(parentEntry.biomeIds);
             this.biomeTypes.addAll(parentEntry.biomeTypes);
             this.requiredBiomeTypes.addAll(parentEntry.requiredBiomeTypes);
@@ -779,7 +835,7 @@ public final class ExternalSpawnHints {
             this.summon = copySummonInfo(parentEntry.summon);
         }
 
-        SpawnConditionAnalyzer.SpawnConditions toSpawnConditions(EntityLiving entity, boolean aquatic, boolean flying) {
+        SpawnConditionAnalyzer.SpawnConditions toSpawnConditions(boolean aquatic, boolean flying) {
             List<String> resolvedBiomes = resolveBiomes();
             int resolvedDimensionId = resolveDimensionId(resolvedBiomes);
             String resolvedDimensionName = resolveDimensionName(resolvedDimensionId);
@@ -802,8 +858,72 @@ public final class ExternalSpawnHints {
                 resolvedDimensionName,
                 resolvedDimensionId,
                 spawnReason,
-                summon
+                copySummonInfo(summon),
+                false
             );
+        }
+
+        SpawnConditionAnalyzer.SpawnConditions applyTo(SpawnConditionAnalyzer.SpawnConditions spawnConditions,
+                                                        boolean aquatic,
+                                                        boolean flying) {
+            List<String> resolvedBiomes = provides(HintField.BIOMES) ? resolveBiomes() : spawnConditions.biomes;
+            int resolvedDimensionId = spawnConditions.dimensionId;
+            String resolvedDimensionName = spawnConditions.dimension;
+
+            if (provides(HintField.DIMENSION_ID)) {
+                resolvedDimensionId = resolveDimensionId(resolvedBiomes);
+                resolvedDimensionName = resolveDimensionName(resolvedDimensionId);
+            }
+
+            if (provides(HintField.DIMENSION_NAME)) {
+                resolvedDimensionName = resolveDimensionName(resolvedDimensionId);
+            }
+
+            List<String> resolvedGroundBlocks = provides(HintField.GROUND_BLOCKS)
+                ? resolveGroundBlocks(aquatic, flying) : spawnConditions.groundBlocks;
+            List<Integer> resolvedLightLevels = provides(HintField.LIGHT_LEVELS)
+                ? resolveRange(lightMin, lightMax) : spawnConditions.lightLevels;
+            List<Integer> resolvedYLevels = provides(HintField.Y_LEVELS)
+                ? resolveRange(yMin, yMax) : spawnConditions.yLevels;
+            List<int[]> resolvedTimeOfDay = provides(HintField.TIME_OF_DAY)
+                ? (timeOfDay.isEmpty() ? null : copyTimeRanges(timeOfDay)) : spawnConditions.timeOfDay;
+            List<String> resolvedWeather = provides(HintField.WEATHER)
+                ? (weather.isEmpty() ? null : new ArrayList<>(weather)) : spawnConditions.weather;
+            List<String> resolvedHints = provides(HintField.HINTS)
+                ? new ArrayList<>(hints) : spawnConditions.hints;
+            Boolean resolvedRequiresSky = provides(HintField.REQUIRES_SKY)
+                ? requiresSky : spawnConditions.requiresSky;
+            List<Integer> resolvedMoonPhases = provides(HintField.MOON_PHASES)
+                ? (moonPhases.isEmpty() ? null : new ArrayList<>(moonPhases)) : spawnConditions.moonPhases;
+            Boolean resolvedRequiresSlimeChunk = provides(HintField.REQUIRES_SLIME_CHUNK)
+                ? requiresSlimeChunk : spawnConditions.requiresSlimeChunk;
+            Boolean resolvedRequiresNether = provides(HintField.REQUIRES_NETHER)
+                ? requiresNether : spawnConditions.requiresNether;
+            SpawnConditionAnalyzer.SummonInfo resolvedSummon = provides(HintField.SUMMON)
+                ? copySummonInfo(summon) : spawnConditions.summon;
+
+            return new SpawnConditionAnalyzer.SpawnConditions(
+                resolvedBiomes,
+                resolvedGroundBlocks,
+                resolvedLightLevels,
+                resolvedYLevels,
+                resolvedTimeOfDay,
+                resolvedWeather,
+                resolvedHints,
+                resolvedRequiresSky,
+                resolvedMoonPhases,
+                resolvedRequiresSlimeChunk,
+                resolvedRequiresNether,
+                resolvedDimensionName,
+                resolvedDimensionId,
+                spawnReason,
+                resolvedSummon,
+                spawnConditions.analysisFailed
+            );
+        }
+
+        private boolean provides(HintField field) {
+            return providedFields.contains(field);
         }
 
         private List<String> resolveBiomes() {

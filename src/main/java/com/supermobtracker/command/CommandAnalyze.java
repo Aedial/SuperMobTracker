@@ -236,7 +236,7 @@ public class CommandAnalyze extends CommandBase implements IClientCommand {
                 analyzer = new SpawnConditionAnalyzer();
 
                 long sampleStart = System.nanoTime();
-                result = analyzer.analyze(entityId);
+                result = analyzer.getSpawnConditions(entityId);
                 long sampleTime = System.nanoTime() - sampleStart;
                 timings.add(sampleTime);
 

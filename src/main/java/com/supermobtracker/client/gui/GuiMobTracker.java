@@ -178,7 +178,7 @@ public class GuiMobTracker extends GuiScreen {
                 if (restoreId.equals(cachedEntityId) && cachedSpawnConditions != null) {
                     this.spawnConditions = cachedSpawnConditions;
                 } else {
-                    this.spawnConditions = analyzer.analyze(restoreId);
+                    this.spawnConditions = analyzer.getSpawnConditions(restoreId);
                     cachedEntityId = restoreId;
                     cachedSpawnConditions = this.spawnConditions;
 
@@ -204,7 +204,7 @@ public class GuiMobTracker extends GuiScreen {
         }
 
         this.selected = id;
-        this.spawnConditions = analyzer.analyze(id);
+        this.spawnConditions = analyzer.getSpawnConditions(id);
         cachedEntityId = id;
         cachedSpawnConditions = this.spawnConditions;
         ModConfig.setClientLastSelectedEntity(id != null ? id.toString() : "");

@@ -153,7 +153,7 @@
         },
         "parent": {
           "$ref": "#/$defs/resourceLocation",
-          "description": "Optional. Use the conditions of an existing parent entry instead of repeating them. Must be a declared entityId in the file."
+          "description": "Optional. Inherit the fields from an existing parent entry, overriding them with the fields in this entry. Must be a declared entityId in the file."
         },
         "spawnReason": {
           "type": "string",
@@ -164,7 +164,7 @@
         },
         "dimensionId": {
           "type": "integer",
-          "description": "Optional. If omitted, Super Mob Tracker tries to infer it from the resolved biome list and otherwise falls back to the current dimension."
+          "description": "Optional. A supplied value replaces the analyzed dimension. For a full external result, an omitted value is inferred from the resolved biome list when possible."
         },
         "dimensionName": {
           "type": "string"

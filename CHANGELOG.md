@@ -8,6 +8,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - Semantic Versioning: https://semver.org/spec/v2.0.0.html
 
 
+## [1.5.4] - 2026-10-15
+### Added
+- Add support for external spawn hints for mobs that have a native biomes list (instead of only those without any native biomes). These hints are intended to correct or supplement the analyzed spawn conditions, instead of providing a complete replacement. As such, only the specified fields in the hint will override the analyzed values, and any omitted fields will retain their analyzed values.
+
+
 ## [1.5.3] - 2026-09-01
 ### Added
 - Add an exclusion list in config for the GUI/loot dump, to hide some mobs that are not useful to track (e.g., summons, fake mobs, etc.).

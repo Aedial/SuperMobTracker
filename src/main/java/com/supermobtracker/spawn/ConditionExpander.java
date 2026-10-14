@@ -341,7 +341,10 @@ public class ConditionExpander {
             expanded.requiresSlimeChunk,
             expanded.requiresNether,
             expanded.dimension,
-            expanded.dimensionId
+            expanded.dimensionId,
+            SpawnConditionAnalyzer.NATURAL_SPAWN_REASON,
+            null,
+            false
         );
     }
 }

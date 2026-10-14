@@ -147,55 +147,7 @@ public class SpawnConditionAnalyzer {
         public final int dimensionId;
         public final String spawnReason;
         public final SummonInfo summon;
-
-        public SpawnConditions(@Nonnull List<String> biomes,
-                               @Nullable List<String> groundBlocks,
-                               @Nonnull List<Integer> lightLevels,
-                               @Nonnull List<Integer> yLevels,
-                               @Nullable List<int[]> timeOfDay,
-                               @Nullable List<String> weather,
-                               @Nonnull List<String> hints,
-                               @Nullable Boolean requiresSky,
-                               @Nullable String dimension,
-                               int dimensionId) {
-            this(biomes, groundBlocks, lightLevels, yLevels, timeOfDay, weather, hints,
-                 requiresSky, null, null, null, dimension, dimensionId, NATURAL_SPAWN_REASON, null);
-        }
-
-        public SpawnConditions(@Nonnull List<String> biomes,
-                               @Nullable List<String> groundBlocks,
-                               @Nonnull List<Integer> lightLevels,
-                               @Nonnull List<Integer> yLevels,
-                               @Nullable List<int[]> timeOfDay,
-                               @Nullable List<String> weather,
-                               @Nonnull List<String> hints,
-                               @Nullable Boolean requiresSky,
-                               @Nullable List<Integer> moonPhases,
-                               @Nullable Boolean requiresSlimeChunk,
-                               @Nullable Boolean requiresNether,
-                               @Nullable String dimension,
-                               int dimensionId) {
-              this(biomes, groundBlocks, lightLevels, yLevels, timeOfDay, weather, hints,
-                  requiresSky, moonPhases, requiresSlimeChunk, requiresNether, dimension, dimensionId, NATURAL_SPAWN_REASON, null);
-           }
-
-           public SpawnConditions(@Nonnull List<String> biomes,
-                                  @Nullable List<String> groundBlocks,
-                                  @Nonnull List<Integer> lightLevels,
-                                  @Nonnull List<Integer> yLevels,
-                                  @Nullable List<int[]> timeOfDay,
-                                  @Nullable List<String> weather,
-                                  @Nonnull List<String> hints,
-                                  @Nullable Boolean requiresSky,
-                                  @Nullable List<Integer> moonPhases,
-                                  @Nullable Boolean requiresSlimeChunk,
-                                  @Nullable Boolean requiresNether,
-                                  @Nullable String dimension,
-                                  int dimensionId,
-                                  @Nullable String spawnReason) {
-            this(biomes, groundBlocks, lightLevels, yLevels, timeOfDay, weather, hints,
-                requiresSky, moonPhases, requiresSlimeChunk, requiresNether, dimension, dimensionId, spawnReason, null);
-        }
+        public final boolean analysisFailed;
 
         public SpawnConditions(@Nonnull List<String> biomes,
                                @Nullable List<String> groundBlocks,
@@ -211,7 +163,8 @@ public class SpawnConditionAnalyzer {
                                @Nullable String dimension,
                                int dimensionId,
                                @Nullable String spawnReason,
-                               @Nullable SummonInfo summon) {
+                               @Nullable SummonInfo summon,
+                               boolean analysisFailed) {
             this.biomes = biomes;
             this.groundBlocks = groundBlocks;
             this.lightLevels = lightLevels;
@@ -227,6 +180,7 @@ public class SpawnConditionAnalyzer {
             this.dimensionId = dimensionId;
             this.spawnReason = spawnReason;
             this.summon = summon;
+            this.analysisFailed = analysisFailed;
         }
 
         private boolean hasNonNaturalSpawnReason() {
@@ -237,16 +191,7 @@ public class SpawnConditionAnalyzer {
          * Check if the analysis failed (no valid first sample found).
          */
         public boolean failed() {
-            if (hasNonNaturalSpawnReason()) return false;
-
-            boolean hasBiomes = biomes != null && !biomes.isEmpty() && !biomes.get(0).equals("unknown");
-            boolean hasLightLevels = !lightLevels.isEmpty();
-            boolean hasYLevels = !yLevels.isEmpty();
-            boolean hasGroundBlocks = groundBlocks != null && !groundBlocks.isEmpty() && !groundBlocks.get(0).equals("unknown");
-            boolean hasTimeOfDay = timeOfDay != null && !timeOfDay.isEmpty();
-            boolean hasWeather = weather != null && !weather.isEmpty() && !weather.get(0).equals("unknown");
-
-            return !(hasBiomes || hasLightLevels || hasYLevels || hasGroundBlocks || hasTimeOfDay || hasWeather);
+            return analysisFailed;
         }
 
         /**
@@ -829,6 +774,7 @@ public class SpawnConditionAnalyzer {
         double startTime = (double) System.nanoTime();
         lastError = null;
         lastResult = null;
+        lastHadNativeBiomes = false;
         ConditionUtils.resetSuccessfulSeed();
 
         EntityEntry entry = ForgeRegistries.ENTITIES.getValue(entityId);
@@ -841,14 +787,7 @@ public class SpawnConditionAnalyzer {
             // Get native biomes from the entity spawn tables
             List<String> nativeBiomes = getNativeBiomes(entityId, entry.getEntityClass());
             lastHadNativeBiomes = !nativeBiomes.isEmpty();
-            if (!lastHadNativeBiomes) {
-                SpawnConditions fallback = ExternalSpawnHints.getSpawnConditions(entityId, entity, isAquatic(entityId), isFlying(entityId));
-                if (fallback == null) return null;
-
-                lastHadNativeBiomes = true;
-                lastResult = fallback;
-                return fallback;
-            }
+            if (!lastHadNativeBiomes) return null;
 
             // Find target dimension for this mob
             int currentDimId = entity.world.provider.getDimension();
@@ -919,6 +858,17 @@ public class SpawnConditionAnalyzer {
 
             return null;
         }
+    }
+
+    public SpawnConditions getSpawnConditions(ResourceLocation entityId) {
+        SpawnConditions spawnConditions = analyze(entityId);
+        SpawnConditions result = ExternalSpawnHints.applySpawnHints(
+            entityId, spawnConditions, isAquatic(entityId), isFlying(entityId));
+
+        if (result != null && !lastHadNativeBiomes) lastHadNativeBiomes = true;
+
+        lastResult = result;
+        return result;
     }
 
     private void logAnalysisFailure(ResourceLocation entityId, Throwable error) {
@@ -1022,7 +972,7 @@ public class SpawnConditionAnalyzer {
             return new SpawnConditions(
                 biomes, result.groundBlocks, result.lightLevels, result.yLevels, result.timeOfDay, result.weather,
                 result.hints, result.requiresSky, result.moonPhases, result.requiresSlimeChunk, result.requiresNether,
-                dimensionName, targetDimId
+                dimensionName, targetDimId, NATURAL_SPAWN_REASON, null, result.analysisFailed
             );
         }
 
@@ -1032,7 +982,10 @@ public class SpawnConditionAnalyzer {
         List<int[]> timeOfDay = null;  // null indicates unknown/not determined
         List<String> weather = Collections.singletonList("unknown");
 
-        return new SpawnConditions(biomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null, null, dimensionName, targetDimId);
+        return new SpawnConditions(
+            biomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null, null, null, null, null,
+            dimensionName, targetDimId, NATURAL_SPAWN_REASON, null, true
+        );
     }
 
     /**

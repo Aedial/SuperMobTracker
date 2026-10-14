@@ -317,7 +317,8 @@ public class SampleFinder {
         }
 
         return new SpawnConditionAnalyzer.SpawnConditions(
-            failBiomes, failGround, narrowedLight, emptyY, time, weather, hints, null, null, Integer.MIN_VALUE
+            failBiomes, failGround, narrowedLight, emptyY, time, weather, hints, null, null, null, null,
+            null, Integer.MIN_VALUE, SpawnConditionAnalyzer.NATURAL_SPAWN_REASON, null, true
         );
     }
 }
