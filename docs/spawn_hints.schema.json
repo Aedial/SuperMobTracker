@@ -27,6 +27,16 @@
       "type": "string",
       "pattern": "^[a-z0-9_.-]+:[a-z0-9_./-]+$"
     },
+    "translationKey": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+$",
+      "description": "Translation key from an external mod."
+    },
+    "hintTranslationKey": {
+      "type": "string",
+      "pattern": "^[a-z0-9_.-]+$",
+      "description": "Lowercase internal translation key."
+    },
     "lightLevel": {
       "type": "integer",
       "minimum": 0,
@@ -157,7 +167,7 @@
         },
         "spawnReason": {
           "type": "string",
-          "description": "Reason shown in the GUI. Known values such as worldgen, structure, spawner, event, command, and other have built-in labels."
+          "description": "Reason shown in the GUI. A missing value inherits from parent or native analysis. Known values such as worldgen, structure, spawner, event, command, and other have built-in labels."
         },
         "biomes": {
           "$ref": "#/$defs/biomes"
@@ -167,7 +177,7 @@
           "description": "Optional. A supplied value replaces the analyzed dimension. For a full external result, an omitted value is inferred from the resolved biome list when possible."
         },
         "dimensionName": {
-          "type": "string"
+          "$ref": "#/$defs/translationKey"
         },
         "groundBlocks": {
           "type": "array",
@@ -220,15 +230,11 @@
         "hints": {
           "type": "array",
           "items": {
-            "type": "string"
+            "$ref": "#/$defs/hintTranslationKey"
           }
         }
       },
-      "required": ["entityId"],
-      "anyOf": [
-        {"required": ["spawnReason"]},
-        {"required": ["parent"]}
-      ]
+      "required": ["entityId"]
     }
   }
 }

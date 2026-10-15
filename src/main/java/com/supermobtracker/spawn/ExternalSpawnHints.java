@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import net.minecraft.block.Block;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.item.Item;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.biome.Biome;
@@ -52,9 +54,11 @@ public final class ExternalSpawnHints {
     private static final int MAX_TIME_OF_DAY = 23999;
     private static final Map<String, BiomeDictionary.Type> BIOME_TYPES_BY_NAME = buildBiomeTypeMap();
     private static final Set<String> VALID_WEATHERS = new LinkedHashSet<>(Arrays.asList("clear", "rain", "thunder"));
-    private static final Pattern TRANSLATION_KEY_PATTERN = Pattern.compile("[a-z0-9_.-]+");
+    private static final Pattern INVALID_TRANSLATION_KEY_CHARACTER_PATTERN = Pattern.compile("[^A-Za-z0-9_.-]");
 
     private static Map<ResourceLocation, HintEntry> cachedEntries = Collections.emptyMap();
+    private static final Set<ResourceLocation> MISSING_SPAWN_REASON_WARNINGS =
+        Collections.synchronizedSet(new HashSet<>());
     private static long lastLoadedTimestamp = Long.MIN_VALUE;
     private static boolean cacheInitialized = false;
 
@@ -69,8 +73,18 @@ public final class ExternalSpawnHints {
         HintEntry entry = cachedEntries.get(entityId);
         if (entry == null) return spawnConditions;
 
-        if (spawnConditions == null || spawnConditions.analysisFailed) {
+        if (spawnConditions == null) {
+            if (entry.spawnReason == null) {
+                warnMissingSpawnReason(entry);
+                return null;
+            }
+
             return entry.toSpawnConditions(aquatic, flying);
+        }
+
+        if (entry.spawnReason == null && spawnConditions.spawnReason == null) {
+            warnMissingSpawnReason(entry);
+            return spawnConditions;
         }
 
         return entry.applyTo(spawnConditions, aquatic, flying);
@@ -84,7 +98,16 @@ public final class ExternalSpawnHints {
 
         cacheInitialized = true;
         lastLoadedTimestamp = lastModified;
+        MISSING_SPAWN_REASON_WARNINGS.clear();
         cachedEntries = loadEntries(file);
+    }
+
+    private static void warnMissingSpawnReason(HintEntry entry) {
+        if (!MISSING_SPAWN_REASON_WARNINGS.add(entry.entityId)) return;
+
+        SuperMobTracker.LOGGER.warn(
+            "Ignoring spawn hint for {} from {} because neither the hint nor native analysis provides a spawn reason.",
+            entry.entityId, entry.sourceName);
     }
 
     private static File getHintsFile() {
@@ -139,15 +162,16 @@ public final class ExternalSpawnHints {
             return;
         }
 
-        List<RawHintEntry> sourceEntryList = new ArrayList<>();
-        Map<ResourceLocation, RawHintEntry> sourceEntries = new LinkedHashMap<>();
+        List<HintEntrySource> sourceEntryList = new ArrayList<>();
+        Map<ResourceLocation, HintEntrySource> sourceEntries = new LinkedHashMap<>();
         Map<ResourceLocation, HintEntry> resolvedEntries = new LinkedHashMap<>();
 
         for (int i = 0; i < rawEntries.size(); i++) {
             JsonElement rawEntry = rawEntries.get(i);
             if (!rawEntry.isJsonObject()) {
                 SuperMobTracker.LOGGER.warn(
-                    "Ignoring spawn hint entry {} in {} because it is not an object.", i, sourceName);
+                    "Ignoring spawn hint entry {} in {} because it is not an object: {}.",
+                    i, sourceName, rawEntry);
                 continue;
             }
 
@@ -155,13 +179,21 @@ public final class ExternalSpawnHints {
             ResourceLocation entityId = parseEntryId(entryObject, i, sourceName);
             if (entityId == null || !isNamespaceLoaded(entityId.getNamespace())) continue;
 
-            RawHintEntry sourceEntry = new RawHintEntry(entityId, entryObject, i);
+            if (sourceEntries.containsKey(entityId)) {
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring duplicate spawn hint for {} in {}. Keeping the first entry: {}.",
+                    entityId, sourceName, entryObject);
+                continue;
+            }
+
+            HintEntrySource sourceEntry = new HintEntrySource(entityId, entryObject);
             sourceEntryList.add(sourceEntry);
             sourceEntries.put(entityId, sourceEntry);
         }
 
-        for (RawHintEntry sourceEntry : sourceEntryList) {
-            HintEntry entry = parseEntry(sourceEntry, sourceName, entries, sourceEntries, resolvedEntries, new LinkedHashSet<>());
+        for (HintEntrySource sourceEntry : sourceEntryList) {
+            HintEntry entry = parseEntry(sourceEntry, sourceName, entries, sourceEntries, resolvedEntries,
+                new LinkedHashSet<>());
             if (entry == null) continue;
 
             entries.put(entry.entityId, entry);
@@ -173,7 +205,8 @@ public final class ExternalSpawnHints {
         String entityIdText = getString(object, "entityId");
         if (entityIdText == null || entityIdText.trim().isEmpty()) {
             SuperMobTracker.LOGGER.warn(
-                "Ignoring spawn hint entry {} in {} because 'entityId' is missing.", index, sourceName);
+                "Ignoring spawn hint entry {} in {} because 'entityId' must be a non-empty string: {}.",
+                index, sourceName, object);
             return null;
         }
 
@@ -182,8 +215,8 @@ public final class ExternalSpawnHints {
             entityId = new ResourceLocation(entityIdText);
         } catch (Exception e) {
             SuperMobTracker.LOGGER.warn(
-                "Ignoring spawn hint entry {} in {} because '{}' is not a valid entity ID.",
-                index, sourceName, entityIdText);
+                "Ignoring spawn hint entry {} in {} because '{}' is not a valid entity ID: {}.",
+                index, sourceName, entityIdText, object);
             return null;
         }
 
@@ -191,10 +224,10 @@ public final class ExternalSpawnHints {
     }
 
     @Nullable
-    private static HintEntry parseEntry(RawHintEntry rawEntry,
+    private static HintEntry parseEntry(HintEntrySource rawEntry,
                                         String sourceName,
                                         Map<ResourceLocation, HintEntry> loadedEntries,
-                                        Map<ResourceLocation, RawHintEntry> sourceEntries,
+                                        Map<ResourceLocation, HintEntrySource> sourceEntries,
                                         Map<ResourceLocation, HintEntry> resolvedEntries,
                                         Set<ResourceLocation> resolutionStack) {
         HintEntry cachedEntry = resolvedEntries.get(rawEntry.entityId);
@@ -202,50 +235,48 @@ public final class ExternalSpawnHints {
 
         if (!resolutionStack.add(rawEntry.entityId)) {
             SuperMobTracker.LOGGER.warn(
-                "Ignoring spawn hint entry {} in {} because it has a circular parent chain.",
-                rawEntry.index,
-                sourceName);
+                "Ignoring spawn hint for {} in {} because it has a circular parent chain.",
+                rawEntry.entityId, sourceName);
             return null;
         }
 
         JsonObject object = rawEntry.object;
         String parentText = getString(object, "parent");
-        String spawnReason = normalizeSpawnReason(getString(object, "spawnReason"));
+        if (object.has("parent") && (parentText == null || parentText.trim().isEmpty())) {
+            warnInvalidFieldType(rawEntry, sourceName, "parent", "a non-empty string");
+        }
+
+        String spawnReasonText = getString(object, "spawnReason");
+        if (object.has("spawnReason") && spawnReasonText == null) {
+            warnInvalidFieldType(rawEntry, sourceName, "spawnReason", "a string");
+        }
+
+        String spawnReason = normalizeSpawnReason(spawnReasonText);
         HintEntry entry;
 
         if (parentText != null && !parentText.trim().isEmpty()) {
-            ResourceLocation parentId = parseResourceLocation(parentText, "parent entity", rawEntry.index, sourceName);
+            ResourceLocation parentId = parseResourceLocation(parentText, "parent entity", rawEntry, sourceName);
             if (parentId == null || !isNamespaceLoaded(parentId.getNamespace())) {
                 resolutionStack.remove(rawEntry.entityId);
                 return null;
             }
 
-            HintEntry parentEntry = resolveParentEntry(parentId, sourceName, loadedEntries, sourceEntries, resolvedEntries, resolutionStack);
+            HintEntry parentEntry = resolveParentEntry(parentId, sourceName, loadedEntries, sourceEntries,
+                resolvedEntries, resolutionStack);
             if (parentEntry == null) {
                 SuperMobTracker.LOGGER.warn(
-                    "Ignoring spawn hint entry {} in {} because parent '{}' could not be resolved.",
-                    rawEntry.index,
-                    sourceName,
-                    parentText);
+                    "Ignoring spawn hint for {} in {} because parent '{}' could not be resolved.",
+                    rawEntry.entityId, sourceName, parentText);
                 resolutionStack.remove(rawEntry.entityId);
                 return null;
             }
 
-            entry = new HintEntry(parentEntry, rawEntry.entityId, spawnReason);
+            entry = new HintEntry(parentEntry, rawEntry.entityId, spawnReason, sourceName);
         } else {
-            if (spawnReason == null) {
-                SuperMobTracker.LOGGER.warn(
-                    "Ignoring spawn hint entry {} in {} because neither 'spawnReason' nor 'parent' is present.",
-                    rawEntry.index,
-                    sourceName);
-                resolutionStack.remove(rawEntry.entityId);
-                return null;
-            }
-
-            entry = new HintEntry(rawEntry.entityId, spawnReason);
+            entry = new HintEntry(rawEntry.entityId, spawnReason, sourceName);
         }
 
-        applyEntryData(entry, object, rawEntry.index, sourceName);
+        applyEntryData(entry, object, rawEntry, sourceName);
         resolvedEntries.put(entry.entityId, entry);
         resolutionStack.remove(rawEntry.entityId);
 
@@ -256,13 +287,13 @@ public final class ExternalSpawnHints {
     private static HintEntry resolveParentEntry(ResourceLocation parentId,
                                                 String sourceName,
                                                 Map<ResourceLocation, HintEntry> loadedEntries,
-                                                Map<ResourceLocation, RawHintEntry> sourceEntries,
+                                                Map<ResourceLocation, HintEntrySource> sourceEntries,
                                                 Map<ResourceLocation, HintEntry> resolvedEntries,
                                                 Set<ResourceLocation> resolutionStack) {
         HintEntry cachedEntry = resolvedEntries.get(parentId);
         if (cachedEntry != null) return cachedEntry;
 
-        RawHintEntry sourceEntry = sourceEntries.get(parentId);
+        HintEntrySource sourceEntry = sourceEntries.get(parentId);
         if (sourceEntry != null) {
             return parseEntry(sourceEntry, sourceName, loadedEntries, sourceEntries, resolvedEntries, resolutionStack);
         }
@@ -270,25 +301,24 @@ public final class ExternalSpawnHints {
         return loadedEntries.get(parentId);
     }
 
-    private static void applyEntryData(HintEntry entry, JsonObject object, int index, String sourceName) {
+    private static void applyEntryData(HintEntry entry, JsonObject object,
+                                       HintEntrySource sourceEntry, String sourceName) {
         JsonObject biomeObject = getObject(object, "biomes");
-        if (object.has("biomes")) {
+        if (biomeObject != null) {
             entry.providedFields.add(HintField.BIOMES);
             entry.biomeIds.clear();
             entry.biomeTypes.clear();
             entry.requiredBiomeTypes.clear();
-        }
 
-        if (biomeObject != null) {
-            for (String biomeIdText : getStringList(biomeObject, "ids")) {
+            for (String biomeIdText : getStringList(biomeObject, "ids", sourceEntry, sourceName)) {
                 ResourceLocation biomeId;
 
                 try {
                     biomeId = new ResourceLocation(biomeIdText);
                 } catch (Exception e) {
                     SuperMobTracker.LOGGER.warn(
-                        "Ignoring invalid biome ID '{}' in spawn hint entry {} from {}.",
-                        biomeIdText, index, sourceName);
+                        "Ignoring invalid biome ID '{}' in spawn hint for {} from {}.",
+                        biomeIdText, sourceEntry.entityId, sourceName);
                     continue;
                 }
 
@@ -297,132 +327,157 @@ public final class ExternalSpawnHints {
                 Biome biome = ForgeRegistries.BIOMES.getValue(biomeId);
                 if (biome == null) {
                     SuperMobTracker.LOGGER.warn(
-                        "Ignoring unknown biome ID '{}' in spawn hint entry {} from {}.",
-                        biomeIdText, index, sourceName);
+                        "Ignoring unknown biome ID '{}' in spawn hint for {} from {}.",
+                        biomeIdText, sourceEntry.entityId, sourceName);
                     continue;
                 }
 
                 entry.biomeIds.add(biome.getRegistryName().toString());
             }
 
-            for (String biomeTypeText : getStringList(biomeObject, "types")) {
+            for (String biomeTypeText : getStringList(biomeObject, "types", sourceEntry, sourceName)) {
                 BiomeDictionary.Type biomeType = BIOME_TYPES_BY_NAME.get(biomeTypeText.trim().toUpperCase(Locale.ROOT));
                 if (biomeType == null) {
                     SuperMobTracker.LOGGER.warn(
-                        "Ignoring unknown biome type '{}' in spawn hint entry {} from {}.",
-                        biomeTypeText, index, sourceName);
+                        "Ignoring unknown biome type '{}' in spawn hint for {} from {}.",
+                        biomeTypeText, sourceEntry.entityId, sourceName);
                     continue;
                 }
 
                 entry.biomeTypes.add(biomeType);
             }
 
-            for (String biomeTypeText : getStringList(biomeObject, "allTypes")) {
+            for (String biomeTypeText : getStringList(biomeObject, "allTypes", sourceEntry, sourceName)) {
                 BiomeDictionary.Type biomeType = BIOME_TYPES_BY_NAME.get(biomeTypeText.trim().toUpperCase(Locale.ROOT));
                 if (biomeType == null) {
                     SuperMobTracker.LOGGER.warn(
-                        "Ignoring unknown required biome type '{}' in spawn hint entry {} from {}.",
-                        biomeTypeText, index, sourceName);
+                        "Ignoring unknown required biome type '{}' in spawn hint for {} from {}.",
+                        biomeTypeText, sourceEntry.entityId, sourceName);
                     continue;
                 }
 
                 entry.requiredBiomeTypes.add(biomeType);
             }
+        } else if (object.has("biomes")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "biomes", "an object");
         }
 
-        if (object.has("dimensionId")) {
+        Integer dimensionId = getInteger(object, "dimensionId");
+        if (dimensionId != null) {
             entry.providedFields.add(HintField.DIMENSION_ID);
-            entry.dimensionId = getInteger(object, "dimensionId");
+            entry.dimensionId = dimensionId;
+        } else if (object.has("dimensionId")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "dimensionId", "an integer");
         }
 
-        if (object.has("dimensionName")) {
-            String dimensionName = getString(object, "dimensionName");
-            if (dimensionName != null && !isTranslationKey(dimensionName)) {
-                SuperMobTracker.LOGGER.warn(
-                    "Ignoring non-localized dimensionName '{}' in spawn hint entry {} from {}.",
-                    dimensionName,
-                    index,
-                    sourceName);
-            } else {
+        String dimensionName = getString(object, "dimensionName");
+        if (dimensionName != null) {
+            if (validateTranslationKey(dimensionName, "dimensionName", sourceEntry, sourceName)) {
                 entry.providedFields.add(HintField.DIMENSION_NAME);
                 entry.dimensionName = dimensionName;
             }
+        } else if (object.has("dimensionName")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "dimensionName", "a string");
         }
 
-        if (object.has("groundBlocks")) {
+        JsonArray groundBlocks = getArray(object, "groundBlocks");
+        if (groundBlocks != null) {
             entry.providedFields.add(HintField.GROUND_BLOCKS);
             entry.groundBlocks.clear();
-            entry.groundBlocks.addAll(getStringList(object, "groundBlocks"));
+            entry.groundBlocks.addAll(getStringList(groundBlocks, "groundBlocks", sourceEntry, sourceName));
+        } else if (object.has("groundBlocks")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "groundBlocks", "an array");
         }
 
-        if (object.has("lightLevels")) {
+        if (getObject(object, "lightLevels") != null) {
             entry.providedFields.add(HintField.LIGHT_LEVELS);
-            IntRange lightLevels = parseRange(object, "lightLevels", MIN_LIGHT_LEVEL, MAX_LIGHT_LEVEL, index, sourceName);
+            IntRange lightLevels = parseRange(object, "lightLevels", MIN_LIGHT_LEVEL, MAX_LIGHT_LEVEL,
+                sourceEntry, sourceName);
             entry.lightMin = lightLevels != null ? lightLevels.min : null;
             entry.lightMax = lightLevels != null ? lightLevels.max : null;
+        } else if (object.has("lightLevels")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "lightLevels", "an object");
         }
 
-        if (object.has("yLevels")) {
+        if (getObject(object, "yLevels") != null) {
             entry.providedFields.add(HintField.Y_LEVELS);
-            IntRange yLevels = parseRange(object, "yLevels");
+            IntRange yLevels = parseRange(object, "yLevels", null, null, sourceEntry, sourceName);
             entry.yMin = yLevels != null ? yLevels.min : null;
             entry.yMax = yLevels != null ? yLevels.max : null;
+        } else if (object.has("yLevels")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "yLevels", "an object");
         }
 
-        if (object.has("timeOfDay")) {
+        if (getArray(object, "timeOfDay") != null) {
             entry.providedFields.add(HintField.TIME_OF_DAY);
             entry.timeOfDay.clear();
-            entry.timeOfDay.addAll(parseTimeRanges(object, "timeOfDay", index, sourceName));
+            entry.timeOfDay.addAll(parseTimeRanges(object, "timeOfDay", sourceEntry, sourceName));
+        } else if (object.has("timeOfDay")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "timeOfDay", "an array");
         }
 
-        if (object.has("weather")) {
+        if (getArray(object, "weather") != null) {
             entry.providedFields.add(HintField.WEATHER);
             entry.weather.clear();
-            entry.weather.addAll(parseWeatherList(object, "weather", index, sourceName));
+            entry.weather.addAll(parseWeatherList(object, "weather", sourceEntry, sourceName));
+        } else if (object.has("weather")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "weather", "an array");
         }
 
-        if (object.has("requiresSky")) {
+        Boolean requiresSky = getBoolean(object, "requiresSky");
+        if (requiresSky != null) {
             entry.providedFields.add(HintField.REQUIRES_SKY);
-            entry.requiresSky = getBoolean(object, "requiresSky");
+            entry.requiresSky = requiresSky;
+        } else if (object.has("requiresSky")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "requiresSky", "a boolean");
         }
 
-        if (object.has("moonPhases")) {
+        if (getArray(object, "moonPhases") != null) {
             entry.providedFields.add(HintField.MOON_PHASES);
             entry.moonPhases.clear();
-            entry.moonPhases.addAll(getIntegerList(object, "moonPhases"));
+            entry.moonPhases.addAll(parseMoonPhases(object, sourceEntry, sourceName));
+        } else if (object.has("moonPhases")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "moonPhases", "an array");
         }
 
-        if (object.has("requiresSlimeChunk")) {
+        Boolean requiresSlimeChunk = getBoolean(object, "requiresSlimeChunk");
+        if (requiresSlimeChunk != null) {
             entry.providedFields.add(HintField.REQUIRES_SLIME_CHUNK);
-            entry.requiresSlimeChunk = getBoolean(object, "requiresSlimeChunk");
+            entry.requiresSlimeChunk = requiresSlimeChunk;
+        } else if (object.has("requiresSlimeChunk")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "requiresSlimeChunk", "a boolean");
         }
 
-        if (object.has("requiresNether")) {
+        Boolean requiresNether = getBoolean(object, "requiresNether");
+        if (requiresNether != null) {
             entry.providedFields.add(HintField.REQUIRES_NETHER);
-            entry.requiresNether = getBoolean(object, "requiresNether");
+            entry.requiresNether = requiresNether;
+        } else if (object.has("requiresNether")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "requiresNether", "a boolean");
         }
 
-        if (object.has("summon")) {
-            entry.providedFields.add(HintField.SUMMON);
-            entry.summon = parseSummonInfo(object, index, sourceName);
+        if (getObject(object, "summon") != null) {
+            SpawnConditionAnalyzer.SummonInfo summon = parseSummonInfo(object, sourceEntry, sourceName);
+            if (summon != null) {
+                entry.providedFields.add(HintField.SUMMON);
+                entry.summon = summon;
+            }
+        } else if (object.has("summon")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "summon", "an object");
         }
 
-        if (object.has("hints")) {
+        JsonArray hints = getArray(object, "hints");
+        if (hints != null) {
             entry.providedFields.add(HintField.HINTS);
             entry.hints.clear();
 
-            for (String hintKey : getStringList(object, "hints")) {
-                if (!isTranslationKey(hintKey)) {
-                    SuperMobTracker.LOGGER.warn(
-                        "Ignoring non-localized hint '{}' in spawn hint entry {} from {}.",
-                        hintKey,
-                        index,
-                        sourceName);
-                    continue;
+            for (String hintKey : getStringList(hints, "hints", sourceEntry, sourceName)) {
+                if (validateHintTranslationKey(hintKey, sourceEntry, sourceName)) {
+                    entry.hints.add(hintKey);
                 }
-
-                entry.hints.add(hintKey);
             }
+        } else if (object.has("hints")) {
+            warnInvalidFieldType(sourceEntry, sourceName, "hints", "an array");
         }
     }
 
@@ -433,8 +488,43 @@ public final class ExternalSpawnHints {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    private static boolean isTranslationKey(String value) {
-        return value != null && TRANSLATION_KEY_PATTERN.matcher(value).matches();
+    private static boolean validateHintTranslationKey(String value, HintEntrySource sourceEntry,
+                                                      String sourceName) {
+        if (!value.equals(value.toLowerCase(Locale.ROOT))) {
+            SuperMobTracker.LOGGER.error(
+                "Ignoring hint '{}' in spawn hint for {} from {} because Super Mob Tracker hint keys "
+                    + "cannot contain uppercase characters.",
+                value, sourceEntry.entityId, sourceName);
+            return false;
+        }
+
+        return validateTranslationKey(value, "hint", sourceEntry, sourceName);
+    }
+
+    private static boolean validateTranslationKey(String value, String field,
+                                                  HintEntrySource sourceEntry, String sourceName) {
+        if (value.isEmpty()) {
+            SuperMobTracker.LOGGER.error(
+                "Ignoring {} in spawn hint for {} from {} because translation keys cannot be empty.",
+                field, sourceEntry.entityId, sourceName);
+            return false;
+        }
+
+        if (INVALID_TRANSLATION_KEY_CHARACTER_PATTERN.matcher(value).find()) {
+            SuperMobTracker.LOGGER.error(
+                "Ignoring {} '{}' in spawn hint for {} from {} because translation key " +
+                "contains invalid characters.",
+                field, value, sourceEntry.entityId, sourceName);
+            return false;
+        }
+
+        if (!I18n.hasKey(value)) {
+            SuperMobTracker.LOGGER.warn(
+                "Spawn hint for {} from {} uses {} '{}' without an active translation.",
+                sourceEntry.entityId, sourceName, field, value);
+        }
+
+        return true;
     }
 
     private static boolean isNamespaceLoaded(String namespace) {
@@ -446,8 +536,8 @@ public final class ExternalSpawnHints {
 
     @Nullable
     private static SpawnConditionAnalyzer.SummonInfo parseSummonInfo(JsonObject entryObject,
-                                                                       int index,
-                                                                       String sourceName) {
+                                                                     HintEntrySource sourceEntry,
+                                                                     String sourceName) {
         JsonObject summonObject = getObject(entryObject, "summon");
         if (summonObject == null) return null;
 
@@ -458,20 +548,21 @@ public final class ExternalSpawnHints {
                 JsonElement rawItem = itemArray.get(itemIndex);
                 if (!rawItem.isJsonObject()) {
                     SuperMobTracker.LOGGER.warn(
-                        "Ignoring non-object summon item {} in spawn hint entry {} from {}.",
-                        itemIndex, index, sourceName);
+                        "Ignoring non-object summon item {} in spawn hint for {} from {}.",
+                        itemIndex, sourceEntry.entityId, sourceName);
                     continue;
                 }
 
                 JsonObject itemObject = rawItem.getAsJsonObject();
-                ResourceLocation itemId = parseResourceLocation(getString(itemObject, "id"), "summon item", index, sourceName);
+                ResourceLocation itemId = parseResourceLocation(getString(itemObject, "id"), "summon item",
+                    sourceEntry, sourceName);
                 if (itemId == null || !isNamespaceLoaded(itemId.getNamespace())) continue;
 
                 Item item = ForgeRegistries.ITEMS.getValue(itemId);
                 if (item == null) {
                     SuperMobTracker.LOGGER.warn(
-                        "Ignoring unknown summon item '{}' in spawn hint entry {} from {}.",
-                        itemId, index, sourceName);
+                        "Ignoring unknown summon item '{}' in spawn hint for {} from {}.",
+                        itemId, sourceEntry.entityId, sourceName);
                     continue;
                 }
 
@@ -481,8 +572,8 @@ public final class ExternalSpawnHints {
                 int resolvedCount = count == null ? 1 : count;
                 if (resolvedMetadata < 0 || resolvedCount < 1) {
                     SuperMobTracker.LOGGER.warn(
-                        "Ignoring summon item '{}' in spawn hint entry {} from {} because metadata must be non-negative and count must be positive.",
-                        itemId, index, sourceName);
+                        "Ignoring summon item '{}' in spawn hint for {} from {} because metadata must be non-negative and count must be positive.",
+                        itemId, sourceEntry.entityId, sourceName);
                     continue;
                 }
 
@@ -492,15 +583,17 @@ public final class ExternalSpawnHints {
 
         if (items.isEmpty()) {
             SuperMobTracker.LOGGER.warn(
-                "Ignoring summon metadata in spawn hint entry {} from {} because it has no valid items.", index, sourceName);
+                "Ignoring summon metadata in spawn hint for {} from {} because it has no valid items.",
+                sourceEntry.entityId, sourceName);
             return null;
         }
 
-        String onBlock = parseKnownBlockId(getString(summonObject, "onBlock"), index, sourceName);
-        String onEntity = parseKnownEntityId(getString(summonObject, "onEntity"), index, sourceName);
+        String onBlock = parseKnownBlockId(getString(summonObject, "onBlock"), sourceEntry, sourceName);
+        String onEntity = parseKnownEntityId(getString(summonObject, "onEntity"), sourceEntry, sourceName);
         if (onBlock != null && onEntity != null) {
             SuperMobTracker.LOGGER.warn(
-                "Spawn hint entry {} in {} specifies both summon onBlock and onEntity; using onBlock.", index, sourceName);
+                "Spawn hint for {} from {} specifies both summon onBlock and onEntity; using onBlock.",
+                sourceEntry.entityId, sourceName);
             onEntity = null;
         }
 
@@ -508,14 +601,15 @@ public final class ExternalSpawnHints {
     }
 
     @Nullable
-    private static String parseKnownBlockId(String text, int index, String sourceName) {
-        ResourceLocation blockId = parseResourceLocation(text, "summon target block", index, sourceName);
+    private static String parseKnownBlockId(String text, HintEntrySource sourceEntry, String sourceName) {
+        ResourceLocation blockId = parseResourceLocation(text, "summon target block", sourceEntry, sourceName);
         if (blockId == null || !isNamespaceLoaded(blockId.getNamespace())) return null;
 
         Block block = ForgeRegistries.BLOCKS.getValue(blockId);
         if (block == null) {
             SuperMobTracker.LOGGER.warn(
-                "Ignoring unknown summon target block '{}' in spawn hint entry {} from {}.", blockId, index, sourceName);
+                "Ignoring unknown summon target block '{}' in spawn hint for {} from {}.",
+                blockId, sourceEntry.entityId, sourceName);
             return null;
         }
 
@@ -523,13 +617,14 @@ public final class ExternalSpawnHints {
     }
 
     @Nullable
-    private static String parseKnownEntityId(String text, int index, String sourceName) {
-        ResourceLocation entityId = parseResourceLocation(text, "summon target entity", index, sourceName);
+    private static String parseKnownEntityId(String text, HintEntrySource sourceEntry, String sourceName) {
+        ResourceLocation entityId = parseResourceLocation(text, "summon target entity", sourceEntry, sourceName);
         if (entityId == null || !isNamespaceLoaded(entityId.getNamespace())) return null;
 
         if (ForgeRegistries.ENTITIES.getValue(entityId) == null) {
             SuperMobTracker.LOGGER.warn(
-                "Ignoring unknown summon target entity '{}' in spawn hint entry {} from {}.", entityId, index, sourceName);
+                "Ignoring unknown summon target entity '{}' in spawn hint for {} from {}.",
+                entityId, sourceEntry.entityId, sourceName);
             return null;
         }
 
@@ -539,7 +634,7 @@ public final class ExternalSpawnHints {
     @Nullable
     private static ResourceLocation parseResourceLocation(String text,
                                                           String label,
-                                                          int index,
+                                                          HintEntrySource sourceEntry,
                                                           String sourceName) {
         if (text == null || text.trim().isEmpty()) return null;
 
@@ -547,7 +642,8 @@ public final class ExternalSpawnHints {
             return new ResourceLocation(text);
         } catch (Exception e) {
             SuperMobTracker.LOGGER.warn(
-                "Ignoring invalid {} '{}' in spawn hint entry {} from {}.", label, text, index, sourceName);
+                "Ignoring invalid {} '{}' in spawn hint for {} from {}.",
+                label, text, sourceEntry.entityId, sourceName);
             return null;
         }
     }
@@ -555,6 +651,13 @@ public final class ExternalSpawnHints {
     private static JsonObject getObject(JsonObject object, String key) {
         if (object == null || !object.has(key) || !object.get(key).isJsonObject()) return null;
         return object.getAsJsonObject(key);
+    }
+
+    private static void warnInvalidFieldType(HintEntrySource sourceEntry, String sourceName,
+                                             String field, String expectedType) {
+        SuperMobTracker.LOGGER.warn(
+            "Ignoring {} in spawn hint for {} from {} because it must be {}.",
+            field, sourceEntry.entityId, sourceName, expectedType);
     }
 
     private static Map<String, BiomeDictionary.Type> buildBiomeTypeMap() {
@@ -580,12 +683,14 @@ public final class ExternalSpawnHints {
     }
 
     private static String getString(JsonObject object, String key) {
-        if (object == null || !object.has(key) || !object.get(key).isJsonPrimitive()) return null;
+        if (object == null || !object.has(key) || !object.get(key).isJsonPrimitive()
+            || !object.getAsJsonPrimitive(key).isString()) return null;
         return object.get(key).getAsString();
     }
 
     private static Integer getInteger(JsonObject object, String key) {
-        if (object == null || !object.has(key) || !object.get(key).isJsonPrimitive()) return null;
+        if (object == null || !object.has(key) || !object.get(key).isJsonPrimitive()
+            || !object.getAsJsonPrimitive(key).isNumber()) return null;
 
         try {
             return object.get(key).getAsInt();
@@ -595,7 +700,8 @@ public final class ExternalSpawnHints {
     }
 
     private static Boolean getBoolean(JsonObject object, String key) {
-        if (object == null || !object.has(key) || !object.get(key).isJsonPrimitive()) return null;
+        if (object == null || !object.has(key) || !object.get(key).isJsonPrimitive()
+            || !object.getAsJsonPrimitive(key).isBoolean()) return null;
 
         try {
             return object.get(key).getAsBoolean();
@@ -604,51 +710,80 @@ public final class ExternalSpawnHints {
         }
     }
 
-    private static List<String> getStringList(JsonObject object, String key) {
-        JsonArray array = getArray(object, key);
+    private static List<String> getStringList(JsonObject object, String key,
+                                              HintEntrySource sourceEntry, String sourceName) {
+        return getStringList(getArray(object, key), key, sourceEntry, sourceName);
+    }
+
+    private static List<String> getStringList(JsonArray array, String key,
+                                              HintEntrySource sourceEntry, String sourceName) {
         List<String> values = new ArrayList<>();
         if (array == null) return values;
 
-        for (JsonElement element : array) {
-            if (!element.isJsonPrimitive()) continue;
+        for (int index = 0; index < array.size(); index++) {
+            JsonElement element = array.get(index);
+            if (!element.isJsonPrimitive() || !element.getAsJsonPrimitive().isString()) {
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring non-string {}[{}] in spawn hint for {} from {}.",
+                    key, index, sourceEntry.entityId, sourceName);
+                continue;
+            }
 
             String value = element.getAsString();
-            if (value == null) continue;
-
             String trimmed = value.trim();
-            if (!trimmed.isEmpty()) values.add(trimmed);
+            if (trimmed.isEmpty()) {
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring empty {}[{}] in spawn hint for {} from {}.",
+                    key, index, sourceEntry.entityId, sourceName);
+                continue;
+            }
+
+            values.add(trimmed);
         }
 
         return values;
     }
 
-    private static List<Integer> getIntegerList(JsonObject object, String key) {
-        JsonArray array = getArray(object, key);
+    private static List<Integer> parseMoonPhases(JsonObject object,
+                                                 HintEntrySource sourceEntry, String sourceName) {
+        JsonArray array = getArray(object, "moonPhases");
         List<Integer> values = new ArrayList<>();
         if (array == null) return values;
 
-        for (JsonElement element : array) {
-            if (!element.isJsonPrimitive()) continue;
+        for (int index = 0; index < array.size(); index++) {
+            JsonElement element = array.get(index);
+            if (!element.isJsonPrimitive() || !element.getAsJsonPrimitive().isNumber()) {
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring non-integer moonPhases[{}] in spawn hint for {} from {}.",
+                    index, sourceEntry.entityId, sourceName);
+                continue;
+            }
 
             try {
-                values.add(element.getAsInt());
+                int phase = element.getAsInt();
+                if (phase < 0 || phase > 7) {
+                    SuperMobTracker.LOGGER.warn(
+                        "Ignoring out-of-range moonPhases[{}] in spawn hint for {} from {}. Expected 0-7 but got {}.",
+                        index, sourceEntry.entityId, sourceName, phase);
+                    continue;
+                }
+
+                values.add(phase);
             } catch (Exception e) {
-                // Ignore invalid entry.
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring non-integer moonPhases[{}] in spawn hint for {} from {}.",
+                    index, sourceEntry.entityId, sourceName);
             }
         }
 
         return values;
     }
 
-    private static IntRange parseRange(JsonObject object, String key) {
-        return parseRange(object, key, null, null, -1, null);
-    }
-
     private static IntRange parseRange(JsonObject object,
                                        String key,
                                        Integer minAllowed,
                                        Integer maxAllowed,
-                                       int index,
+                                       HintEntrySource sourceEntry,
                                        String sourceName) {
         JsonObject rangeObject = getObject(object, key);
         if (rangeObject == null) return null;
@@ -663,9 +798,9 @@ public final class ExternalSpawnHints {
         int resolvedMax = Math.max(min, max);
         if ((minAllowed != null && resolvedMin < minAllowed) || (maxAllowed != null && resolvedMax > maxAllowed)) {
             SuperMobTracker.LOGGER.warn(
-                "Ignoring out-of-range {} in spawn hint entry {} from {}. Expected {}-{} but got {}-{}.",
+                "Ignoring out-of-range {} in spawn hint for {} from {}. Expected {}-{} but got {}-{}.",
                 key,
-                index,
+                sourceEntry.entityId,
                 sourceName,
                 minAllowed,
                 maxAllowed,
@@ -678,14 +813,20 @@ public final class ExternalSpawnHints {
         return new IntRange(resolvedMin, resolvedMax);
     }
 
-    private static List<int[]> parseTimeRanges(JsonObject object, String key, int index, String sourceName) {
+    private static List<int[]> parseTimeRanges(JsonObject object, String key,
+                                               HintEntrySource sourceEntry, String sourceName) {
         JsonArray array = getArray(object, key);
         List<int[]> ranges = new ArrayList<>();
         if (array == null) return ranges;
 
         for (int rangeIndex = 0; rangeIndex < array.size(); rangeIndex++) {
             JsonElement element = array.get(rangeIndex);
-            if (!element.isJsonObject()) continue;
+            if (!element.isJsonObject()) {
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring non-object {}[{}] in spawn hint for {} from {}.",
+                    key, rangeIndex, sourceEntry.entityId, sourceName);
+                continue;
+            }
 
             JsonObject rangeObject = element.getAsJsonObject();
             Integer start = getInteger(rangeObject, "start");
@@ -698,10 +839,10 @@ public final class ExternalSpawnHints {
             int resolvedEnd = Math.max(start, end);
             if (resolvedStart < MIN_TIME_OF_DAY || resolvedEnd > MAX_TIME_OF_DAY) {
                 SuperMobTracker.LOGGER.warn(
-                    "Ignoring out-of-range {}[{}] in spawn hint entry {} from {}. Expected {}-{} but got {}-{}.",
+                    "Ignoring out-of-range {}[{}] in spawn hint for {} from {}. Expected {}-{} but got {}-{}.",
                     key,
                     rangeIndex,
-                    index,
+                    sourceEntry.entityId,
                     sourceName,
                     MIN_TIME_OF_DAY,
                     MAX_TIME_OF_DAY,
@@ -717,16 +858,17 @@ public final class ExternalSpawnHints {
         return ranges;
     }
 
-    private static List<String> parseWeatherList(JsonObject object, String key, int index, String sourceName) {
+    private static List<String> parseWeatherList(JsonObject object, String key,
+                                                 HintEntrySource sourceEntry, String sourceName) {
         List<String> values = new ArrayList<>();
 
-        for (String rawWeather : getStringList(object, key)) {
+        for (String rawWeather : getStringList(object, key, sourceEntry, sourceName)) {
             String weather = rawWeather.trim().toLowerCase(Locale.ROOT);
             if (!VALID_WEATHERS.contains(weather)) {
                 SuperMobTracker.LOGGER.warn(
-                    "Ignoring unsupported weather '{}' in spawn hint entry {} from {}. Supported values are {}.",
+                    "Ignoring unsupported weather '{}' in spawn hint for {} from {}. Supported values are {}.",
                     rawWeather,
-                    index,
+                    sourceEntry.entityId,
                     sourceName,
                     VALID_WEATHERS
                 );
@@ -766,20 +908,19 @@ public final class ExternalSpawnHints {
         }
     }
 
-    private static class RawHintEntry {
+    private static class HintEntrySource {
         final ResourceLocation entityId;
         final JsonObject object;
-        final int index;
 
-        RawHintEntry(ResourceLocation entityId, JsonObject object, int index) {
+        HintEntrySource(ResourceLocation entityId, JsonObject object) {
             this.entityId = entityId;
             this.object = object;
-            this.index = index;
         }
     }
 
     private static class HintEntry {
         final ResourceLocation entityId;
+        final String sourceName;
         final String spawnReason;
         final Set<HintField> providedFields = EnumSet.noneOf(HintField.class);
         final Set<String> biomeIds = new LinkedHashSet<>();
@@ -802,14 +943,17 @@ public final class ExternalSpawnHints {
         Boolean requiresNether;
         SpawnConditionAnalyzer.SummonInfo summon;
 
-        HintEntry(ResourceLocation entityId, String spawnReason) {
+        HintEntry(ResourceLocation entityId, @Nullable String spawnReason, String sourceName) {
             this.entityId = entityId;
             this.spawnReason = spawnReason;
+            this.sourceName = sourceName;
         }
 
-        HintEntry(HintEntry parentEntry, ResourceLocation entityId, @Nullable String spawnReason) {
+        HintEntry(HintEntry parentEntry, ResourceLocation entityId, @Nullable String spawnReason,
+                  String sourceName) {
             this.entityId = entityId;
             this.spawnReason = spawnReason != null ? spawnReason : parentEntry.spawnReason;
+            this.sourceName = sourceName;
             this.providedFields.addAll(parentEntry.providedFields);
             this.biomeIds.addAll(parentEntry.biomeIds);
             this.biomeTypes.addAll(parentEntry.biomeTypes);
@@ -901,6 +1045,7 @@ public final class ExternalSpawnHints {
                 ? requiresNether : spawnConditions.requiresNether;
             SpawnConditionAnalyzer.SummonInfo resolvedSummon = provides(HintField.SUMMON)
                 ? copySummonInfo(summon) : spawnConditions.summon;
+            String resolvedSpawnReason = spawnReason != null ? spawnReason : spawnConditions.spawnReason;
 
             return new SpawnConditionAnalyzer.SpawnConditions(
                 resolvedBiomes,
@@ -916,7 +1061,7 @@ public final class ExternalSpawnHints {
                 resolvedRequiresNether,
                 resolvedDimensionName,
                 resolvedDimensionId,
-                spawnReason,
+                resolvedSpawnReason,
                 resolvedSummon,
                 spawnConditions.analysisFailed
             );

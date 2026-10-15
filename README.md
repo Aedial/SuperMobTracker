@@ -23,11 +23,14 @@ A client-side Minecraft 1.12.2 mod that lets you select mobs to view spawn condi
 - **loot dump**: Required for the JEI integration of loot tables to work. See the `/smtlootdump` command section below, for more details.
 
 ## External Spawn Hints
-Some mobs do not use normal biome spawn tables at all, so the analyzer has nothing native to sample from. Super Mob Tracker then uses the external entry as the complete spawn result. Entries can also replace selected analyzed conditions for mobs with native biome spawns. Omitted fields retain the analyzed values. If you replace an array field (like `hints` or `weather`), any previous value will be overwritten, and you will need to specify *every* element you want to keep.
+Some mobs do not use normal biome spawn tables at all, so the analyzer has nothing native to sample from. Super Mob Tracker then uses the external entry as the complete spawn result.
+External spawn hints can also act as complement or correction to mobs *with* native biome spawns. Omitted fields retain the analyzed values. If you replace an array field (like `hints` or `weather`), any previous value will be overwritten, and you will need to specify *every* value you want it to have.
 
 The parser accepts biome IDs and biome dictionary types in the same entry. `types` matches any listed type, while `allTypes` requires every listed type (for example, `COLD` and `SNOWY`). A supplied dimension ID replaces the analyzed dimension. For a full external result, an omitted dimension ID is inferred from the resolved biome list when possible. Known spawn reasons such as `worldgen`, `structure`, `spawner`, `event`, and `command` get built-in labels in the GUI, while unknown values are displayed as-is. Bundled defaults are loaded first, and the user config file overrides them by entity ID.
 
 For an item-based summon, add a `summon` object with one or more item registry IDs. The GUI resolves those IDs at runtime, so the displayed item name and hover tooltip always come from the registered items. The GUI comes with JEI handling for these items, when available. `onBlock` or `onEntity` can be used to specify the target the item(s) must be used on.
+
+`hints` array and `dimensionName` (if provided) MUST be translation keys. They will be rejected if they do not conform to the expected format, and a warning will show if they do not have a valid translation. `hints` entries must be lowercase, but `dimensionName` can use mixed case. Do not forget to add the corresponding entries in your .lang file.
 
 Validation notes: `lightLevels` use the vanilla 0-15 range, `timeOfDay` uses Minecraft day ticks from 0 to 23999, and `weather` accepts `clear`, `rain`, or `thunder`.
 
@@ -40,6 +43,8 @@ Example:
     {
       "entityId": "iceandfire:seaserpent",
       "spawnReason": "worldgen",
+      "dimensionId": 0,
+      "dimensionName": "dimension.overworld",
       "biomes": {
         "types": ["OCEAN"]
       },

@@ -27,6 +27,10 @@
       "entityId": "twilightforest:hydra_head",
       "parent": "twilightforest:hydra",
       "spawnReason": "other"
+    },
+    {
+      "entityId": "minecraft:zombie",
+      "hints": ["gui.mobtracker.hint.here_is_a_custom_hint_i_hope_you_have_it_in_your_lang_file"]
     }
   ]
 }
