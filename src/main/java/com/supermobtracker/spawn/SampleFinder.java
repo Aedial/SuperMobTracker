@@ -302,23 +302,27 @@ public class SampleFinder {
         List<Integer> emptyY = new ArrayList<>();
         List<int[]> time = null;  // null indicates unknown/not determined
         List<String> weather = Collections.singletonList("unknown");
-        List<String> hints = new ArrayList<>();
+        List<SpawnConditionAnalyzer.SpawnHint> hints = new ArrayList<>();
 
         if (lastQueriedConditions != null) {
-            if (lastQueriedConditions.getOrDefault("lightLevel", false)) hints.add(HINT_LIGHT);
-            if (lastQueriedConditions.getOrDefault("groundBlock", false)) hints.add(HINT_GROUND);
-            if (lastQueriedConditions.getOrDefault("biome", false)) hints.add(HINT_BIOME);
-            if (lastQueriedConditions.getOrDefault("timeOfDay", false)) hints.add(HINT_TIME);
-            if (lastQueriedConditions.getOrDefault("weather", false)) hints.add(HINT_WEATHER);
-            if (lastQueriedConditions.getOrDefault("canSeeSky", false)) hints.add(HINT_SKY);
-            if (lastQueriedConditions.getOrDefault("moonPhase", false)) hints.add(HINT_MOON_PHASE);
-            if (lastQueriedConditions.getOrDefault("isSlimeChunk", false)) hints.add(HINT_SLIME_CHUNK);
-            if (lastQueriedConditions.getOrDefault("isNether", false)) hints.add(HINT_NETHER);
+            if (lastQueriedConditions.getOrDefault("lightLevel", false)) hints.add(createHint(HINT_LIGHT));
+            if (lastQueriedConditions.getOrDefault("groundBlock", false)) hints.add(createHint(HINT_GROUND));
+            if (lastQueriedConditions.getOrDefault("biome", false)) hints.add(createHint(HINT_BIOME));
+            if (lastQueriedConditions.getOrDefault("timeOfDay", false)) hints.add(createHint(HINT_TIME));
+            if (lastQueriedConditions.getOrDefault("weather", false)) hints.add(createHint(HINT_WEATHER));
+            if (lastQueriedConditions.getOrDefault("canSeeSky", false)) hints.add(createHint(HINT_SKY));
+            if (lastQueriedConditions.getOrDefault("moonPhase", false)) hints.add(createHint(HINT_MOON_PHASE));
+            if (lastQueriedConditions.getOrDefault("isSlimeChunk", false)) hints.add(createHint(HINT_SLIME_CHUNK));
+            if (lastQueriedConditions.getOrDefault("isNether", false)) hints.add(createHint(HINT_NETHER));
         }
 
         return new SpawnConditionAnalyzer.SpawnConditions(
             failBiomes, failGround, narrowedLight, emptyY, time, weather, hints, null, null, null, null,
-            null, Integer.MIN_VALUE, SpawnConditionAnalyzer.NATURAL_SPAWN_REASON, null, true
+            null, Integer.MIN_VALUE, SpawnConditionAnalyzer.NATURAL_SPAWN_REASON, true
         );
+    }
+
+    private SpawnConditionAnalyzer.SpawnHint createHint(String key) {
+        return new SpawnConditionAnalyzer.SpawnHint(key, Collections.emptyList());
     }
 }

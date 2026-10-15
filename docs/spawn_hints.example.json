@@ -13,7 +13,10 @@
     {
       "entityId": "minecraft:endermite",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "minecraft:ender_pearl"}]}
+      "hints": [
+        {"key": "examplemod.hint.use_item", "args": ["item:minecraft:ender_pearl"]},
+        {"key": "examplemod.hint.use_item_on_block", "args": ["item:minecraft:ender_pearl", "block:minecraft:stone"]}
+      ]
     },
     {
       "entityId": "twilightforest:hydra",

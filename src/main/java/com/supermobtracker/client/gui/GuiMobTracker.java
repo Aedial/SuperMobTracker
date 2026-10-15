@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
-import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiButton;
@@ -33,8 +32,10 @@ import com.supermobtracker.client.ClientSettings;
 import com.supermobtracker.client.gui.widgets.GuiBiomeWidget;
 import com.supermobtracker.client.gui.widgets.GuiMobListEntryWidget;
 import com.supermobtracker.client.gui.widgets.GuiRetryTextButton;
-import com.supermobtracker.client.gui.widgets.GuiSummonEntityWidget;
-import com.supermobtracker.client.gui.widgets.GuiSummonItemWidget;
+import com.supermobtracker.client.gui.widgets.GuiHintArgument;
+import com.supermobtracker.client.gui.widgets.GuiHintBlockArgument;
+import com.supermobtracker.client.gui.widgets.GuiHintEntityArgument;
+import com.supermobtracker.client.gui.widgets.GuiHintItemArgument;
 import com.supermobtracker.client.gui.widgets.GuiUnknownDimensionWidget;
 import com.supermobtracker.client.gui.widgets.MultiColumnTooltipWidget;
 import com.supermobtracker.client.util.GuiDrawingUtils;
@@ -230,7 +231,7 @@ public class GuiMobTracker extends GuiScreen {
         return true;
     }
 
-    public void selectSummonEntity(ResourceLocation id) {
+    public void selectHintEntity(ResourceLocation id) {
         selectEntity(id);
         listWidget.ensureVisible(id);
     }
@@ -677,8 +678,6 @@ public class GuiMobTracker extends GuiScreen {
         String spawnReason = I18n.format("gui.mobtracker.spawnReason",
             formatSpawnReason(spawnConditions.spawnReason));
         widgets.addWrappedText(spawnReason, dimensionColor, 12, 6, 0);
-        addSummonWidgets(widgets, spawnConditions.summon);
-
         // Only show spawn condition details if they have valid data
         if (!spawnConditions.failed()) {
             if (!spawnConditions.lightLevels.isEmpty()) {
@@ -833,13 +832,14 @@ public class GuiMobTracker extends GuiScreen {
         biomeWidget = widgets.addWidget(new GuiBiomeWidget(fontRenderer, biomesLabel, biomeColor, 12, 6, 0,
             this, translatedBiomes));
 
-        List<String> hints = spawnConditions.hints;
+        List<SpawnConditionAnalyzer.SpawnHint> hints = spawnConditions.hints;
         if (!hints.isEmpty()) {
             widgets.addSpacing(10);
             widgets.addWrappedText(I18n.format("gui.mobtracker.hintsHeader"), 0xFFFFFF, 10, 0, 0);
 
-            for (String hint : hints) {
-                widgets.addWrappedText("- " + I18n.format(hint), hintColor, 12, 6, 0);
+            for (SpawnConditionAnalyzer.SpawnHint hint : hints) {
+                GuiScrollableTextWidget widget = createHintWidget(hint);
+                if (widget != null) widgets.addWidget(widget);
             }
         }
 
@@ -847,68 +847,33 @@ public class GuiMobTracker extends GuiScreen {
         panelWidgets.setVisible(true);
     }
 
-    // TODO: move summoning info into modular hints. This will involve adding item/entity support
-    //       to the wrapped text widgets.
-    private void addSummonWidgets(GuiScrollableWidgetFactory widgets, SpawnConditionAnalyzer.SummonInfo summon) {
-        if (summon == null || summon.items.isEmpty()) return;
+    private GuiScrollableTextWidget createHintWidget(SpawnConditionAnalyzer.SpawnHint hint) {
+        List<GuiHintArgument> arguments = new ArrayList<>();
+        for (SpawnConditionAnalyzer.HintArgument argument : hint.arguments) {
+            if (argument.type == SpawnConditionAnalyzer.HintArgument.Type.ITEM) {
+                Item item = ForgeRegistries.ITEMS.getValue(argument.id);
+                if (item == null) return null;
 
-        widgets.addWrappedText(I18n.format("gui.mobtracker.summon.using"), hintColor, 12, 6, 0);
-        for (SpawnConditionAnalyzer.SummonItem summonItem : summon.items) {
-            Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(summonItem.itemId));
-            if (item == null) continue;
-
-            ItemStack stack = new ItemStack(item, summonItem.count, summonItem.metadata);
-            String name = stack.getDisplayName();
-            if (summonItem.count > 1) name = summonItem.count + " x " + name;
-            widgets.addWidget(new GuiSummonItemWidget(fontRenderer, name, GuiScrollableTextWidget.Layout.ELIDED,
-                12, -6, mc, stack));
-        }
-
-        if (summon.onBlock != null) {
-            String target = TranslationUtils.translateBlockName(summon.onBlock);
-            String targetText = I18n.format("gui.mobtracker.summon.on", target);
-            ItemStack blockStack = getSummonBlockStack(summon.onBlock);
-            if (!blockStack.isEmpty()) {
-                widgets.addWidget(new GuiSummonItemWidget(fontRenderer, targetText,
-                    GuiScrollableTextWidget.Layout.WRAPPED, 6, 0, mc, blockStack));
-            } else {
-                widgets.addWrappedText(targetText, hintColor, 12, 6, 0);
-            }
-        } else if (summon.onEntity != null) {
-            ResourceLocation targetId = new ResourceLocation(summon.onEntity);
-            Entity targetEntity = analyzer.getEntityInstance(targetId);
-            String target = TranslationUtils.formatEntityName(targetId, targetEntity, true);
-            String targetText = I18n.format("gui.mobtracker.summon.on", target);
-            if (targetEntity != null) {
-                widgets.addWidget(new GuiSummonEntityWidget(fontRenderer, targetText, this, targetId));
-            } else {
-                widgets.addWrappedText(targetText, hintColor, 12, 6, 0);
+                arguments.add(new GuiHintItemArgument(mc, new ItemStack(item, argument.count, argument.metadata)));
+            } else if (argument.type == SpawnConditionAnalyzer.HintArgument.Type.BLOCK) {
+                arguments.add(new GuiHintBlockArgument(mc, TranslationUtils.translateBlockName(argument.id.toString()),
+                    argument.id, hintColor));
+            } else if (argument.type == SpawnConditionAnalyzer.HintArgument.Type.ENTITY) {
+                arguments.add(new GuiHintEntityArgument(formatEntityName(argument.id, true), this, argument.id));
             }
         }
 
-        widgets.addSpacing(12);  // add extra spacing after summon info
+        return new GuiScrollableTextWidget(fontRenderer, hint.key, "- " + I18n.format(hint.key), hintColor,
+            hintColor, 12, 0, GuiScrollableTextWidget.Layout.WRAPPED, 6, 0, arguments);
     }
 
-    private ItemStack getSummonBlockStack(String blockId) {
-        Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockId));
-        if (block == null) return ItemStack.EMPTY;
-
-        Item item = Item.getItemFromBlock(block);
-        if (item == null) return ItemStack.EMPTY;
-
-        ItemStack stack = new ItemStack(item);
-        if (stack.isEmpty()) return ItemStack.EMPTY;
-
-        return stack;
-    }
-
-    public List<String> getSummonEntityTooltip(ResourceLocation id) {
+    public List<String> getHintEntityTooltip(ResourceLocation id) {
         String entityName = formatEntityName(id, true);
         List<String> tooltip = new ArrayList<>();
         tooltip.add(entityName);
         if (!entityName.equals(id.toString())) tooltip.add(id.toString());
         tooltip.add("");
-        tooltip.add(I18n.format("gui.mobtracker.summon.entity"));
+        tooltip.add(I18n.format("gui.mobtracker.hint.entity"));
         return tooltip;
     }
 

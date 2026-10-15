@@ -36,7 +36,7 @@ public class ConditionExpander {
         @Nullable public final String dimension = null;
         public final int dimensionId = 0;
 
-        public final List<String> hints = new ArrayList<>();
+        public final List<SpawnConditionAnalyzer.SpawnHint> hints = new ArrayList<>();
 
         @Nullable public List<String> groundBlocks = null;    // null = doesn't matter, else list of valid ground blocks
         @Nullable public List<int[]> timeRanges = null;       // null = doesn't matter, else list of valid time ranges [start, end] in ticks
@@ -343,7 +343,6 @@ public class ConditionExpander {
             expanded.dimension,
             expanded.dimensionId,
             SpawnConditionAnalyzer.NATURAL_SPAWN_REASON,
-            null,
             false
         );
     }

@@ -33,7 +33,12 @@
     {
       "entityId": "minecraft:endermite",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "minecraft:ender_pearl"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:minecraft:ender_pearl"]
+        }
+      ]
     },
     {
       "entityId": "minecraft:evocation_illager",
@@ -76,10 +81,12 @@
     {
       "entityId": "minecraft:snowman",
       "spawnReason": "event",
-      "summon": {
-        "items": [{"id": "minecraft:pumpkin"}],
-        "onBlock": "minecraft:snow"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:minecraft:pumpkin", "block:minecraft:snow"]
+        }
+      ]
     },
     {
       "entityId": "minecraft:villager",
@@ -903,15 +910,22 @@
       "biomes": {"ids": ["thebetweenlands:sludge_plains", "thebetweenlands:marsh_0", "thebetweenlands:marsh_1"]},
       "dimensionId": 20,
       "dimensionName": "dimension.thebetweenlands",
-      "summon": {"items": [{"id": "thebetweenlands:mummy_bait"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:thebetweenlands:mummy_bait"]
+        }
+      ]
     },
     {
       "entityId": "thebetweenlands:emberling",
       "spawnReason": "event",
-      "summon": {
-        "items": [{"id": "thebetweenlands:items_misc", "metadata": 45}],
-        "onEntity": "thebetweenlands:wild_emberling"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:thebetweenlands:items_misc@45", "entity:thebetweenlands:wild_emberling"]
+        }
+      ]
     },
     {
       "entityId": "thebetweenlands:emberling_shaman",
@@ -930,7 +944,12 @@
     {
       "entityId": "thebetweenlands:mire_snail_egg",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "thebetweenlands:mire_snail_egg"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:thebetweenlands:mire_snail_egg"]
+        }
+      ]
     },
     {
       "entityId": "thebetweenlands:small_sludge_worm",
@@ -1314,7 +1333,12 @@
       "spawnReason": "event",
       "dimensionId": 66,
       "dimensionName": "dimension.erebus",
-      "summon": {"items": [{"id": "minecraft:bed"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:minecraft:bed"]
+        }
+      ]
     },
     {
       "entityId": "erebus:erebus.bot_fly_larva",
@@ -1352,10 +1376,12 @@
     {
       "entityId": "erebus:erebus.umber_golem",
       "spawnReason": "event",
-      "summon": {
-        "items": [{"id": "erebus:wand_of_animation"}],
-        "onBlock": "erebus:umber_golem_statue"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:erebus:wand_of_animation", "block:erebus:umber_golem_statue"]
+        }
+      ]
     },
 
     {
@@ -1396,7 +1422,16 @@
     {
       "entityId": "iceandfire:myrmex_swarmer",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "iceandfire:myrmex_desert_swarm"}, {"id": "iceandfire:myrmex_jungle_swarm"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:iceandfire:myrmex_desert_swarm"]
+        },
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:iceandfire:myrmex_jungle_swarm"]
+        }
+      ]
     },
     {
       "entityId": "mod_lavacow:piranha",
@@ -1415,18 +1450,22 @@
     {
       "entityId": "mod_lavacow:skeletonking",
       "spawnReason": "event",
-      "summon": {
-        "items": [{"id": "mod_lavacow:kings_crown", "metadata": 1}],
-        "onBlock": "minecraft:skull"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:mod_lavacow:kings_crown@1", "block:minecraft:skull"]
+        }
+      ]
     },
     {
       "entityId": "mod_lavacow:lavacow",
       "spawnReason": "event",
-      "summon": {
-        "items": [{"id": "mod_lavacow:potion_of_mooten_lava"}],
-        "onEntity": "minecraft:cow"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:mod_lavacow:potion_of_mooten_lava", "entity:minecraft:cow"]
+        }
+      ]
     },
     {
       "entityId": "mod_lavacow:mimic",
@@ -1466,7 +1505,12 @@
       "biomes": {"types": ["NETHER"]},
       "dimensionId": -1,
       "dimensionName": "dimension.the_nether",
-      "summon": {"items": [{"id": "divinerpg:call_of_the_watcher"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:call_of_the_watcher"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:king_of_scorchers",
@@ -1474,14 +1518,24 @@
       "biomes": {"types": ["NETHER"]},
       "dimensionId": -1,
       "dimensionName": "dimension.the_nether",
-      "summon": {"items": [{"id": "divinerpg:infernal_flame"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:infernal_flame"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:ancient_entity",
       "spawnReason": "event",
       "dimensionId": 0,
       "dimensionName": "dimension.overworld",
-      "summon": {"items": [{"id": "divinerpg:mysterious_clock"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:mysterious_clock"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:livestock_merchant",
@@ -1520,7 +1574,12 @@
       "spawnReason": "event",
       "dimensionId": 1,
       "dimensionName": "dimension.the_end",
-      "summon": {"items": [{"id": "divinerpg:horde_horn"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:horde_horn"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:ayeraco_green",
@@ -1543,69 +1602,116 @@
       "spawnReason": "event",
       "dimensionId": 424,
       "dimensionName": "dimension.divinerpg.mortum",
-      "summon": {"items": [{"id": "divinerpg:karot_crystal"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:karot_crystal"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:reyvor",
       "spawnReason": "event",
       "dimensionId": 424,
       "dimensionName": "dimension.divinerpg.mortum",
-      "summon": {"items": [{"id": "divinerpg:reyvor_crystal"}, {"id": "divinerpg:densos_crystal"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:reyvor_crystal"]
+        },
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:densos_crystal"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:densos",
       "spawnReason": "event",
       "dimensionId": 424,
       "dimensionName": "dimension.divinerpg.mortum",
-      "summon": {"items": [{"id": "divinerpg:reyvor_crystal"}, {"id": "divinerpg:densos_crystal"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:reyvor_crystal"]
+        },
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:densos_crystal"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:soul_fiend",
       "spawnReason": "event",
       "dimensionId": 424,
       "dimensionName": "dimension.divinerpg.mortum",
-      "summon": {"items": [{"id": "divinerpg:soul_fiend_crystal"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:soul_fiend_crystal"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:twilight_demon",
       "spawnReason": "event",
       "dimensionId": 424,
       "dimensionName": "dimension.divinerpg.mortum",
-      "summon": {"items": [{"id": "divinerpg:twilight_demon_crystal"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:twilight_demon_crystal"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:vamacheron",
       "spawnReason": "event",
       "dimensionId": 424,
       "dimensionName": "dimension.divinerpg.mortum",
-      "summon": {"items": [{"id": "divinerpg:vamacheron_crystal"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:vamacheron_crystal"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:parasecta",
       "spawnReason": "event",
       "dimensionId": 426,
       "dimensionName": "dimension.divinerpg.arcana",
-      "summon": {
-        "items": [{"id": "divinerpg:wizards_book"}],
-        "onBlock": "divinerpg:parasecta_altar"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:divinerpg:wizards_book", "block:divinerpg:parasecta_altar"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:dramix",
       "spawnReason": "event",
       "dimensionId": 426,
       "dimensionName": "dimension.divinerpg.arcana",
-      "summon": {
-        "items": [{"id": "divinerpg:wizards_book"}],
-        "onBlock": "divinerpg:dramix_altar"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:divinerpg:wizards_book", "block:divinerpg:dramix_altar"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:wraith",
       "spawnReason": "event",
       "dimensionId": 426,
       "dimensionName": "dimension.divinerpg.arcana",
-      "summon": {"items": [{"id": "divinerpg:ghostbane"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:divinerpg:ghostbane"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:hive_queen",
@@ -1703,50 +1809,60 @@
       "spawnReason": "event",
       "dimensionId": 427,
       "dimensionName": "dimension.divinerpg.vethea",
-      "summon": {
-        "items": [{"id": "divinerpg:dream_flint"}],
-        "onBlock": "divinerpg:wreck_altar"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:divinerpg:dream_flint", "block:divinerpg:wreck_altar"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:raglok",
       "spawnReason": "event",
       "dimensionId": 427,
       "dimensionName": "dimension.divinerpg.vethea",
-      "summon": {
-        "items": [{"id": "divinerpg:dream_flint"}],
-        "onBlock": "divinerpg:raglok_altar"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:divinerpg:dream_flint", "block:divinerpg:raglok_altar"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:karos",
       "spawnReason": "event",
       "dimensionId": 427,
       "dimensionName": "dimension.divinerpg.vethea",
-      "summon": {
-        "items": [{"id": "divinerpg:dream_flint"}],
-        "onBlock": "divinerpg:karos_altar"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:divinerpg:dream_flint", "block:divinerpg:karos_altar"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:quadro",
       "spawnReason": "event",
       "dimensionId": 427,
       "dimensionName": "dimension.divinerpg.vethea",
-      "summon": {
-        "items": [{"id": "divinerpg:dream_flint"}],
-        "onBlock": "divinerpg:quadrotic_altar"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:divinerpg:dream_flint", "block:divinerpg:quadrotic_altar"]
+        }
+      ]
     },
     {
       "entityId": "divinerpg:lady_luna",
       "spawnReason": "event",
       "dimensionId": 427,
       "dimensionName": "dimension.divinerpg.vethea",
-      "summon": {
-        "items": [{"id": "divinerpg:moon_clock"}],
-        "onBlock": "divinerpg:lunic_altar"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:divinerpg:moon_clock", "block:divinerpg:lunic_altar"]
+        }
+      ]
     },
 
     {
@@ -1760,7 +1876,12 @@
     {
       "entityId": "aoa3:alluricorn",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:alluricorn_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:alluricorn_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:amphibior",
@@ -1822,7 +1943,12 @@
       "biomes": {"ids": ["aoa3:greckon"]},
       "dimensionId": 810,
       "dimensionName": "dimension.aoa.greckon",
-      "summon": {"items": [{"id": "aoa3:haunted_idol"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:haunted_idol"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:bane_big",
@@ -1850,11 +1976,13 @@
       "biomes": {"ids": ["aoa3:barathos"]},
       "dimensionId": 802,
       "dimensionName": "dimension.aoa.barathos",
-      "summon": {
-        "items": [{"id": "aoa3:warlock_gem"}],
-        "onBlock": "aoa3:baroness_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:warlock_gem", "block:aoa3:baroness_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:baumba",
@@ -1867,7 +1995,12 @@
     {
       "entityId": "aoa3:blissard",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:blissard_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:blissard_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:bloodmist",
@@ -1886,11 +2019,13 @@
       "biomes": {"ids": ["aoa3:haven"]},
       "dimensionId": 811,
       "dimensionName": "dimension.aoa.haven",
-      "summon": {
-        "items": [{"id": "aoa3:voliant_heart"}],
-        "onBlock": "aoa3:guardian_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:voliant_heart", "block:aoa3:guardian_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:blue_rune_templar",
@@ -1938,16 +2073,23 @@
       "biomes": {"ids": ["aoa3:runandor"]},
       "dimensionId": 819,
       "dimensionName": "dimension.aoa.runandor",
-      "summon": {
-        "items": [{"id": "aoa3:mega_rune_stone"}],
-        "onBlock": "aoa3:clunkhead_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:mega_rune_stone", "block:aoa3:clunkhead_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:compeer",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:compeer_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:compeer_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:coniferon",
@@ -1960,20 +2102,32 @@
     {
       "entityId": "aoa3:construct_of_servility",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:construct_of_servility_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:construct_of_servility_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:corallus",
       "spawnReason": "event",
-      "summon": {
-        "items": [{"id": "aoa3:amphibiyte_lung"}],
-        "onBlock": "minecraft:water"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:amphibiyte_lung", "block:minecraft:water"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:corby",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:corby_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:corby_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:corrupted_traveller",
@@ -1988,7 +2142,12 @@
       "biomes": {"ids": ["aoa3:candyland"]},
       "dimensionId": 803,
       "dimensionName": "dimension.aoa.candyland",
-      "summon": {"items": [{"id": "aoa3:treat_bag"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:treat_bag"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:craexxeus",
@@ -1996,16 +2155,23 @@
       "biomes": {"ids": ["aoa3:shyrelands"]},
       "dimensionId": 820,
       "dimensionName": "dimension.aoa.shyrelands",
-      "summon": {
-        "items": [{"id": "aoa3:ancient_ring"}],
-        "onBlock": "aoa3:craexxeus_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:ancient_ring", "block:aoa3:craexxeus_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:craggy",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:craggy_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:craggy_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:creep",
@@ -2013,11 +2179,13 @@
       "biomes": {"ids": ["aoa3:creeponia"]},
       "dimensionId": 805,
       "dimensionName": "dimension.aoa.creeponia",
-      "summon": {
-        "items": [{"id": "aoa3:explosive_gems"}],
-        "onBlock": "aoa3:creep_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:explosive_gems", "block:aoa3:creep_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:creep_banker",
@@ -2065,11 +2233,13 @@
       "biomes": {"ids": ["aoa3:crystevia"]},
       "dimensionId": 806,
       "dimensionName": "dimension.aoa.crystevia",
-      "summon": {
-        "items": [{"id": "aoa3:giant_crystal"}],
-        "onBlock": "aoa3:power_station"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:giant_crystal", "block:aoa3:power_station"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:dark_beast",
@@ -2116,16 +2286,23 @@
       "biomes": {"ids": ["aoa3:lborean"]},
       "dimensionId": 814,
       "dimensionName": "dimension.aoa.lborean",
-      "summon": {
-        "items": [{"id": "aoa3:call_of_the_drake"}],
-        "onBlock": "aoa3:dracyon_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:call_of_the_drake", "block:aoa3:dracyon_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:draggy",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:draggy_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:draggy_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:dungeon_keeper",
@@ -2168,11 +2345,13 @@
       "biomes": {"ids": ["aoa3:abyss"]},
       "dimensionId": 800,
       "dimensionName": "dimension.aoa.abyss",
-      "summon": {
-        "items": [{"id": "aoa3:staring_eye"}],
-        "onBlock": "aoa3:illusion_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:staring_eye", "block:aoa3:illusion_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:elusive_clone",
@@ -2181,7 +2360,12 @@
     {
       "entityId": "aoa3:ender_carrier",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:ender_carrier_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:ender_carrier_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:enforcer",
@@ -2205,11 +2389,13 @@
       "biomes": {"ids": ["aoa3:vox_ponds"]},
       "dimensionId": 821,
       "dimensionName": "dimension.aoa.voxPonds",
-      "summon": {
-        "items": [{"id": "aoa3:apoco_stone"}],
-        "onBlock": "aoa3:exoid_station"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:apoco_stone", "block:aoa3:exoid_station"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:explosives_expert",
@@ -2270,7 +2456,12 @@
     {
       "entityId": "aoa3:friendly_creeper",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:creepified_sword"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:creepified_sword"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:fungock",
@@ -2349,7 +2540,12 @@
     {
       "entityId": "aoa3:gnawer",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:gnawer_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:gnawer_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:golden_lottoman",
@@ -2386,7 +2582,12 @@
     {
       "entityId": "aoa3:goofer",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:goofer_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:goofer_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:gorb_arms_dealer",
@@ -2418,11 +2619,13 @@
       "biomes": {"ids": ["aoa3:lelyetia"]},
       "dimensionId": 815,
       "dimensionName": "dimension.aoa.lelyetia",
-      "summon": {
-        "items": [{"id": "aoa3:guardians_eye"}],
-        "onBlock": "aoa3:graw_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:guardians_eye", "block:aoa3:graw_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:green_flower",
@@ -2434,11 +2637,13 @@
       "biomes": {"ids": ["aoa3:haven"]},
       "dimensionId": 811,
       "dimensionName": "dimension.aoa.haven",
-      "summon": {
-        "items": [{"id": "aoa3:voliant_heart"}],
-        "onBlock": "aoa3:guardian_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:voliant_heart", "block:aoa3:guardian_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:green_rune_templar",
@@ -2454,11 +2659,13 @@
       "biomes": {"ids": ["aoa3:celeve"]},
       "dimensionId": 804,
       "dimensionName": "dimension.aoa.celeve",
-      "summon": {
-        "items": [{"id": "aoa3:toy_gyrocopter"}],
-        "onBlock": "aoa3:toy_box"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:toy_gyrocopter", "block:aoa3:toy_box"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:harkos",
@@ -2486,12 +2693,22 @@
     {
       "entityId": "aoa3:healing_golem",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:healing_golem_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:healing_golem_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:hellquin",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:hellquin_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:hellquin_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:hive_king",
@@ -2499,16 +2716,23 @@
       "biomes": {"ids": ["aoa3:barathos"]},
       "dimensionId": 802,
       "dimensionName": "dimension.aoa.barathos",
-      "summon": {
-        "items": [{"id": "aoa3:hive_egg"}],
-        "onBlock": "aoa3:hive_spawner"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:hive_egg", "block:aoa3:hive_spawner"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:hive_soldier",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:hive_staff"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:hive_staff"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:hive_worker",
@@ -2517,7 +2741,12 @@
     {
       "entityId": "aoa3:horntail",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:horntail_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:horntail_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:horon",
@@ -2548,11 +2777,13 @@
       "biomes": {"ids": ["aoa3:lborean"]},
       "dimensionId": 814,
       "dimensionName": "dimension.aoa.lborean",
-      "summon": {
-        "items": [{"id": "aoa3:pure_water_stone"}],
-        "onBlock": "aoa3:hydro_table"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:pure_water_stone", "block:aoa3:hydro_table"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:hydrolon",
@@ -2628,7 +2859,12 @@
       "biomes": {"types": ["NETHER"]},
       "dimensionId": -1,
       "dimensionName": "dimension.the_nether",
-      "summon": {"items": [{"id": "aoa3:explosive_idol"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:explosive_idol"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:king_shroomus",
@@ -2636,7 +2872,12 @@
       "biomes": {"ids": ["aoa3:mysterium"]},
       "dimensionId": 817,
       "dimensionName": "dimension.aoa.mysterium",
-      "summon": {"items": [{"id": "aoa3:shroom_stone"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:shroom_stone"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:klobber",
@@ -2652,11 +2893,13 @@
       "biomes": {"ids": ["aoa3:deeplands"]},
       "dimensionId": 807,
       "dimensionName": "dimension.aoa.deeplands",
-      "summon": {
-        "items": [{"id": "aoa3:boulder_dash"}],
-        "onBlock": "aoa3:kror_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:boulder_dash", "block:aoa3:kror_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:leafy_giant",
@@ -2729,12 +2972,22 @@
     {
       "entityId": "aoa3:mecha_cyclops",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:mecha_cyclops_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:mecha_cyclops_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:mecha_skellox",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:mecha_skellox_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:mecha_skellox_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:mechbot",
@@ -2742,11 +2995,13 @@
       "biomes": {"ids": ["aoa3:iromine"]},
       "dimensionId": 813,
       "dimensionName": "dimension.aoa.iromine",
-      "summon": {
-        "items": [{"id": "aoa3:gold_spring"}],
-        "onBlock": "aoa3:mechbot_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:gold_spring", "block:aoa3:mechbot_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:mechyon",
@@ -2825,7 +3080,12 @@
       "biomes": {"types": ["NETHER"]},
       "dimensionId": -1,
       "dimensionName": "dimension.the_nether",
-      "summon": {"items": [{"id": "aoa3:nethengeic_callstone"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:nethengeic_callstone"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:night_watcher",
@@ -2894,7 +3154,12 @@
     {
       "entityId": "aoa3:penguin",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:penguin_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:penguin_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:penumbra",
@@ -2922,7 +3187,12 @@
     {
       "entityId": "aoa3:plateosaur",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:plateosaur_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:plateosaur_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:pod_plant",
@@ -2954,10 +3224,12 @@
       "biomes": {"ids": ["aoa3:precasia"]},
       "dimensionId": 818,
       "dimensionName": "dimension.aoa.precasia",
-      "summon": {
-        "items": [{"id": "aoa3:blank_realmstone"}],
-        "onBlock": "minecraft:carrots"
-      }
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:blank_realmstone", "block:minecraft:carrots"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:primordial_banker",
@@ -3022,7 +3294,12 @@
     {
       "entityId": "aoa3:rammerhorn",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:rammerhorn_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:rammerhorn_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:rawbone",
@@ -3061,11 +3338,13 @@
       "biomes": {"ids": ["aoa3:haven"]},
       "dimensionId": 811,
       "dimensionName": "dimension.aoa.haven",
-      "summon": {
-        "items": [{"id": "aoa3:voliant_heart"}],
-        "onBlock": "aoa3:guardian_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:voliant_heart", "block:aoa3:guardian_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:red_rune_templar",
@@ -3089,7 +3368,12 @@
       "biomes": {"ids": ["aoa3:haven"]},
       "dimensionId": 811,
       "dimensionName": "dimension.aoa.haven",
-      "summon": {"items": [{"id": "aoa3:heavy_boulder"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:heavy_boulder"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:rocky_lottoman",
@@ -3149,12 +3433,22 @@
     {
       "entityId": "aoa3:shaddy",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:shaddy_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:shaddy_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:shadow_stalker",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:shadowlord_staff"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:shadowlord_staff"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:shadowlord",
@@ -3162,11 +3456,13 @@
       "biomes": {"ids": ["aoa3:abyss"]},
       "dimensionId": 800,
       "dimensionName": "dimension.aoa.abyss",
-      "summon": {
-        "items": [{"id": "aoa3:book_of_shadows"}],
-        "onBlock": "aoa3:shadow_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:book_of_shadows", "block:aoa3:shadow_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:shavo",
@@ -3214,11 +3510,13 @@
       "biomes": {"ids": ["aoa3:iromine"]},
       "dimensionId": 813,
       "dimensionName": "dimension.aoa.iromine",
-      "summon": {
-        "items": [{"id": "aoa3:silvro_coin"}],
-        "onBlock": "aoa3:silverfoot_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:silvro_coin", "block:aoa3:silverfoot_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:skele_elder",
@@ -3273,7 +3571,12 @@
       "spawnReason": "event",
       "dimensionId": 0,
       "dimensionName": "dimension.overworld",
-      "summon": {"items": [{"id": "aoa3:troll_idol"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:troll_idol"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:soulscorne",
@@ -3294,7 +3597,12 @@
     {
       "entityId": "aoa3:spikeback",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:spikeback_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:spikeback_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:spinoledon",
@@ -3321,7 +3629,12 @@
     {
       "entityId": "aoa3:spraggy",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:spraggy_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:spraggy_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:stone_giant",
@@ -3408,7 +3721,12 @@
       "biomes": {"ids": ["aoa3:precasia"]},
       "dimensionId": 818,
       "dimensionName": "dimension.aoa.precasia",
-      "summon": {"items": [{"id": "aoa3:bone_horn"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:bone_horn"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:undead_troll",
@@ -3455,11 +3773,13 @@
       "biomes": {"ids": ["aoa3:gardencia"]},
       "dimensionId": 809,
       "dimensionName": "dimension.aoa.gardencia",
-      "summon": {
-        "items": [{"id": "aoa3:petals"}],
-        "onBlock": "aoa3:vinocorne_shrine"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:petals", "block:aoa3:vinocorne_shrine"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:visage",
@@ -3475,11 +3795,13 @@
       "biomes": {"ids": ["aoa3:lunalus"]},
       "dimensionId": 816,
       "dimensionName": "dimension.aoa.lunalus",
-      "summon": {
-        "items": [{"id": "aoa3:observing_eye"}],
-        "onBlock": "aoa3:visualent_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:observing_eye", "block:aoa3:visualent_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:voxxulon",
@@ -3487,16 +3809,23 @@
       "biomes": {"ids": ["aoa3:vox_ponds"]},
       "dimensionId": 821,
       "dimensionName": "dimension.aoa.voxPonds",
-      "summon": {
-        "items": [{"id": "aoa3:vile_stone"}],
-        "onBlock": "aoa3:voxxulon_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:vile_stone", "block:aoa3:voxxulon_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:waggy",
       "spawnReason": "event",
-      "summon": {"items": [{"id": "aoa3:waggy_slab"}]}
+      "hints": [
+        {
+          "key": "gui.mobtracker.summon.using",
+          "args": ["item:aoa3:waggy_slab"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:walker",
@@ -3526,11 +3855,13 @@
       "biomes": {"ids": ["aoa3:haven"]},
       "dimensionId": 811,
       "dimensionName": "dimension.aoa.haven",
-      "summon": {
-        "items": [{"id": "aoa3:voliant_heart"}],
-        "onBlock": "aoa3:guardian_altar"
-      },
-      "hints": ["gui.mobtracker.hint.structure", "gui.mobtracker.hint.block_triggered"]
+      "hints": [
+        "gui.mobtracker.hint.structure",
+        {
+          "key": "gui.mobtracker.summon.using_on",
+          "args": ["item:aoa3:voliant_heart", "block:aoa3:guardian_altar"]
+        }
+      ]
     },
     {
       "entityId": "aoa3:yellow_rune_templar",

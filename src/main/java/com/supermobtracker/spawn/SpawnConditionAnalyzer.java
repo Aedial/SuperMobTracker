@@ -168,7 +168,7 @@ public class SpawnConditionAnalyzer {
         public final List<Integer> yLevels;
         public final List<int[]> timeOfDay;        // null = doesn't matter, else list of valid time ranges [start, end] in ticks
         public final List<String> weather;         // null = doesn't matter, else list of valid weathers
-        public final List<String> hints;
+        public final List<SpawnHint> hints;
         public final Boolean requiresSky;          // null = doesn't matter, true = requires sky, false = requires no sky
         public final List<Integer> moonPhases;     // null = doesn't matter, else list of valid moon phases (0-7)
         public final Boolean requiresSlimeChunk;   // null = doesn't matter, true = requires slime chunk, false = excludes slime chunk
@@ -176,7 +176,6 @@ public class SpawnConditionAnalyzer {
         public final String dimension;
         public final int dimensionId;
         public final String spawnReason;
-        public final SummonInfo summon;
         public final boolean analysisFailed;
 
         public SpawnConditions(@Nonnull List<String> biomes,
@@ -185,7 +184,7 @@ public class SpawnConditionAnalyzer {
                                @Nonnull List<Integer> yLevels,
                                @Nullable List<int[]> timeOfDay,
                                @Nullable List<String> weather,
-                               @Nonnull List<String> hints,
+                               @Nonnull List<SpawnHint> hints,
                                @Nullable Boolean requiresSky,
                                @Nullable List<Integer> moonPhases,
                                @Nullable Boolean requiresSlimeChunk,
@@ -193,7 +192,6 @@ public class SpawnConditionAnalyzer {
                                @Nullable String dimension,
                                int dimensionId,
                                @Nullable String spawnReason,
-                               @Nullable SummonInfo summon,
                                boolean analysisFailed) {
             this.biomes = biomes;
             this.groundBlocks = groundBlocks;
@@ -209,7 +207,6 @@ public class SpawnConditionAnalyzer {
             this.dimension = dimension;
             this.dimensionId = dimensionId;
             this.spawnReason = spawnReason;
-            this.summon = summon;
             this.analysisFailed = analysisFailed;
         }
 
@@ -244,32 +241,36 @@ public class SpawnConditionAnalyzer {
     }
 
     /**
-     * Data-driven item and target information for a non-natural summon.
+     * Data-driven text and interactive arguments shown for a spawn hint.
      */
-    public static final class SummonInfo {
-        public final List<SummonItem> items;
-        @Nullable public final String onBlock;
-        @Nullable public final String onEntity;
+    public static final class SpawnHint {
+        public final String key;
+        public final List<HintArgument> arguments;
 
-        public SummonInfo(@Nonnull List<SummonItem> items,
-                          @Nullable String onBlock,
-                          @Nullable String onEntity) {
-            this.items = new ArrayList<>(items);
-            this.onBlock = onBlock;
-            this.onEntity = onEntity;
+        public SpawnHint(String key, @Nonnull List<HintArgument> arguments) {
+            this.key = key;
+            this.arguments = new ArrayList<>(arguments);
         }
     }
 
     /**
-     * An item stack used by a summon. Metadata supports 1.12 sub-items such as skull variants.
+     * An item, block, or entity inserted into an external spawn hint.
      */
-    public static final class SummonItem {
-        public final String itemId;
+    public static final class HintArgument {
+        public enum Type {
+            ITEM,
+            BLOCK,
+            ENTITY
+        }
+
+        public final Type type;
+        public final ResourceLocation id;
         public final int metadata;
         public final int count;
 
-        public SummonItem(String itemId, int metadata, int count) {
-            this.itemId = itemId;
+        public HintArgument(Type type, ResourceLocation id, int metadata, int count) {
+            this.type = type;
+            this.id = id;
             this.metadata = metadata;
             this.count = count;
         }
@@ -1015,7 +1016,7 @@ public class SpawnConditionAnalyzer {
             return new SpawnConditions(
                 biomes, result.groundBlocks, result.lightLevels, result.yLevels, result.timeOfDay, result.weather,
                 result.hints, result.requiresSky, result.moonPhases, result.requiresSlimeChunk, result.requiresNether,
-                dimensionName, targetDimId, NATURAL_SPAWN_REASON, null, result.analysisFailed
+                dimensionName, targetDimId, NATURAL_SPAWN_REASON, result.analysisFailed
             );
         }
 
@@ -1027,7 +1028,7 @@ public class SpawnConditionAnalyzer {
 
         return new SpawnConditions(
             biomes, groundBlocks, narrowedLight, yLevels, timeOfDay, weather, null, null, null, null, null,
-            dimensionName, targetDimId, NATURAL_SPAWN_REASON, null, true
+            dimensionName, targetDimId, NATURAL_SPAWN_REASON, true
         );
     }
 

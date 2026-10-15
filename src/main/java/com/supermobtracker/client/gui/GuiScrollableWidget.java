@@ -22,10 +22,22 @@ public abstract class GuiScrollableWidget {
         return false;
     }
 
+    public boolean onClick(int mouseX, int mouseY, int x, int y, int width, int mouseButton) {
+        return onClick(mouseButton);
+    }
+
     public void onHover() {
+    }
+
+    public void onHover(int mouseX, int mouseY, int x, int y, int width) {
+        onHover();
     }
 
     public List<String> getTooltip() {
         return Collections.emptyList();
+    }
+
+    public List<String> getTooltip(int mouseX, int mouseY, int x, int y, int width) {
+        return getTooltip();
     }
 }

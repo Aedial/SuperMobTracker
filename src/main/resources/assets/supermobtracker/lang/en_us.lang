@@ -252,10 +252,10 @@ gui.mobtracker.spawnReason.spawner=Spawner
 gui.mobtracker.spawnReason.event=Event/script
 gui.mobtracker.spawnReason.command=Command
 gui.mobtracker.spawnReason.other=Unknown/other
-gui.mobtracker.summon.using=Can be summoned by using:
-gui.mobtracker.summon.on=on %s.
-gui.mobtracker.summon.entity=Left-click or right-click to open this mob in the tracker
-gui.mobtracker.summon.jei=Left-click for recipes, right-click for uses in JEI
+gui.mobtracker.summon.using=Can be summoned by using {}.
+gui.mobtracker.summon.using_on=Can be summoned by using {} on {}.
+gui.mobtracker.hint.entity=Left-click to open this mob in the tracker
+gui.mobtracker.hint.jei=Left-click for recipes, right-click for uses in JEI
 
 ## HUD Position Selector
 gui.supermobtracker.hudPosition.top_left=Top Left

@@ -28,6 +28,8 @@ public class GuiScrollableWidgetList {
     private int firstVisibleWidget;
     private int lastVisibleWidget;
     private GuiScrollableWidget hoveredWidget;
+    private int hoveredMouseX;
+    private int hoveredMouseY;
     private boolean layoutDirty = true;
     private boolean visibleRangeDirty = true;
     private boolean draggingScrollbar;
@@ -89,8 +91,13 @@ public class GuiScrollableWidgetList {
         ensureLayout();
         updateVisibleRange();
         hoveredWidget = widgetAt(mouseX, mouseY);
-        if (hoveredWidget != null) hoveredWidget.onHover();
+        hoveredMouseX = mouseX;
+        hoveredMouseY = mouseY;
         if (width <= 0 || height <= 0 || contentWidth <= 0) return;
+
+        if (hoveredWidget != null) {
+            hoveredWidget.onHover(mouseX, mouseY, x + contentLeftPadding, getWidgetY(hoveredWidget), contentWidth);
+        }
 
         GL11.glEnable(GL11.GL_SCISSOR_TEST);
         ScaledResolution resolution = new ScaledResolution(minecraft);
@@ -132,7 +139,7 @@ public class GuiScrollableWidgetList {
         GuiScrollableWidget widget = widgetAt(mouseX, mouseY);
         if (widget == null) return false;
 
-        return widget.onClick(mouseButton);
+        return widget.onClick(mouseX, mouseY, x + contentLeftPadding, getWidgetY(widget), contentWidth, mouseButton);
     }
 
     public void scroll(int amount) {
@@ -171,7 +178,8 @@ public class GuiScrollableWidgetList {
     public List<String> getHoveredTooltip() {
         if (hoveredWidget == null) return Collections.emptyList();
 
-        List<String> tooltip = hoveredWidget.getTooltip();
+        List<String> tooltip = hoveredWidget.getTooltip(hoveredMouseX, hoveredMouseY, x + contentLeftPadding,
+            getWidgetY(hoveredWidget), contentWidth);
         return tooltip != null ? tooltip : Collections.emptyList();
     }
 
@@ -253,6 +261,11 @@ public class GuiScrollableWidgetList {
         }
 
         return null;
+    }
+
+    private int getWidgetY(GuiScrollableWidget widget) {
+        int index = widgets.indexOf(widget);
+        return index < 0 ? y : y + widgetOffsets[index] - scrollOffset;
     }
 
     private void setScrollOffset(int offset) {

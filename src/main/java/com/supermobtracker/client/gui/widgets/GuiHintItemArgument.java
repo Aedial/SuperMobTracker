@@ -4,24 +4,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.resources.I18n;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.item.ItemStack;
 
-import com.supermobtracker.client.gui.GuiScrollableTextWidget;
 import com.supermobtracker.integration.jei.JEIHelper;
 
 
-public class GuiSummonItemWidget extends GuiScrollableTextWidget {
+public class GuiHintItemArgument extends GuiHintArgument {
     private final Minecraft minecraft;
     private final ItemStack stack;
 
-    public GuiSummonItemWidget(FontRenderer fontRenderer, String text, Layout layout, int horizontalOffset,
-            int widthOffset, Minecraft minecraft, ItemStack stack) {
-        super(fontRenderer, text, 0xFFDD55, 0xFFFF55, 12, 0, layout, horizontalOffset, widthOffset);
+    public GuiHintItemArgument(Minecraft minecraft, ItemStack stack) {
+        super(formatName(stack));
         this.minecraft = minecraft;
         this.stack = stack;
+    }
+
+    @Override
+    public int getColor() {
+        return 0x55AAFF;
+    }
+
+    @Override
+    public int getHoverColor() {
+        return 0x88CCFF;
     }
 
     @Override
@@ -48,9 +55,14 @@ public class GuiSummonItemWidget extends GuiScrollableTextWidget {
         tooltip.addAll(stack.getTooltip(minecraft.player, tooltipFlags));
         if (JEIHelper.isJEILoaded()) {
             tooltip.add("");
-            tooltip.add(I18n.format("gui.mobtracker.summon.jei"));
+            tooltip.add(I18n.format("gui.mobtracker.hint.jei"));
         }
 
         return tooltip;
+    }
+
+    private static String formatName(ItemStack stack) {
+        String name = stack.getDisplayName();
+        return stack.getCount() > 1 ? stack.getCount() + "x " + name : name;
     }
 }

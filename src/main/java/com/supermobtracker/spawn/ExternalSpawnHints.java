@@ -59,6 +59,8 @@ public final class ExternalSpawnHints {
     private static Map<ResourceLocation, HintEntry> cachedEntries = Collections.emptyMap();
     private static final Set<ResourceLocation> MISSING_SPAWN_REASON_WARNINGS =
         Collections.synchronizedSet(new HashSet<>());
+    private static final Set<String> SUMMON_DEPRECATION_WARNINGS =
+        Collections.synchronizedSet(new HashSet<>());
     private static long lastLoadedTimestamp = Long.MIN_VALUE;
     private static boolean cacheInitialized = false;
 
@@ -99,6 +101,7 @@ public final class ExternalSpawnHints {
         cacheInitialized = true;
         lastLoadedTimestamp = lastModified;
         MISSING_SPAWN_REASON_WARNINGS.clear();
+        SUMMON_DEPRECATION_WARNINGS.clear();
         cachedEntries = loadEntries(file);
     }
 
@@ -456,14 +459,20 @@ public final class ExternalSpawnHints {
             warnInvalidFieldType(sourceEntry, sourceName, "requiresNether", "a boolean");
         }
 
-        if (getObject(object, "summon") != null) {
-            SpawnConditionAnalyzer.SummonInfo summon = parseSummonInfo(object, sourceEntry, sourceName);
-            if (summon != null) {
-                entry.providedFields.add(HintField.SUMMON);
-                entry.summon = summon;
+        if (object.has("summon")) {
+            warnDeprecatedSummon(sourceName);
+            JsonObject summonObject = getObject(object, "summon");
+            if (summonObject != null) {
+                List<SpawnConditionAnalyzer.SpawnHint> summonHints = parseSummonHints(summonObject, sourceEntry,
+                    sourceName);
+                if (summonHints != null) {
+                    entry.summonHints.clear();
+                    entry.summonHints.addAll(summonHints);
+                    entry.providedFields.add(HintField.SUMMON);
+                }
+            } else {
+                warnInvalidFieldType(sourceEntry, sourceName, "summon", "an object");
             }
-        } else if (object.has("summon")) {
-            warnInvalidFieldType(sourceEntry, sourceName, "summon", "an object");
         }
 
         JsonArray hints = getArray(object, "hints");
@@ -471,10 +480,10 @@ public final class ExternalSpawnHints {
             entry.providedFields.add(HintField.HINTS);
             entry.hints.clear();
 
-            for (String hintKey : getStringList(hints, "hints", sourceEntry, sourceName)) {
-                if (validateHintTranslationKey(hintKey, sourceEntry, sourceName)) {
-                    entry.hints.add(hintKey);
-                }
+            for (int hintIndex = 0; hintIndex < hints.size(); hintIndex++) {
+                SpawnConditionAnalyzer.SpawnHint hint = parseHint(hints.get(hintIndex), hintIndex, sourceEntry,
+                    sourceName);
+                if (hint != null) entry.hints.add(hint);
             }
         } else if (object.has("hints")) {
             warnInvalidFieldType(sourceEntry, sourceName, "hints", "an array");
@@ -527,6 +536,14 @@ public final class ExternalSpawnHints {
         return true;
     }
 
+    private static void warnDeprecatedSummon(String sourceName) {
+        if (DEFAULT_RESOURCE_PATH.equals(sourceName) || !SUMMON_DEPRECATION_WARNINGS.add(sourceName)) return;
+
+        SuperMobTracker.LOGGER.warn(
+            "Spawn hints source {} uses deprecated 'summon' entries. Use extended 'hints' entries instead.",
+            sourceName);
+    }
+
     private static boolean isNamespaceLoaded(String namespace) {
         if (namespace == null || namespace.isEmpty()) return true;
         if ("minecraft".equals(namespace) || "forge".equals(namespace)) return true;
@@ -535,13 +552,190 @@ public final class ExternalSpawnHints {
     }
 
     @Nullable
-    private static SpawnConditionAnalyzer.SummonInfo parseSummonInfo(JsonObject entryObject,
-                                                                     HintEntrySource sourceEntry,
-                                                                     String sourceName) {
-        JsonObject summonObject = getObject(entryObject, "summon");
-        if (summonObject == null) return null;
+    private static SpawnConditionAnalyzer.SpawnHint parseHint(JsonElement rawHint, int hintIndex,
+                                                              HintEntrySource sourceEntry, String sourceName) {
+        if (rawHint.isJsonPrimitive() && rawHint.getAsJsonPrimitive().isString()) {
+            String key = rawHint.getAsString().trim();
+            if (key.isEmpty()) {
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring empty hints[{}] in spawn hint for {} from {}.",
+                    hintIndex, sourceEntry.entityId, sourceName);
+                return null;
+            }
 
-        List<SpawnConditionAnalyzer.SummonItem> items = new ArrayList<>();
+            if (!validateHintTranslationKey(key, sourceEntry, sourceName)) return null;
+
+            return new SpawnConditionAnalyzer.SpawnHint(key, Collections.emptyList());
+        }
+
+        if (!rawHint.isJsonObject()) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring hints[{}] in spawn hint for {} from {} because it must be a string or an object.",
+                hintIndex, sourceEntry.entityId, sourceName);
+            return null;
+        }
+
+        JsonObject hintObject = rawHint.getAsJsonObject();
+        String key = getString(hintObject, "key");
+        if (key == null || key.trim().isEmpty()) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring hints[{}] in spawn hint for {} from {} because 'key' must be a non-empty string.",
+                hintIndex, sourceEntry.entityId, sourceName);
+            return null;
+        }
+
+        key = key.trim();
+        if (!validateHintTranslationKey(key, sourceEntry, sourceName)) return null;
+
+        JsonArray rawArguments = getArray(hintObject, "args");
+        if (rawArguments == null) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring hints[{}] in spawn hint for {} from {} because 'args' must be an array.",
+                hintIndex, sourceEntry.entityId, sourceName);
+            return null;
+        }
+
+        if (rawArguments.size() == 0) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring hints[{}] in spawn hint for {} from {} because 'args' must not be empty.",
+                hintIndex, sourceEntry.entityId, sourceName);
+            return null;
+        }
+
+        List<SpawnConditionAnalyzer.HintArgument> arguments = new ArrayList<>();
+        for (int argumentIndex = 0; argumentIndex < rawArguments.size(); argumentIndex++) {
+            SpawnConditionAnalyzer.HintArgument argument = parseHintArgument(rawArguments.get(argumentIndex),
+                hintIndex, argumentIndex, sourceEntry, sourceName);
+            if (argument == null) return null;
+
+            arguments.add(argument);
+        }
+
+        return new SpawnConditionAnalyzer.SpawnHint(key, arguments);
+    }
+
+    @Nullable
+    private static SpawnConditionAnalyzer.HintArgument parseHintArgument(JsonElement rawArgument, int hintIndex,
+                                                                         int argumentIndex,
+                                                                         HintEntrySource sourceEntry,
+                                                                         String sourceName) {
+        if (!rawArgument.isJsonPrimitive() || !rawArgument.getAsJsonPrimitive().isString()) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring hints[{}] in spawn hint for {} from {} because args[{}] must be a string.",
+                hintIndex, sourceEntry.entityId, sourceName, argumentIndex);
+            return null;
+        }
+
+        String value = rawArgument.getAsString().trim();
+        int typeSeparator = value.indexOf(':');
+        if (typeSeparator <= 0 || typeSeparator == value.length() - 1) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring hints[{}] in spawn hint for {} from {} because args[{}] must use "
+                    + "item:, block:, or entity:.",
+                hintIndex, sourceEntry.entityId, sourceName, argumentIndex);
+            return null;
+        }
+
+        String type = value.substring(0, typeSeparator);
+        String idText = value.substring(typeSeparator + 1);
+        if ("item".equals(type)) {
+            return parseHintItemArgument(idText, hintIndex, argumentIndex, sourceEntry, sourceName);
+        }
+        if ("block".equals(type)) {
+            return parseHintBlockArgument(idText, hintIndex, argumentIndex, sourceEntry, sourceName);
+        }
+        if ("entity".equals(type)) {
+            return parseHintEntityArgument(idText, hintIndex, argumentIndex, sourceEntry, sourceName);
+        }
+
+        SuperMobTracker.LOGGER.warn(
+            "Ignoring hints[{}] in spawn hint for {} from {} because args[{}] has unsupported type '{}'.",
+            hintIndex, sourceEntry.entityId, sourceName, argumentIndex, type);
+        return null;
+    }
+
+    @Nullable
+    private static SpawnConditionAnalyzer.HintArgument parseHintItemArgument(String value, int hintIndex,
+                                                                             int argumentIndex,
+                                                                             HintEntrySource sourceEntry,
+                                                                             String sourceName) {
+        int metadata = 0;
+        int metadataSeparator = value.lastIndexOf('@');
+        String itemIdText = value;
+        if (metadataSeparator >= 0) {
+            itemIdText = value.substring(0, metadataSeparator);
+            String metadataText = value.substring(metadataSeparator + 1);
+            try {
+                metadata = Integer.parseInt(metadataText);
+            } catch (NumberFormatException e) {
+                SuperMobTracker.LOGGER.warn(
+                    "Ignoring hints[{}] in spawn hint for {} from {} because args[{}] has invalid item metadata '{}'.",
+                    hintIndex, sourceEntry.entityId, sourceName, argumentIndex, metadataText);
+                return null;
+            }
+        }
+
+        if (metadata < 0) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring hints[{}] in spawn hint for {} from {} because args[{}] has negative item metadata.",
+                hintIndex, sourceEntry.entityId, sourceName, argumentIndex);
+            return null;
+        }
+
+        ResourceLocation itemId = parseResourceLocation(itemIdText, "hint item", sourceEntry, sourceName);
+        if (itemId == null || !isNamespaceLoaded(itemId.getNamespace())) return null;
+        if (ForgeRegistries.ITEMS.getValue(itemId) == null) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring unknown hint item '{}' in spawn hint for {} from {}.",
+                itemId, sourceEntry.entityId, sourceName);
+            return null;
+        }
+
+        return new SpawnConditionAnalyzer.HintArgument(SpawnConditionAnalyzer.HintArgument.Type.ITEM, itemId,
+            metadata, 1);
+    }
+
+    @Nullable
+    private static SpawnConditionAnalyzer.HintArgument parseHintBlockArgument(String value, int hintIndex,
+                                                                              int argumentIndex,
+                                                                              HintEntrySource sourceEntry,
+                                                                              String sourceName) {
+        ResourceLocation blockId = parseResourceLocation(value, "hint block", sourceEntry, sourceName);
+        if (blockId == null || !isNamespaceLoaded(blockId.getNamespace())) return null;
+        if (ForgeRegistries.BLOCKS.getValue(blockId) == null) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring unknown hint block '{}' in spawn hint for {} from {}.",
+                blockId, sourceEntry.entityId, sourceName);
+            return null;
+        }
+
+        return new SpawnConditionAnalyzer.HintArgument(SpawnConditionAnalyzer.HintArgument.Type.BLOCK, blockId,
+            0, 1);
+    }
+
+    @Nullable
+    private static SpawnConditionAnalyzer.HintArgument parseHintEntityArgument(String value, int hintIndex,
+                                                                                 int argumentIndex,
+                                                                                 HintEntrySource sourceEntry,
+                                                                                 String sourceName) {
+        ResourceLocation entityId = parseResourceLocation(value, "hint entity", sourceEntry, sourceName);
+        if (entityId == null || !isNamespaceLoaded(entityId.getNamespace())) return null;
+        if (ForgeRegistries.ENTITIES.getValue(entityId) == null) {
+            SuperMobTracker.LOGGER.warn(
+                "Ignoring unknown hint entity '{}' in spawn hint for {} from {}.",
+                entityId, sourceEntry.entityId, sourceName);
+            return null;
+        }
+
+        return new SpawnConditionAnalyzer.HintArgument(SpawnConditionAnalyzer.HintArgument.Type.ENTITY, entityId,
+            0, 1);
+    }
+
+    @Nullable
+    private static List<SpawnConditionAnalyzer.SpawnHint> parseSummonHints(JsonObject summonObject,
+                                                                             HintEntrySource sourceEntry,
+                                                                             String sourceName) {
+        List<SpawnConditionAnalyzer.HintArgument> items = new ArrayList<>();
         JsonArray itemArray = getArray(summonObject, "items");
         if (itemArray != null) {
             for (int itemIndex = 0; itemIndex < itemArray.size(); itemIndex++) {
@@ -572,12 +766,14 @@ public final class ExternalSpawnHints {
                 int resolvedCount = count == null ? 1 : count;
                 if (resolvedMetadata < 0 || resolvedCount < 1) {
                     SuperMobTracker.LOGGER.warn(
-                        "Ignoring summon item '{}' in spawn hint for {} from {} because metadata must be non-negative and count must be positive.",
+                        "Ignoring summon item '{}' in spawn hint for {} from {} because metadata must be non-negative "
+                            + "and count must be positive.",
                         itemId, sourceEntry.entityId, sourceName);
                     continue;
                 }
 
-                items.add(new SpawnConditionAnalyzer.SummonItem(itemId.toString(), resolvedMetadata, resolvedCount));
+                items.add(new SpawnConditionAnalyzer.HintArgument(SpawnConditionAnalyzer.HintArgument.Type.ITEM,
+                    itemId, resolvedMetadata, resolvedCount));
             }
         }
 
@@ -588,8 +784,10 @@ public final class ExternalSpawnHints {
             return null;
         }
 
-        String onBlock = parseKnownBlockId(getString(summonObject, "onBlock"), sourceEntry, sourceName);
-        String onEntity = parseKnownEntityId(getString(summonObject, "onEntity"), sourceEntry, sourceName);
+        SpawnConditionAnalyzer.HintArgument onBlock = parseSummonBlockArgument(getString(summonObject, "onBlock"),
+            sourceEntry, sourceName);
+        SpawnConditionAnalyzer.HintArgument onEntity = parseSummonEntityArgument(getString(summonObject, "onEntity"),
+            sourceEntry, sourceName);
         if (onBlock != null && onEntity != null) {
             SuperMobTracker.LOGGER.warn(
                 "Spawn hint for {} from {} specifies both summon onBlock and onEntity; using onBlock.",
@@ -597,11 +795,25 @@ public final class ExternalSpawnHints {
             onEntity = null;
         }
 
-        return new SpawnConditionAnalyzer.SummonInfo(items, onBlock, onEntity);
+        SpawnConditionAnalyzer.HintArgument target = onBlock != null ? onBlock : onEntity;
+        List<SpawnConditionAnalyzer.SpawnHint> hints = new ArrayList<>();
+        for (SpawnConditionAnalyzer.HintArgument item : items) {
+            if (target == null) {
+                hints.add(new SpawnConditionAnalyzer.SpawnHint("gui.mobtracker.summon.using",
+                    Collections.singletonList(item)));
+            } else {
+                hints.add(new SpawnConditionAnalyzer.SpawnHint("gui.mobtracker.summon.using_on",
+                    Arrays.asList(item, target)));
+            }
+        }
+
+        return hints;
     }
 
     @Nullable
-    private static String parseKnownBlockId(String text, HintEntrySource sourceEntry, String sourceName) {
+    private static SpawnConditionAnalyzer.HintArgument parseSummonBlockArgument(String text,
+                                                                                  HintEntrySource sourceEntry,
+                                                                                  String sourceName) {
         ResourceLocation blockId = parseResourceLocation(text, "summon target block", sourceEntry, sourceName);
         if (blockId == null || !isNamespaceLoaded(blockId.getNamespace())) return null;
 
@@ -613,11 +825,14 @@ public final class ExternalSpawnHints {
             return null;
         }
 
-        return blockId.toString();
+        return new SpawnConditionAnalyzer.HintArgument(SpawnConditionAnalyzer.HintArgument.Type.BLOCK,
+            blockId, 0, 1);
     }
 
     @Nullable
-    private static String parseKnownEntityId(String text, HintEntrySource sourceEntry, String sourceName) {
+    private static SpawnConditionAnalyzer.HintArgument parseSummonEntityArgument(String text,
+                                                                                   HintEntrySource sourceEntry,
+                                                                                   String sourceName) {
         ResourceLocation entityId = parseResourceLocation(text, "summon target entity", sourceEntry, sourceName);
         if (entityId == null || !isNamespaceLoaded(entityId.getNamespace())) return null;
 
@@ -628,7 +843,8 @@ public final class ExternalSpawnHints {
             return null;
         }
 
-        return entityId.toString();
+        return new SpawnConditionAnalyzer.HintArgument(SpawnConditionAnalyzer.HintArgument.Type.ENTITY, entityId,
+            0, 1);
     }
 
     @Nullable
@@ -930,7 +1146,8 @@ public final class ExternalSpawnHints {
         final List<int[]> timeOfDay = new ArrayList<>();
         final List<String> weather = new ArrayList<>();
         final List<Integer> moonPhases = new ArrayList<>();
-        final List<String> hints = new ArrayList<>();
+        final List<SpawnConditionAnalyzer.SpawnHint> hints = new ArrayList<>();
+        final List<SpawnConditionAnalyzer.SpawnHint> summonHints = new ArrayList<>();
 
         Integer dimensionId;
         String dimensionName;
@@ -941,7 +1158,6 @@ public final class ExternalSpawnHints {
         Boolean requiresSky;
         Boolean requiresSlimeChunk;
         Boolean requiresNether;
-        SpawnConditionAnalyzer.SummonInfo summon;
 
         HintEntry(ResourceLocation entityId, @Nullable String spawnReason, String sourceName) {
             this.entityId = entityId;
@@ -967,6 +1183,7 @@ public final class ExternalSpawnHints {
             this.weather.addAll(parentEntry.weather);
             this.moonPhases.addAll(parentEntry.moonPhases);
             this.hints.addAll(parentEntry.hints);
+            this.summonHints.addAll(parentEntry.summonHints);
             this.dimensionId = parentEntry.dimensionId;
             this.dimensionName = parentEntry.dimensionName;
             this.lightMin = parentEntry.lightMin;
@@ -976,7 +1193,6 @@ public final class ExternalSpawnHints {
             this.requiresSky = parentEntry.requiresSky;
             this.requiresSlimeChunk = parentEntry.requiresSlimeChunk;
             this.requiresNether = parentEntry.requiresNether;
-            this.summon = copySummonInfo(parentEntry.summon);
         }
 
         SpawnConditionAnalyzer.SpawnConditions toSpawnConditions(boolean aquatic, boolean flying) {
@@ -994,7 +1210,7 @@ public final class ExternalSpawnHints {
                 resolvedYLevels,
                 timeOfDay.isEmpty() ? null : copyTimeRanges(timeOfDay),
                 weather.isEmpty() ? null : new ArrayList<>(weather),
-                hints.isEmpty() ? null : new ArrayList<>(hints),
+                combineHints(hints, summonHints),
                 requiresSky,
                 moonPhases.isEmpty() ? null : new ArrayList<>(moonPhases),
                 requiresSlimeChunk,
@@ -1002,7 +1218,6 @@ public final class ExternalSpawnHints {
                 resolvedDimensionName,
                 resolvedDimensionId,
                 spawnReason,
-                copySummonInfo(summon),
                 false
             );
         }
@@ -1033,8 +1248,9 @@ public final class ExternalSpawnHints {
                 ? (timeOfDay.isEmpty() ? null : copyTimeRanges(timeOfDay)) : spawnConditions.timeOfDay;
             List<String> resolvedWeather = provides(HintField.WEATHER)
                 ? (weather.isEmpty() ? null : new ArrayList<>(weather)) : spawnConditions.weather;
-            List<String> resolvedHints = provides(HintField.HINTS)
-                ? new ArrayList<>(hints) : spawnConditions.hints;
+            List<SpawnConditionAnalyzer.SpawnHint> resolvedHints = provides(HintField.HINTS)
+                ? new ArrayList<>(hints) : new ArrayList<>(spawnConditions.hints);
+            if (provides(HintField.SUMMON)) resolvedHints.addAll(summonHints);
             Boolean resolvedRequiresSky = provides(HintField.REQUIRES_SKY)
                 ? requiresSky : spawnConditions.requiresSky;
             List<Integer> resolvedMoonPhases = provides(HintField.MOON_PHASES)
@@ -1043,8 +1259,6 @@ public final class ExternalSpawnHints {
                 ? requiresSlimeChunk : spawnConditions.requiresSlimeChunk;
             Boolean resolvedRequiresNether = provides(HintField.REQUIRES_NETHER)
                 ? requiresNether : spawnConditions.requiresNether;
-            SpawnConditionAnalyzer.SummonInfo resolvedSummon = provides(HintField.SUMMON)
-                ? copySummonInfo(summon) : spawnConditions.summon;
             String resolvedSpawnReason = spawnReason != null ? spawnReason : spawnConditions.spawnReason;
 
             return new SpawnConditionAnalyzer.SpawnConditions(
@@ -1062,7 +1276,6 @@ public final class ExternalSpawnHints {
                 resolvedDimensionName,
                 resolvedDimensionId,
                 resolvedSpawnReason,
-                resolvedSummon,
                 spawnConditions.analysisFailed
             );
         }
@@ -1146,16 +1359,12 @@ public final class ExternalSpawnHints {
             return copy;
         }
 
-        @Nullable
-        private SpawnConditionAnalyzer.SummonInfo copySummonInfo(@Nullable SpawnConditionAnalyzer.SummonInfo source) {
-            if (source == null) return null;
-
-            List<SpawnConditionAnalyzer.SummonItem> items = new ArrayList<>();
-            for (SpawnConditionAnalyzer.SummonItem summonItem : source.items) {
-                items.add(new SpawnConditionAnalyzer.SummonItem(summonItem.itemId, summonItem.metadata, summonItem.count));
-            }
-
-            return new SpawnConditionAnalyzer.SummonInfo(items, source.onBlock, source.onEntity);
+        private List<SpawnConditionAnalyzer.SpawnHint> combineHints(
+                List<SpawnConditionAnalyzer.SpawnHint> sourceHints,
+                List<SpawnConditionAnalyzer.SpawnHint> sourceSummonHints) {
+            List<SpawnConditionAnalyzer.SpawnHint> combined = new ArrayList<>(sourceHints);
+            combined.addAll(sourceSummonHints);
+            return combined;
         }
     }
 }
