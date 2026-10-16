@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.item.ItemStack;
 
 import com.supermobtracker.SuperMobTracker;
 import com.supermobtracker.client.gui.widgets.GuiHintArgument;
@@ -110,6 +111,12 @@ public class GuiScrollableTextWidget extends GuiScrollableWidget {
         if (argument != null) return argument.getTooltip();
 
         return super.getTooltip(mouseX, mouseY, x, y, width);
+    }
+
+    @Override
+    public ItemStack getTooltipStack(int mouseX, int mouseY, int x, int y, int width) {
+        GuiHintArgument argument = getArgumentAt(mouseX, mouseY, x, y, width);
+        return argument != null ? argument.getTooltipStack() : ItemStack.EMPTY;
     }
 
     private void drawLine(TextLine line, int x, int y, int defaultColor, GuiHintArgument activeArgument) {

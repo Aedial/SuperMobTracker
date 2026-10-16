@@ -9,6 +9,7 @@ import org.lwjgl.opengl.GL11;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.ScaledResolution;
+import net.minecraft.item.ItemStack;
 
 
 public class GuiScrollableWidgetList {
@@ -181,6 +182,14 @@ public class GuiScrollableWidgetList {
         List<String> tooltip = hoveredWidget.getTooltip(hoveredMouseX, hoveredMouseY, x + contentLeftPadding,
             getWidgetY(hoveredWidget), contentWidth);
         return tooltip != null ? tooltip : Collections.emptyList();
+    }
+
+    public ItemStack getHoveredTooltipStack() {
+        if (hoveredWidget == null) return ItemStack.EMPTY;
+
+        ItemStack stack = hoveredWidget.getTooltipStack(hoveredMouseX, hoveredMouseY, x + contentLeftPadding,
+            getWidgetY(hoveredWidget), contentWidth);
+        return stack != null ? stack : ItemStack.EMPTY;
     }
 
     public boolean isHovered(GuiScrollableWidget widget) {

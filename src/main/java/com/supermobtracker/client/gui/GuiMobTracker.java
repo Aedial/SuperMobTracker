@@ -27,6 +27,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import net.minecraftforge.fml.client.config.GuiUtils;
 
 import com.supermobtracker.client.ClientSettings;
 import com.supermobtracker.client.gui.widgets.GuiBiomeWidget;
@@ -892,9 +893,22 @@ public class GuiMobTracker extends GuiScreen {
         List<String> tooltip = widgets.getHoveredTooltip();
         if (tooltip.isEmpty()) return;
 
+        ItemStack tooltipStack = widgets.getHoveredTooltipStack();
+
         GlStateManager.pushMatrix();
         GlStateManager.translate(0.0F, 0.0F, 500.0F);
-        drawHoveringText(tooltip, mouseX, mouseY);
+        if (tooltipStack.isEmpty()) {
+            drawHoveringText(tooltip, mouseX, mouseY);
+        } else {
+            GuiUtils.preItemToolTip(tooltipStack);
+            GuiHintTooltipRenderer.beginIconTooltip(tooltipStack);
+            try {
+                drawHoveringText(GuiHintTooltipRenderer.addIconHeader(tooltip, fontRenderer), mouseX, mouseY);
+            } finally {
+                GuiHintTooltipRenderer.endIconTooltip();
+                GuiUtils.postItemToolTip();
+            }
+        }
         GlStateManager.popMatrix();
     }
 

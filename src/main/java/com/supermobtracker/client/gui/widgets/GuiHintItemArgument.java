@@ -61,6 +61,11 @@ public class GuiHintItemArgument extends GuiHintArgument {
         return tooltip;
     }
 
+    @Override
+    public ItemStack getTooltipStack() {
+        return stack;
+    }
+
     private static String formatName(ItemStack stack) {
         String name = stack.getDisplayName();
         return stack.getCount() > 1 ? stack.getCount() + "x " + name : name;

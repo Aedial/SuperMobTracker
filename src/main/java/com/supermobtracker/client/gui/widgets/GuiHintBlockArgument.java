@@ -42,6 +42,11 @@ public class GuiHintBlockArgument extends GuiHintArgument {
         return itemArgument == null ? Collections.emptyList() : itemArgument.getTooltip();
     }
 
+    @Override
+    public ItemStack getTooltipStack() {
+        return itemArgument == null ? ItemStack.EMPTY : itemArgument.getTooltipStack();
+    }
+
     private static ItemStack getItemStack(ResourceLocation blockId) {
         Block block = ForgeRegistries.BLOCKS.getValue(blockId);
         if (block == null) return ItemStack.EMPTY;
