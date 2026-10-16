@@ -27,6 +27,7 @@ import mezz.jei.api.ingredients.VanillaTypes;
 import mezz.jei.api.recipe.IRecipeWrapper;
 
 import com.supermobtracker.client.ClientSettings;
+import com.supermobtracker.client.ClientWorldLootTables;
 import com.supermobtracker.client.gui.GuiMobTracker;
 import com.supermobtracker.client.gui.SmallVanillaButton;
 import com.supermobtracker.client.util.GuiDrawingUtils;
@@ -410,7 +411,8 @@ public class MobLootJeiRecipe implements IRecipeWrapper {
 
         cachedWorld = minecraft.world;
         try {
-            cachedEntity = EntityList.createEntityByIDFromName(entityId, minecraft.world);
+            cachedEntity = ClientWorldLootTables.withLootTableManager(minecraft.world,
+                () -> EntityList.createEntityByIDFromName(entityId, minecraft.world));
         } catch (Exception ignored) {
             cachedEntity = null;
         }

@@ -39,12 +39,14 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.IChunkProvider;
 import net.minecraft.world.storage.ISaveHandler;
 import net.minecraft.world.storage.WorldInfo;
+import net.minecraft.world.storage.loot.LootTableManager;
 import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 
 import com.supermobtracker.SuperMobTracker;
+import com.supermobtracker.client.ClientWorldLootTables;
 import com.supermobtracker.util.Utils;
 
 
@@ -393,6 +395,11 @@ public class SpawnConditionAnalyzer {
         }
 
         @Override
+        public LootTableManager getLootTableManager() {
+            return ClientWorldLootTables.getLootTableManager();
+        }
+
+        @Override
         public int getLight(@Nonnull BlockPos pos) {
             queriedConditions.put("lightLevel", true);
             return lightLevel;
@@ -690,7 +697,8 @@ public class SpawnConditionAnalyzer {
                 return null;
             }
 
-            Entity entity = EntityList.createEntityByIDFromName(entry.getRegistryName(), world);
+            Entity entity = ClientWorldLootTables.withLootTableManager(world,
+                () -> EntityList.createEntityByIDFromName(entry.getRegistryName(), world));
             if (entity instanceof EntityLiving) {
                 entityInstanceCache.put(entityId, (EntityLiving) entity);
                 return (EntityLiving) entity;
@@ -726,7 +734,10 @@ public class SpawnConditionAnalyzer {
         entity.setLocationAndAngles(0.5D, Math.max(1, world.getSeaLevel()), 0.5D, 0.0F, 0.0F);
 
         try {
-            entity.onInitialSpawn(world.getDifficultyForLocation(new BlockPos(entity)), null);
+            ClientWorldLootTables.withLootTableManager(world, () -> {
+                entity.onInitialSpawn(world.getDifficultyForLocation(new BlockPos(entity)), null);
+                return null;
+            });
         } catch (Throwable t) {
             if (ConditionUtils.shouldShowCrashes()) {
                 SuperMobTracker.LOGGER.error("Error initializing display entity for {}", entityId, t);

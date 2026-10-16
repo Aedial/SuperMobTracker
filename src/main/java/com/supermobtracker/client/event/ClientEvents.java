@@ -22,6 +22,7 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.registry.EntityEntry;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
+import com.supermobtracker.client.ClientWorldLootTables;
 import com.supermobtracker.client.input.KeyBindings;
 import com.supermobtracker.client.gui.GuiIconButton;
 import com.supermobtracker.client.gui.GuiMobTracker;
@@ -240,7 +241,8 @@ public class ClientEvents {
 
             String name = id.toString();
             if (ModConfig.clientI18nNames) {
-                Entity entity = EntityList.createEntityByIDFromName(id, mc.world);
+                Entity entity = ClientWorldLootTables.withLootTableManager(mc.world,
+                    () -> EntityList.createEntityByIDFromName(id, mc.world));
                 if (entity != null) name = entity.getDisplayName().getUnformattedText();
             }
 
